@@ -93,7 +93,7 @@ These patterns are non-negotiable. Set them up in Milestone 0 and use them consi
 
 ### Auth token lifecycle
 - Supabase access tokens expire after ~1 hour. The client must handle this invisibly.
-- On app launch: call `supabase.auth.getSession()` to auto-refresh if needed.
+- On app launch with refresh-token-only storage: read the persisted refresh token and call `supabase.auth.refreshSession({ refresh_token })` to obtain a fresh access token. Do not document `setSession()` for this pattern; Supabase requires both access and refresh tokens for that API.
 - Set up `supabase.auth.onAuthStateChange` listener to catch `TOKEN_REFRESHED` and `SIGNED_OUT` events globally.
 - If a refresh fails (refresh token expired): redirect to login with a clear message ("Your session expired. Please log in again."), do not show a crash or cryptic error.
 - **expo-secure-store 2KB limit on Android:** Store only the refresh token in `expo-secure-store`. Hold the access token in memory. On app relaunch, use the persisted refresh token to obtain a new access token. This avoids the Android storage size limit for large session objects.
@@ -217,10 +217,10 @@ These patterns are non-negotiable. Set them up in Milestone 0 and use them consi
 
 ## Testing and validation
 Before declaring a task done:
-- Run lint: `npm run lint`
-- Run typecheck: `npm run typecheck`
-- Run tests if they exist: `npm test`
-- Run Expo doctor if dependencies changed: `npx expo-doctor`
+- Run lint: `pnpm run lint`
+- Run typecheck: `pnpm run typecheck`
+- Run tests if they exist: `pnpm test`
+- Run Expo doctor if dependencies changed: `pnpm run doctor`
 - If tests do not exist for changed core logic, add targeted tests where reasonable.
 - Verify the app still builds.
 

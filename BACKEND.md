@@ -1066,8 +1066,8 @@ This section documents the client-side architectural patterns that are critical 
 Supabase access tokens expire after ~1 hour. The client must handle this invisibly.
 
 **On app launch:**
-1. Call `supabase.auth.getSession()` — this auto-refreshes the access token if the refresh token is still valid
-2. If the refresh token is expired (e.g. user hasn't opened the app in 30+ days): the call returns `null`, redirect to login with message "Your session expired. Please log in again."
+1. Read the persisted refresh token from secure storage and call `supabase.auth.refreshSession({ refresh_token })` to obtain a fresh access token
+2. If the refresh token is expired (e.g. user hasn't opened the app in 30+ days): the refresh call returns `null` / an error, redirect to login with message "Your session expired. Please log in again."
 
 **During use:**
 - Set up `supabase.auth.onAuthStateChange` as a global listener
@@ -1079,7 +1079,8 @@ Supabase access tokens expire after ~1 hour. The client must handle this invisib
 - `expo-secure-store` on Android has a 2KB value limit. Supabase session objects can exceed this.
 - Store **only the refresh token** in `expo-secure-store` (it's a short string, well under 2KB).
 - Hold the access token **in memory only** (Zustand store, not persisted).
-- On app relaunch: read the refresh token from secure store → call `supabase.auth.setSession()` to obtain a fresh access token.
+- On app relaunch: read the refresh token from secure store → call `supabase.auth.refreshSession({ refresh_token })` to obtain a fresh access token.
+- `supabase.auth.setSession()` is not appropriate for this storage pattern because Supabase requires both `access_token` and `refresh_token` for that API.
 - This pattern works on both iOS and Android without hitting storage limits.
 
 ### 16.2 Data fetching and caching (TanStack Query)

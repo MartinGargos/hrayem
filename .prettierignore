@@ -1,0 +1,10 @@
+node_modules
+.expo
+dist
+web-build
+AGENTS.md
+APP.md
+BACKEND.md
+MILESTONES.md
+PLANS.md
+pnpm-lock.yaml

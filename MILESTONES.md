@@ -48,7 +48,7 @@ The sequence is designed so that:
 
 ### Client infrastructure wiring
 - [ ] **Supabase client** (`src/services/supabase.ts`): initialize with env vars; set up `onAuthStateChange` listener that updates Zustand auth store on `TOKEN_REFRESHED`, `SIGNED_OUT`, `SIGNED_IN`
-- [ ] **Auth token strategy**: store only refresh token in `expo-secure-store` (Android 2KB limit); hold access token in memory via Zustand; on app launch, read refresh token → call `supabase.auth.setSession()` to get fresh access token
+- [ ] **Auth token strategy**: store only refresh token in `expo-secure-store` (Android 2KB limit); hold access token in memory via Zustand; on app launch, read refresh token → call `supabase.auth.refreshSession({ refresh_token })` to get a fresh access token
 - [ ] **React Query provider**: wrap app in `QueryClientProvider`; configure default `staleTime: 30_000`, `gcTime: 1_800_000`, `retry: 2`
 - [ ] **Zustand stores**: create `useAuthStore` (session state, refresh token, push token), `useUserStore` (profile, selected city, language), `useUIStore` (offline status)
 - [ ] **Network monitoring** (`src/components/OfflineBanner.tsx`): initialize `@react-native-community/netinfo` listener; update `useUIStore.isOffline`; render persistent top banner when offline
@@ -59,7 +59,7 @@ The sequence is designed so that:
 
 ### Final checks
 - [ ] Write `README.md` with setup instructions (Milestone 0 scope only), including WSL dev environment notes and client infrastructure overview
-- [ ] Run `npx expo-doctor` — all checks pass
+- [ ] Run `pnpm run doctor` — all checks pass
 - [ ] App opens on Android emulator (WSL) or via EAS dev build (iOS)
 
 **Checkpoint:** App runs on a device or emulator. React Query is wired (verify: a dummy `useQuery` caches correctly). Zustand stores exist. Sentry captures a test error in the dashboard. Offline banner appears when network is disabled. Date formatters produce correct local-timezone output. i18n switches between CZ and EN. Deep link scheme is registered. `expo-doctor` is clean. README covers setup.
@@ -125,9 +125,9 @@ The sequence is designed so that:
 
 ### Session resilience
 - [ ] **Token storage strategy:** store refresh token in `expo-secure-store`; hold access token in Zustand (memory only)
-- [ ] **App launch flow:** read refresh token from secure store → `supabase.auth.setSession()` → obtain fresh access token → populate Zustand
+- [ ] **App launch flow:** read refresh token from secure store → `supabase.auth.refreshSession({ refresh_token })` → obtain a fresh access token → populate Zustand
 - [ ] **Silent token refresh:** `onAuthStateChange` listener catches `TOKEN_REFRESHED` and updates Zustand — user never sees a login screen mid-session
-- [ ] **Expired refresh token handling:** if `getSession()` returns null and no refresh token exists → redirect to login with clear message ("Your session expired. Please log in again.") — no crash, no blank screen
+- [ ] **Expired refresh token handling:** if no refresh token exists or `refreshSession()` fails → redirect to login with clear message ("Your session expired. Please log in again.") — no crash, no blank screen
 - [ ] **401 retry:** if any API call returns 401, trigger `supabase.auth.refreshSession()`, then retry the original request once
 - [ ] Session persistence test: close and reopen app after 5 minutes — user is still logged in without any flash
 
