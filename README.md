@@ -1,6 +1,8 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently contains Milestone 0: the Expo app foundation, environment setup, and shared client infrastructure that later milestones will build on.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, and the Milestone 2 authentication/session-resilience client flow.
+
+Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
 ## Tech stack
 
@@ -23,7 +25,7 @@ Hrayem is a production-oriented mobile app for Czech racket-sport players who wa
 - Android Studio with an Android emulator on the Windows host
 - Expo CLI via the repo scripts or the local project binary
 - EAS CLI available through `pnpm dlx eas-cli`
-- A Supabase project with the public URL and anon key ready
+- A Supabase project with the public URL, anon key, and service role key ready for the Milestone 1 apply and verification workflow
 
 ## Development environment
 
@@ -75,29 +77,96 @@ pnpm run android
 
 ## How to run on a real device
 
-Use Expo Dev Client builds through EAS:
+### iPhone runbook — Milestone 0 from WSL
 
-```bash
-pnpm dlx eas-cli build --profile development --platform android
-pnpm dlx eas-cli build --profile development --platform ios
-pnpm run start -- --dev-client
-```
+Use this flow when you are on Windows + WSL, you have a physical iPhone, and you do not have an Android device available right now. It matches the current `development` profile in [`eas.json`](/home/martin/hrayem/eas.json).
 
-Install the generated development build on the device, then connect it to the Metro server started from WSL.
+1. Prepare the project in WSL.
+
+   ```bash
+   pnpm install
+   cp .env.example .env
+   # fill in the required EXPO_PUBLIC_* values
+   pnpm run doctor
+   ```
+
+2. Log in to Expo and register the iPhone for internal iOS builds.
+
+   ```bash
+   pnpm dlx eas-cli login
+   pnpm dlx eas-cli device:create
+   ```
+
+   On the iPhone, open the registration link or QR code that EAS shows, install the temporary Apple device-registration profile, approve the device registration, and return to the CLI when it asks you to continue.
+
+3. Build the iOS development client.
+
+   ```bash
+   pnpm dlx eas-cli build --profile development --platform ios
+   ```
+
+   If EAS asks for Apple credentials, sign in with the Apple Developer account that will own the build. Wait for the build to finish.
+
+4. Install the build on the iPhone.
+
+   Open the build URL printed by EAS on the iPhone in Safari, tap **Install**, and complete any iOS install prompts. If iOS asks you to trust the developer or provisioning profile, finish that prompt in Settings and then return to the Home Screen.
+
+5. Start Metro from WSL for the development client.
+
+   ```bash
+   pnpm run start -- --dev-client --tunnel
+   ```
+
+   Keep this process running. The `--tunnel` flag is the safest option from WSL to a physical iPhone.
+
+6. Open the app on the iPhone.
+
+   Tap the installed **Hrayem** app. If it does not connect automatically, scan the QR code shown by Expo with the iPhone camera and tap the link so iOS opens it in the Hrayem development build.
+
+### PROVABLE NOW ON IPHONE
+
+Run these checks on the current Milestone 0 foundation screen:
+
+1. **App opens on a real device:** the Hrayem development build launches and shows the Milestone 0 foundation screen.
+2. **React Query wiring:** note the **Fetch count** value, tap **Refetch demo query**, and confirm the count increments and the fetched timestamp updates without a blank-screen flash.
+3. **i18n switching:** tap the Czech and English language buttons and confirm the visible copy changes on the screen.
+4. **Offline banner:** disable Wi-Fi and cellular data or enable Airplane Mode, reopen the app, and confirm the top offline banner appears.
+5. **Date formatting:** confirm the date/time card matches the iPhone's current local timezone.
+6. **Sentry smoke test:** tap the Sentry test button on the foundation screen and confirm the event appears in your Sentry dashboard.
+7. **Deep link scheme registration:** create or send yourself a `hrayem://event/example-id` link on the iPhone, tap it, and confirm iOS offers to open Hrayem or opens Hrayem directly.
+
+### STILL NEEDS ANDROID LATER
+
+- Android app launch proof on an emulator or Android device.
+- Android-side deep-link and app-link proof for the registered `package` / `intentFilters`.
+- Cross-platform confidence that the same Milestone 0 checks behave the same way on Android.
 
 ## Supabase setup
 
-Milestone 0 does not yet add the database migrations, seed files, or Edge Functions described in `BACKEND.md`; those land in Milestone 1. The client is already wired to consume the public Supabase URL and anon key.
+The repo now includes the Milestone 1 Supabase assets:
 
-When the backend assets are added, the expected workflow will be:
+- Ordered schema migrations in `supabase/migrations/`
+- Seed data in `supabase/seed.sql` for `sports`, `app_config`, and the initial Ostrava venues
+- A verification script in `scripts/verify-milestone1.mjs` for the required trigger and RLS checks
+- The authoritative allowed city set lives in the migration-seeded `private.cities` table; `src/constants/cities.ts` is the client mirror and the verification script checks they stay in sync
+- Milestone 2 adds launch-time `app_config` reads for force-update checks and an `avatars` Storage bucket migration for optional profile photos
+
+Use this workflow once `.env` contains real `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` values:
 
 ```bash
+pnpm dlx supabase login
 pnpm dlx supabase link --project-ref <project-ref>
 pnpm dlx supabase db push
-pnpm dlx supabase functions deploy <function-name>
+pnpm run verify:milestone1
 ```
 
-Seed data will be applied once the repo contains the Milestone 1 seed files for `sports`, `app_config`, and venues.
+Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. Edge Functions are still added in later milestones, so there are no function deployments yet.
+
+For Milestone 2 auth flows, also configure these Supabase Auth settings:
+
+- Add `hrayem://auth/callback` to the Auth redirect URL allow list.
+- Configure the Apple and Google providers in Supabase Auth.
+- Use an EAS development build for real OAuth and push-token testing; the app now includes `expo-notifications`, `expo-location`, `expo-image-picker`, `expo-image-manipulator`, and `expo-web-browser`.
 
 ## Build and submit
 
@@ -134,8 +203,10 @@ src/
 - React Query is initialized globally with `staleTime: 30s`, `gcTime: 30m`, and retry defaults for both queries and mutations.
 - Zustand stores are split by domain: auth, user, and UI.
 - Refresh tokens live in `expo-secure-store`; access tokens stay memory-only in the auth store.
-- Supabase auth bootstraps from the persisted refresh token with `supabase.auth.refreshSession({ refresh_token })` on app launch and listens to `SIGNED_IN`, `TOKEN_REFRESHED`, and `SIGNED_OUT`.
+- Supabase auth bootstraps from the persisted refresh token with `supabase.auth.refreshSession({ refresh_token })` on app launch, refreshes once on 401 responses, handles OAuth/password-recovery callbacks via the `hrayem://auth/callback` deep link, and listens to `SIGNED_IN`, `TOKEN_REFRESHED`, `PASSWORD_RECOVERY`, and `SIGNED_OUT`.
 - Network connectivity is tracked with NetInfo and surfaced through a persistent offline banner.
+- Launch routing is now gated by `app_config` (force update), `consent_log` (terms re-consent), and `profiles.profile_complete` before the authenticated user reaches the current foundation/home entry screen.
+- Expo push tokens are re-registered on app launch and synced to `device_tokens` when notification permission is granted.
 - Sentry initializes at app startup with PII scrubbing and a smoke-test button on the Milestone 0 foundation screen.
 - i18n is available from day one with Czech and English resource files and device-language detection.
 - Date formatting is centralized in `src/utils/dates.ts` using `date-fns` and `date-fns-tz`.

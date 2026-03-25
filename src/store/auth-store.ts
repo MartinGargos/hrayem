@@ -18,6 +18,7 @@ type AuthState = {
   beginBootstrap: () => void;
   applySession: (session: Session | null) => void;
   clearSession: (errorMessageKey?: string | null) => void;
+  clearErrorMessage: () => void;
   setPushToken: (pushToken: string | null) => void;
 };
 
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>()(
           status: 'signed-out',
           errorMessageKey,
         }),
+      clearErrorMessage: () => set({ errorMessageKey: null }),
       setPushToken: (pushToken) => set({ pushToken }),
     }),
     {

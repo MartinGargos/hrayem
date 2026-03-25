@@ -22,6 +22,8 @@
 
 ## 2. Data Model
 
+The curated MVP city set is enforced in the database via `private.cities`, a private lookup table seeded in migrations. That database catalog is the authoritative allowed-write source; the client picker mirrors it in `src/constants/cities.ts`. Any public table that stores a city value references `private.cities` so client or service-role writes cannot drift outside the supported set.
+
 ### 2.1 `profiles`
 Extends Supabase `auth.users`. Created automatically on registration via a Postgres trigger on `auth.users`.
 
@@ -30,7 +32,7 @@ id              uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE
 first_name      text CHECK (first_name IS NULL OR char_length(first_name) BETWEEN 1 AND 50)
 last_name       text CHECK (last_name IS NULL OR char_length(last_name) BETWEEN 1 AND 50)
 photo_url       text                         -- Supabase Storage public URL
-city            text                         -- must match a value from the curated city list
+city            text REFERENCES private.cities(name)
 latitude        double precision
 longitude       double precision
 language        text NOT NULL DEFAULT 'cs' CHECK (language IN ('cs', 'en'))
@@ -89,7 +91,7 @@ Crowdsourced by users. One record per physical location. Designed to be claimed 
 ```sql
 id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
 name            text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100)
-city            text NOT NULL            -- must match a value from the curated city list
+city            text NOT NULL REFERENCES private.cities(name)
 address         text CHECK (address IS NULL OR char_length(address) <= 200)
 created_by      uuid REFERENCES profiles(id) ON DELETE SET NULL
 is_verified     boolean NOT NULL DEFAULT false  -- future: set true when facility claims venue
@@ -139,7 +141,7 @@ organizer_id        uuid REFERENCES profiles(id) ON DELETE SET NULL
 venue_id            uuid NOT NULL REFERENCES venues(id)
 starts_at           timestamptz NOT NULL     -- full datetime in UTC; client displays in local TZ
 ends_at             timestamptz NOT NULL
-city                text NOT NULL            -- denormalized from venue; used for feed index
+city                text NOT NULL REFERENCES private.cities(name)  -- denormalized from venue; used for feed index
 reservation_type    text NOT NULL CHECK (reservation_type IN ('reserved', 'to_be_arranged'))
 player_count_total  smallint NOT NULL CHECK (player_count_total BETWEEN 2 AND 20)
 skill_min           smallint NOT NULL CHECK (skill_min BETWEEN 1 AND 4)
@@ -175,6 +177,7 @@ event_id        uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE
 user_id         uuid REFERENCES profiles(id) ON DELETE SET NULL
 status          text NOT NULL CHECK (status IN ('confirmed', 'waitlisted', 'removed'))
 joined_at       timestamptz NOT NULL DEFAULT now()
+updated_at      timestamptz NOT NULL DEFAULT now()
 -- joined_at is set once on first join and never updated on subsequent status changes.
 -- This preserves correct FIFO ordering across leave/rejoin cycles.
 UNIQUE (event_id, user_id)
@@ -254,7 +257,7 @@ Lightweight signal — "I want to play [sport] on [date]". No commitments, no bo
 id              uuid PRIMARY KEY DEFAULT gen_random_uuid()
 user_id         uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE
 sport_id        uuid NOT NULL REFERENCES sports(id)
-city            text NOT NULL            -- denormalized from user's city for feed query
+city            text NOT NULL REFERENCES private.cities(name)  -- denormalized from user's city for feed query
 available_date  date NOT NULL
 time_pref       text CHECK (time_pref IS NULL OR time_pref IN ('morning', 'afternoon', 'evening', 'any'))
 note            text CHECK (note IS NULL OR char_length(note) <= 200)
@@ -335,7 +338,15 @@ CONSTRAINT report_has_target CHECK (
   (target_type = 'event' AND target_event_id IS NOT NULL) OR
   (target_type = 'player' AND target_user_id IS NOT NULL)
 )
-UNIQUE (reporter_id, target_type, COALESCE(target_event_id, '00000000-0000-0000-0000-000000000000'), COALESCE(target_user_id, '00000000-0000-0000-0000-000000000000'))
+```
+
+```sql
+CREATE UNIQUE INDEX idx_reports_dedupe ON reports (
+  reporter_id,
+  target_type,
+  COALESCE(target_event_id, '00000000-0000-0000-0000-000000000000'::uuid),
+  COALESCE(target_user_id, '00000000-0000-0000-0000-000000000000'::uuid)
+);
 ```
 
 On insert: an Edge Function sends an email notification to a configured admin email address for manual review. No automated actions in MVP.
@@ -358,9 +369,9 @@ INSERT INTO app_config (key, value) VALUES
   ('minimum_app_version_android', '1.0.0');
 ```
 
-The client reads `minimum_app_version_{platform}` on every app launch. If the running app version is below this value, a blocking "Please update" screen is shown. To force an update after a breaking API change, increment this value in Supabase — no code deploy needed.
+The client reads `minimum_app_version_{platform}` on every app launch, before it decides whether to show login or the authenticated app shell. If the running app version is below this value, a blocking "Please update" screen is shown. To force an update after a breaking API change, increment this value in Supabase — no code deploy needed.
 
-RLS: readable by any authenticated user. Writable by service role only.
+RLS: readable by `anon` and `authenticated` so the launch-time force-update gate can run before login. Writable by service role only.
 
 ---
 
@@ -389,8 +400,25 @@ RLS: own rows only (read). Insert: any authenticated user (own `user_id` only).
 ### 3.1 `event_feed_view`
 Used by the home feed. Joins event + sport + venue + organizer + live spot counts + organizer stats. Avoids N+1 on the client.
 
+The view must be created with `security_invoker = true` and granted only to `authenticated` (plus `service_role`). This keeps the feed on the same access model as the underlying tables. Waitlist and confirmed counts are exposed through a narrow private aggregate function so the feed can show safe totals without exposing raw `event_players` waitlist rows.
+
 ```sql
-CREATE VIEW event_feed_view AS
+CREATE OR REPLACE FUNCTION private.event_player_counts(target_event_id uuid)
+RETURNS TABLE (spots_taken bigint, waitlist_count bigint)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT
+    COUNT(*) FILTER (WHERE ep.status = 'confirmed')::bigint AS spots_taken,
+    COUNT(*) FILTER (WHERE ep.status = 'waitlisted')::bigint AS waitlist_count
+  FROM public.event_players ep
+  WHERE ep.event_id = target_event_id;
+$$;
+
+CREATE VIEW event_feed_view
+WITH (security_invoker = true) AS
 SELECT
   e.id,
   e.sport_id,
@@ -416,17 +444,17 @@ SELECT
   e.skill_max,
   e.description,
   e.status,
-  COUNT(ep.id) FILTER (WHERE ep.status = 'confirmed')  AS spots_taken,
-  COUNT(ep.id) FILTER (WHERE ep.status = 'waitlisted') AS waitlist_count,
+  COALESCE(ep_counts.spots_taken, 0) AS spots_taken,
+  COALESCE(ep_counts.waitlist_count, 0) AS waitlist_count,
   e.created_at
 FROM events e
 JOIN sports s ON s.id = e.sport_id AND s.is_active = true
 JOIN venues v ON v.id = e.venue_id
 JOIN profiles p ON p.id = e.organizer_id AND p.is_deleted = false
 LEFT JOIN user_sports us ON us.user_id = e.organizer_id AND us.sport_id = e.sport_id
-LEFT JOIN event_players ep ON ep.event_id = e.id
+LEFT JOIN LATERAL private.event_player_counts(e.id) ep_counts ON true
 WHERE e.status IN ('active', 'full')
-GROUP BY e.id, s.id, v.id, p.id, us.no_shows, us.games_played;
+;
 ```
 
 ### 3.2 Thumbs-up percentage (computed at query time)
@@ -490,7 +518,7 @@ All tables have RLS enabled. The `service_role` key (used only by Edge Functions
 | `notification_log` | Own rows only | Service role only |
 | `notification_preferences` | Own rows only | Own rows only |
 | `reports` | Own rows only (reporter can see their own reports) | Service role only (via Edge Function) |
-| `app_config` | Any authenticated user | Service role only |
+| `app_config` | Any user (`anon` + `authenticated`) | Service role only |
 | `consent_log` | Own rows only | Insert own rows only; no update or delete |
 
 ### 4.1 `user_sports` write policy — column-level restriction
@@ -518,9 +546,10 @@ CREATE POLICY profiles_update_own ON profiles
   WITH CHECK (
     id = auth.uid()
     AND is_deleted = (SELECT is_deleted FROM profiles WHERE id = profiles.id)
-    AND profile_complete = (SELECT profile_complete FROM profiles WHERE id = profiles.id)
   );
 ```
+
+`profile_complete` remains protected because the `check_profile_complete` trigger recomputes it on every profile update before the write is committed. The client cannot persist an arbitrary value for that column.
 
 ### 4.3 `venues` write policy — insert only
 

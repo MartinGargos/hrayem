@@ -2,6 +2,129 @@
   "offline": {
     "banner": "You're offline. Some features may be unavailable."
   },
+  "auth": {
+    "loading": {
+      "title": "Getting your session ready",
+      "subtitle": "Hrayem is checking your app version, consent state, and profile before opening the app."
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "city": "City",
+      "language": "Language"
+    },
+    "placeholders": {
+      "email": "name@example.com",
+      "password": "At least 6 characters",
+      "firstName": "Your first name",
+      "lastName": "Your last name",
+      "city": "Choose your city"
+    },
+    "language": {
+      "cs": "Czech",
+      "en": "English"
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to keep your games, profile, and session in sync across launches.",
+      "submit": "Log in",
+      "apple": "Continue with Apple",
+      "google": "Continue with Google",
+      "noAccount": "Don't have an account yet?",
+      "createAccount": "Register",
+      "forgotPassword": "Forgot password?"
+    },
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Start with email and password, then finish your profile before entering the app.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Log in",
+      "termsPrefix": "I agree to the",
+      "termsLink": "Terms of Service",
+      "privacyLink": "Privacy Policy",
+      "and": "and",
+      "confirmEmail": "Check your email to confirm the account, then sign in."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "submit": "Send reset link",
+      "sent": "A password reset link was sent to your email.",
+      "backToLogin": "Back to login"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password to finish the recovery flow.",
+      "password": "New password",
+      "submit": "Save new password"
+    },
+    "reconsent": {
+      "title": "Please review the latest terms",
+      "subtitle": "Hrayem needs your consent for the current Terms of Service and Privacy Policy before you continue.",
+      "submit": "Accept and continue"
+    },
+    "profileSetup": {
+      "title": "Finish your profile",
+      "subtitle": "Add the basics now so other players can recognize you in events, chat, and player lists.",
+      "photoPlaceholder": "Optional photo",
+      "photoAction": "Choose profile photo",
+      "submit": "Save profile",
+      "cityPickerTitle": "Choose your city",
+      "photoPermissionDenied": "Photo library access is needed to choose a profile picture.",
+      "languageCzech": "Czech",
+      "languageEnglish": "English"
+    },
+    "forceUpdate": {
+      "title": "Update required",
+      "subtitle": "A new version of Hrayem is available. Please update to continue.",
+      "update": "Update"
+    },
+    "launchError": {
+      "title": "We couldn't finish app startup",
+      "subtitle": "Please try again. If the problem keeps happening, restart the app once your connection is stable.",
+      "retry": "Try again"
+    },
+    "profileError": {
+      "title": "We couldn't load your profile",
+      "subtitle": "Please try again. Your account is signed in, but the profile data is still needed before the app can continue."
+    },
+    "consentError": {
+      "title": "We couldn't load your consent status",
+      "subtitle": "Please try again so Hrayem can verify your current terms acceptance."
+    },
+    "home": {
+      "eyebrow": "Signed in",
+      "defaultName": "Player",
+      "logout": "Log out"
+    },
+    "validation": {
+      "email": "Enter a valid email address.",
+      "password": "Enter a password with at least 6 characters.",
+      "acceptTerms": "You need to accept the Terms of Service and Privacy Policy.",
+      "firstName": "Enter your first name.",
+      "lastName": "Enter your last name.",
+      "city": "Choose one of the supported cities."
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "invalidCredentials": "That email or password is incorrect.",
+      "emailNotConfirmed": "Please confirm your email before signing in.",
+      "userAlreadyExists": "An account with this email already exists.",
+      "passwordTooWeak": "Please use a stronger password.",
+      "oauthCancelled": "The sign-in flow was cancelled before completion.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "network": "You're offline. Check your connection and try again.",
+      "callback": "The sign-in callback could not be completed. Please try again.",
+      "pushToken": "Push notifications could not be registered on this device.",
+      "logoutFailed": "We couldn't finish logout cleanly. Please try again."
+    },
+    "sessionExpired": "Your session expired. Please log in again.",
+    "passwordRecoveryReady": "Set a new password to finish your recovery flow.",
+    "passwordUpdated": "Your password was updated."
+  },
   "foundation": {
     "eyebrow": "Milestone 0",
     "title": "Project foundation is ready",

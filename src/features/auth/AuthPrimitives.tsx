@@ -1,0 +1,578 @@
+import { useState, type ReactNode } from 'react';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type KeyboardTypeOptions,
+  type TextInputProps,
+} from 'react-native';
+
+import type { AppNotice, NoticeTone } from '../../types/app';
+
+type AuthScaffoldProps = {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  footer?: ReactNode;
+};
+
+export function AuthScaffold({ title, subtitle, children, footer }: AuthScaffoldProps) {
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.flex}
+    >
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>Hrayem</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+
+        <View style={styles.card}>{children}</View>
+        {footer ? <View style={styles.footer}>{footer}</View> : null}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+type NoticeBannerProps = {
+  notice: AppNotice | null;
+  resolveMessage: (messageKey: string) => string;
+};
+
+export function NoticeBanner({ notice, resolveMessage }: NoticeBannerProps) {
+  if (!notice) {
+    return null;
+  }
+
+  return (
+    <View style={[styles.notice, noticeStyles[notice.tone]]}>
+      <Text style={styles.noticeText}>{resolveMessage(notice.messageKey)}</Text>
+    </View>
+  );
+}
+
+type FormTextFieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  error?: string | null;
+  placeholder?: string;
+  secureTextEntry?: boolean;
+  keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoComplete?: TextInputProps['autoComplete'];
+  textContentType?: TextInputProps['textContentType'];
+};
+
+export function FormTextField({
+  label,
+  value,
+  onChangeText,
+  error,
+  placeholder,
+  secureTextEntry,
+  keyboardType,
+  autoCapitalize = 'none',
+  autoComplete,
+  textContentType,
+}: FormTextFieldProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
+        keyboardType={keyboardType}
+        onBlur={() => setIsFocused(false)}
+        onChangeText={onChangeText}
+        onFocus={() => setIsFocused(true)}
+        placeholder={placeholder}
+        placeholderTextColor="#7a8ca3"
+        secureTextEntry={secureTextEntry}
+        selectionColor="#183153"
+        style={[
+          styles.input,
+          isFocused ? styles.inputFocused : undefined,
+          error ? styles.inputError : undefined,
+        ]}
+        textContentType={textContentType}
+        value={value}
+      />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+type ActionButtonProps = {
+  label: string;
+  onPress: () => void | Promise<void>;
+  disabled?: boolean;
+  variant?: 'primary' | 'secondary';
+};
+
+export function ActionButton({
+  label,
+  onPress,
+  disabled = false,
+  variant = 'primary',
+}: ActionButtonProps) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={() => {
+        void onPress();
+      }}
+      style={({ pressed }) => [
+        styles.button,
+        variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
+        disabled ? styles.buttonDisabled : undefined,
+        pressed && !disabled ? styles.buttonPressed : undefined,
+      ]}
+    >
+      <Text
+        style={[
+          styles.buttonLabel,
+          variant === 'primary' ? styles.primaryButtonLabel : styles.secondaryButtonLabel,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+type TextLinkProps = {
+  label: string;
+  onPress: () => void | Promise<void>;
+};
+
+export function TextLink({ label, onPress }: TextLinkProps) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      onPress={() => {
+        void onPress();
+      }}
+    >
+      <Text style={styles.textLink}>{label}</Text>
+    </Pressable>
+  );
+}
+
+type CheckboxFieldProps = {
+  label: ReactNode;
+  checked: boolean;
+  onPress: () => void;
+  error?: string | null;
+};
+
+export function CheckboxField({ label, checked, onPress, error }: CheckboxFieldProps) {
+  return (
+    <View style={styles.field}>
+      <Pressable accessibilityRole="checkbox" onPress={onPress} style={styles.checkboxRow}>
+        <View style={[styles.checkbox, checked ? styles.checkboxChecked : undefined]}>
+          {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
+        </View>
+        <View style={styles.checkboxLabel}>{label}</View>
+      </Pressable>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+type ChoiceOption<TValue extends string> = {
+  label: string;
+  value: TValue;
+};
+
+type SelectionFieldProps = {
+  label: string;
+  value: string | null;
+  placeholder: string;
+  onPress: () => void;
+  error?: string | null;
+};
+
+export function SelectionField({ label, value, placeholder, onPress, error }: SelectionFieldProps) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <Pressable
+        accessibilityLabel={label}
+        accessibilityRole="button"
+        onPress={onPress}
+        style={[styles.selectionField, error ? styles.inputError : undefined]}
+      >
+        <Text style={value ? styles.selectionValue : styles.selectionPlaceholder}>
+          {value || placeholder}
+        </Text>
+      </Pressable>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+type ChoiceChipsProps<TValue extends string> = {
+  label: string;
+  options: ChoiceOption<TValue>[];
+  value: TValue | null;
+  onChange: (value: TValue) => void;
+  error?: string | null;
+};
+
+export function ChoiceChips<TValue extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  error,
+}: ChoiceChipsProps<TValue>) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.chipWrap}>
+        {options.map((option) => {
+          const selected = option.value === value;
+
+          return (
+            <Pressable
+              accessibilityRole="button"
+              key={option.value}
+              onPress={() => onChange(option.value)}
+              style={[styles.chip, selected ? styles.chipSelected : undefined]}
+            >
+              <Text style={[styles.chipLabel, selected ? styles.chipLabelSelected : undefined]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
+type PickerSheetProps<TValue extends string> = {
+  title: string;
+  options: ChoiceOption<TValue>[];
+  selectedValue: TValue | null;
+  onSelect: (value: TValue) => void;
+  onClose: () => void;
+  visible: boolean;
+};
+
+export function PickerSheet<TValue extends string>({
+  title,
+  options,
+  selectedValue,
+  onSelect,
+  onClose,
+  visible,
+}: PickerSheetProps<TValue>) {
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+      <Pressable onPress={onClose} style={styles.sheetBackdrop}>
+        <Pressable style={styles.sheetCard}>
+          <Text style={styles.sheetTitle}>{title}</Text>
+          {options.map((option) => {
+            const selected = option.value === selectedValue;
+
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => {
+                  onSelect(option.value);
+                  onClose();
+                }}
+                style={[styles.sheetOption, selected ? styles.sheetOptionSelected : undefined]}
+              >
+                <Text
+                  style={[
+                    styles.sheetOptionLabel,
+                    selected ? styles.sheetOptionLabelSelected : undefined,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const noticeStyles: Record<NoticeTone, object> = {
+  info: {
+    backgroundColor: '#eaf2fb',
+    borderColor: '#bfd4ea',
+  },
+  success: {
+    backgroundColor: '#ebf6ef',
+    borderColor: '#b7d8c2',
+  },
+  error: {
+    backgroundColor: '#fdeceb',
+    borderColor: '#f1b9b6',
+  },
+};
+
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 32,
+    gap: 18,
+    backgroundColor: '#f7f0e6',
+  },
+  hero: {
+    borderRadius: 28,
+    padding: 22,
+    backgroundColor: '#183153',
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: '#f4cf8c',
+  },
+  title: {
+    marginTop: 8,
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '800',
+    color: '#fff8f0',
+  },
+  subtitle: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 24,
+    color: '#d2dde8',
+  },
+  card: {
+    borderRadius: 24,
+    padding: 20,
+    backgroundColor: '#fff9f1',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: '#eedfca',
+  },
+  footer: {
+    gap: 12,
+  },
+  notice: {
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  noticeText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#183153',
+  },
+  field: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#c8d5e4',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#fbfdff',
+    fontSize: 16,
+    color: '#183153',
+  },
+  inputFocused: {
+    borderColor: '#183153',
+  },
+  inputError: {
+    borderColor: '#cc5f58',
+  },
+  selectionField: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#c8d5e4',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    backgroundColor: '#fbfdff',
+  },
+  selectionValue: {
+    fontSize: 16,
+    color: '#183153',
+  },
+  selectionPlaceholder: {
+    fontSize: 16,
+    color: '#7a8ca3',
+  },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#b44740',
+  },
+  button: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.45,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.99 }],
+  },
+  primaryButton: {
+    backgroundColor: '#183153',
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#d4c2ad',
+    backgroundColor: '#fff3e1',
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  primaryButtonLabel: {
+    color: '#fff9f1',
+  },
+  secondaryButtonLabel: {
+    color: '#183153',
+  },
+  textLink: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#225b88',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#93a5b8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fffdf9',
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: '#183153',
+    borderColor: '#183153',
+  },
+  checkboxMark: {
+    color: '#fffdf9',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  checkboxLabel: {
+    flex: 1,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#d7c8b5',
+    backgroundColor: '#fffdf9',
+  },
+  chipSelected: {
+    backgroundColor: '#183153',
+    borderColor: '#183153',
+  },
+  chipLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#395065',
+  },
+  chipLabelSelected: {
+    color: '#fff9f1',
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(24, 49, 83, 0.48)',
+    justifyContent: 'flex-end',
+  },
+  sheetCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 30,
+    backgroundColor: '#fff9f1',
+    gap: 8,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#183153',
+    marginBottom: 8,
+  },
+  sheetOption: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#fffdf9',
+    borderWidth: 1,
+    borderColor: '#e5d7c4',
+  },
+  sheetOptionSelected: {
+    borderColor: '#183153',
+    backgroundColor: '#eef4fa',
+  },
+  sheetOptionLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  sheetOptionLabelSelected: {
+    color: '#183153',
+  },
+});

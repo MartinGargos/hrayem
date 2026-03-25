@@ -105,7 +105,11 @@ function ActionButton({ label, onPress, variant = 'primary' }: ActionButtonProps
   );
 }
 
-export function FoundationScreen() {
+type FoundationScreenProps = {
+  topSlot?: ReactNode;
+};
+
+export function FoundationScreen({ topSlot }: FoundationScreenProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const authErrorKey = useAuthStore((state) => state.errorMessageKey);
@@ -152,6 +156,7 @@ export function FoundationScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {topSlot}
       <View style={styles.heroCard}>
         <Image
           accessibilityLabel={t('foundation.iconAlt')}

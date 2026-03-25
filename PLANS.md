@@ -1,16 +1,20 @@
-## Milestone 0
+Milestone 0 still needs later real-device proof for iOS dev-build install, offline banner verification on device, CZ/EN switch on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
+
+## Milestone 2 Authentication And Session Resilience
 
 ### Problem
-Milestone 0 still has two closeout gaps: repo commands should use Node 20 without manual shell switching, and the documented Supabase refresh-token bootstrap must match the actual supported API.
+Milestone 2 needs a real auth flow, launch gating, and session resilience on top of the existing Milestone 0 and 1 foundations without prematurely pulling in the Milestone 3 navigation shell.
 
 ### Approach
-Keep the existing Expo foundation intact, add a small repo-local Node 20 runner for package scripts, and correct the auth bootstrap wording to the supported `refreshSession({ refresh_token })` flow instead of documenting an impossible `setSession()` call.
+Build a lightweight state-driven auth shell that routes between email/OAuth auth screens, terms re-consent, profile setup, force update, and the current foundation entry point; keep Supabase session refresh aligned with the repo's refresh-token-only storage pattern; add only the native dependencies needed now for OAuth browser auth, GPS city suggestion, optional profile photo selection, and push-token registration.
 
 ### Steps
-1. Add the minimal repo-local Node 20 defaults needed for package scripts and validation commands.
-2. Align the documented Supabase auth bootstrap with the refresh-token-only storage strategy used by the app.
-3. Re-run validation and separate code-fixed items from runtime proof still needed on a device or emulator.
+1. Add the Milestone 2 dependencies and app config needed for OAuth browser auth, push token registration, GPS location, and optional profile photo selection.
+2. Expand the auth and user stores plus Supabase service helpers so launch bootstrap, auth state changes, 401 retry, logout cleanup, app config checks, and consent/profile gating are all handled centrally.
+3. Implement the auth, terms re-consent, profile setup, force update, and authenticated home-entry screens with `react-hook-form`, Zod, inline validation, i18n, and keyboard-aware layout.
+4. Wire profile photo upload, city auto-suggestion, push-token upsert/delete behavior, and the current repo-consistent logout/session-expiry UX.
+5. Re-run validation, prove the milestone as far as this environment allows, and update the README if setup or testing expectations changed.
 
 ### Open questions / risks
-- Real device or emulator proof is still required for Sentry capture, offline behavior, deep links, and the app-launch checkpoint.
-- The repo can enforce Node 20 for its own package scripts, but a shell opened outside the repo's scripts may still report a different default `node -v`.
+- `AGENTS.md` says `expo-notifications` is added in Milestone 9, but Milestone 2 and `BACKEND.md` already require push-token re-registration on app launch. The smallest consistent decision is to add only the token-registration client path now, not the broader notification feature set.
+- Optional profile photo upload depends on the `avatars` storage bucket and its policies from `BACKEND.md`; if that infrastructure is missing from the current live project, the client upload path can be implemented but not fully proven from this environment.

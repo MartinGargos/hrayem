@@ -55,8 +55,21 @@ const config: ExpoConfig = {
     ],
     predictiveBackGestureEnabled: false,
   },
-  plugins: ['@sentry/react-native/expo'],
+  plugins: [
+    '@sentry/react-native/expo',
+    'expo-web-browser',
+    [
+      'expo-notifications',
+      {
+        icon: './assets/android-icon-monochrome.png',
+        color: '#183153',
+      },
+    ],
+  ],
   extra: {
+    eas: {
+      projectId: 'e62a744a-38df-48ea-b092-32b2579c3108',
+    },
     publicEnv: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',

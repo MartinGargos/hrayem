@@ -1,3 +1,5 @@
+// The authoritative allowed-write city set lives in the migration-seeded private.cities table.
+// Keep this client mirror in sync with the Milestone 1 migrations; verify-milestone1 checks parity.
 export const CURATED_CITIES = [
   'Ostrava',
   'Praha (Prague)',

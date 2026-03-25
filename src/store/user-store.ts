@@ -16,14 +16,21 @@ type UserState = {
   setSelectedCity: (selectedCity: CityName | null) => void;
   setLanguage: (language: AppLanguage) => void;
   clearProfile: () => void;
+  reset: () => void;
 };
+
+function getDefaultUserState() {
+  return {
+    profile: null,
+    selectedCity: null,
+    language: getDeviceLanguage(),
+  };
+}
 
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
-      profile: null,
-      selectedCity: null,
-      language: getDeviceLanguage(),
+      ...getDefaultUserState(),
       hasHydrated: false,
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setProfile: (profile) => set({ profile }),
@@ -48,6 +55,7 @@ export const useUserStore = create<UserState>()(
             : state.profile,
         })),
       clearProfile: () => set({ profile: null }),
+      reset: () => set(getDefaultUserState()),
     }),
     {
       name: 'hrayem-user-store',

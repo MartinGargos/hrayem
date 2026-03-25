@@ -2,6 +2,7 @@ type ErrorWithStatus = {
   code?: string;
   status?: number;
   statusCode?: number;
+  message?: string;
 };
 
 export function isSupabaseUnauthorizedError(error: unknown): boolean {
@@ -28,4 +29,15 @@ export async function retryOnceAfterUnauthorized<T>(
     await refresh();
     return run();
   }
+}
+
+export function throwIfSupabaseError(
+  error: ErrorWithStatus | null | undefined,
+  fallbackMessage: string,
+): void {
+  if (!error) {
+    return;
+  }
+
+  throw new Error(error.message || fallbackMessage);
 }

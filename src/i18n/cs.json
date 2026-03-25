@@ -2,6 +2,129 @@
   "offline": {
     "banner": "Jste offline. Některé funkce nemusí být dostupné."
   },
+  "auth": {
+    "loading": {
+      "title": "Připravuji vaši session",
+      "subtitle": "Hrayem ověřuje verzi aplikace, stav souhlasu a profil, než vás pustí dál."
+    },
+    "fields": {
+      "email": "E-mail",
+      "password": "Heslo",
+      "firstName": "Jméno",
+      "lastName": "Příjmení",
+      "city": "Město",
+      "language": "Jazyk"
+    },
+    "placeholders": {
+      "email": "jmeno@example.com",
+      "password": "Alespoň 6 znaků",
+      "firstName": "Vaše jméno",
+      "lastName": "Vaše příjmení",
+      "city": "Vyberte město"
+    },
+    "language": {
+      "cs": "Čeština",
+      "en": "English"
+    },
+    "login": {
+      "title": "Vítejte zpět",
+      "subtitle": "Přihlaste se a mějte své hry, profil i session spolehlivě dostupné po dalším spuštění.",
+      "submit": "Přihlásit se",
+      "apple": "Pokračovat přes Apple",
+      "google": "Pokračovat přes Google",
+      "noAccount": "Ještě nemáte účet?",
+      "createAccount": "Registrovat se",
+      "forgotPassword": "Zapomněli jste heslo?"
+    },
+    "register": {
+      "title": "Vytvořte si účet",
+      "subtitle": "Začněte e-mailem a heslem a potom dokončete profil, než vstoupíte do aplikace.",
+      "submit": "Vytvořit účet",
+      "haveAccount": "Už máte účet?",
+      "signIn": "Přihlásit se",
+      "termsPrefix": "Souhlasím s",
+      "termsLink": "Podmínkami služby",
+      "privacyLink": "Zásadami ochrany soukromí",
+      "and": "a",
+      "confirmEmail": "Potvrďte účet přes e-mail a potom se přihlaste."
+    },
+    "forgotPassword": {
+      "title": "Obnovení hesla",
+      "subtitle": "Zadejte svůj e-mail a pošleme vám odkaz pro reset hesla.",
+      "submit": "Odeslat odkaz",
+      "sent": "Na váš e-mail byl odeslán odkaz pro obnovení hesla.",
+      "backToLogin": "Zpět na přihlášení"
+    },
+    "resetPassword": {
+      "title": "Nastavte nové heslo",
+      "subtitle": "Vyberte nové heslo a dokončete obnovu účtu.",
+      "password": "Nové heslo",
+      "submit": "Uložit nové heslo"
+    },
+    "reconsent": {
+      "title": "Potvrďte prosím aktuální podmínky",
+      "subtitle": "Hrayem potřebuje souhlas s aktuálními Podmínkami služby a Zásadami ochrany soukromí, než budete pokračovat.",
+      "submit": "Souhlasím a pokračovat"
+    },
+    "profileSetup": {
+      "title": "Dokončete profil",
+      "subtitle": "Doplňte základní údaje, aby vás ostatní hráči poznali v událostech, chatu a seznamech hráčů.",
+      "photoPlaceholder": "Volitelná fotka",
+      "photoAction": "Vybrat profilovou fotku",
+      "submit": "Uložit profil",
+      "cityPickerTitle": "Vyberte město",
+      "photoPermissionDenied": "Pro výběr profilové fotky je potřeba přístup k fotkám.",
+      "languageCzech": "Čeština",
+      "languageEnglish": "English"
+    },
+    "forceUpdate": {
+      "title": "Je potřeba aktualizace",
+      "subtitle": "K dispozici je nová verze Hrayem. Pro pokračování prosím aktualizujte aplikaci.",
+      "update": "Aktualizovat"
+    },
+    "launchError": {
+      "title": "Nepodařilo se dokončit spuštění aplikace",
+      "subtitle": "Zkuste to prosím znovu. Pokud problém přetrvá, restartujte aplikaci po stabilizaci připojení.",
+      "retry": "Zkusit znovu"
+    },
+    "profileError": {
+      "title": "Nepodařilo se načíst profil",
+      "subtitle": "Zkuste to prosím znovu. Účet je přihlášený, ale aplikace bez profilových dat nemůže pokračovat."
+    },
+    "consentError": {
+      "title": "Nepodařilo se načíst stav souhlasu",
+      "subtitle": "Zkuste to prosím znovu, aby Hrayem mohl ověřit aktuální přijetí podmínek."
+    },
+    "home": {
+      "eyebrow": "Přihlášený účet",
+      "defaultName": "Hráč",
+      "logout": "Odhlásit se"
+    },
+    "validation": {
+      "email": "Zadejte platnou e-mailovou adresu.",
+      "password": "Zadejte heslo s alespoň 6 znaky.",
+      "acceptTerms": "Musíte souhlasit s Podmínkami služby a Zásadami ochrany soukromí.",
+      "firstName": "Zadejte své jméno.",
+      "lastName": "Zadejte své příjmení.",
+      "city": "Vyberte jedno z podporovaných měst."
+    },
+    "errors": {
+      "generic": "Něco se pokazilo. Zkuste to prosím znovu.",
+      "invalidCredentials": "Tento e-mail nebo heslo nejsou správné.",
+      "emailNotConfirmed": "Nejdřív prosím potvrďte svůj e-mail.",
+      "userAlreadyExists": "Účet s tímto e-mailem už existuje.",
+      "passwordTooWeak": "Zvolte prosím silnější heslo.",
+      "oauthCancelled": "Přihlašovací proces byl zrušen dříve, než se dokončil.",
+      "rateLimited": "Příliš mnoho pokusů. Chvíli počkejte a zkuste to znovu.",
+      "network": "Jste offline. Zkontrolujte připojení a zkuste to znovu.",
+      "callback": "Nepodařilo se dokončit návrat z přihlášení. Zkuste to prosím znovu.",
+      "pushToken": "Na tomto zařízení se nepodařilo zaregistrovat push notifikace.",
+      "logoutFailed": "Odhlášení se nepodařilo dokončit čistě. Zkuste to prosím znovu."
+    },
+    "sessionExpired": "Vaše session vypršela. Přihlaste se prosím znovu.",
+    "passwordRecoveryReady": "Pro dokončení obnovy nastavte nové heslo.",
+    "passwordUpdated": "Vaše heslo bylo aktualizováno."
+  },
   "foundation": {
     "eyebrow": "Milestone 0",
     "title": "Projektový základ je připravený",

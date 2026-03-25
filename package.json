@@ -12,7 +12,9 @@
     "format": "bash ./scripts/with-node20.sh prettier . --write",
     "format:check": "bash ./scripts/with-node20.sh prettier . --check",
     "doctor": "bash ./scripts/with-node20.sh npx expo-doctor",
-    "export:check": "bash ./scripts/with-node20.sh expo export --platform android --platform ios"
+    "export:check": "bash ./scripts/with-node20.sh expo export --platform android --platform ios",
+    "verify:milestone1": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone1.mjs",
+    "verify:milestone2": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone2.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,10 +28,15 @@
     "expo-constants": "~55.0.9",
     "expo-haptics": "~55.0.9",
     "expo-image": "~55.0.6",
+    "expo-image-manipulator": "~55.0.11",
+    "expo-image-picker": "~55.0.13",
     "expo-linking": "~55.0.8",
     "expo-localization": "~55.0.9",
+    "expo-location": "~55.1.4",
+    "expo-notifications": "~55.0.13",
     "expo-secure-store": "~55.0.9",
     "expo-status-bar": "~55.0.4",
+    "expo-web-browser": "~55.0.10",
     "i18next": "^25.10.8",
     "react": "19.2.0",
     "react-hook-form": "^7.72.0",

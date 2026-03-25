@@ -261,9 +261,9 @@ See BACKEND.md section 16.6 for deep link and universal link configuration.
 ## 8. Location and Venues
 
 ### 8.1 Curated city list
-The app uses a **curated list of Czech cities** stored in a constant. This prevents mismatches like "Ostrava" vs "ostrava" vs "Ostrava-Poruba" that would break feed filtering.
+The app uses a **curated list of Czech cities** enforced in the database for writes and mirrored in `src/constants/cities.ts` for the client picker. The database list is authoritative; the client mirror must stay in sync. This prevents mismatches like "Ostrava" vs "ostrava" vs "Ostrava-Poruba" that would break feed filtering.
 
-MVP city list (expandable via config, no code change required):
+MVP city list (mirrored in code and the database today; server-driven expansion can be added later without changing the product scope):
 - Ostrava
 - Praha (Prague)
 - Brno
