@@ -3,7 +3,8 @@ import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { AuthFlowScreen } from './src/features/auth/AuthFlowScreen';
@@ -15,16 +16,19 @@ import { TermsReconsentScreen } from './src/features/auth/TermsReconsentScreen';
 import { HomeEntryScreen } from './src/features/home/HomeEntryScreen';
 import i18n from './src/i18n';
 import { bindAppStateToQueryFocus, queryClient } from './src/lib/query-client';
+import { isEventDeepLinkUrl } from './src/navigation/deep-links';
 import {
   fetchCurrentUserProfile,
   fetchMinimumSupportedVersion,
   hasAcceptedConsentVersions,
+  materializePendingConsent,
 } from './src/services/app-bootstrap';
 import { registerPushTokenIfNeeded } from './src/services/push-notifications';
 import {
   bindSupabaseAuthAutoRefresh,
   bootstrapSupabaseSession,
   handleSupabaseAuthCallback,
+  isSupabaseAuthCallbackUrl,
   registerSupabaseAuthListener,
 } from './src/services/supabase';
 import { useAuthStore } from './src/store/auth-store';
@@ -50,6 +54,7 @@ function AppShell() {
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const authStatus = useAuthStore((state) => state.status);
   const userId = useAuthStore((state) => state.userId);
+  const pendingConsent = useAuthStore((state) => state.pendingConsent);
   const userHasHydrated = useUserStore((state) => state.hasHydrated);
   const language = useUserStore((state) => state.language);
   const setProfile = useUserStore((state) => state.setProfile);
@@ -57,7 +62,9 @@ function AppShell() {
   const setLanguagePreference = useUserStore((state) => state.setLanguage);
   const authScreen = useUIStore((state) => state.authScreen);
   const setAuthNotice = useUIStore((state) => state.setAuthNotice);
+  const setPendingDeepLink = useUIStore((state) => state.setPendingDeepLink);
   const bootstrapStartedRef = useRef(false);
+  const pendingConsentSyncRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = registerSupabaseAuthListener();
@@ -94,40 +101,50 @@ function AppShell() {
   useEffect(() => {
     let isActive = true;
 
-    async function maybeHandleAuthUrl(url: string | null) {
+    async function maybeHandleIncomingUrl(url: string | null) {
       if (!url) {
         return;
       }
 
-      try {
-        const handled = await handleSupabaseAuthCallback(url);
+      if (isSupabaseAuthCallbackUrl(url)) {
+        try {
+          const handled = await handleSupabaseAuthCallback(url);
 
-        if (!handled || !isActive) {
+          if (!handled || !isActive) {
+            return;
+          }
+        } catch {
+          if (!isActive) {
+            return;
+          }
+
+          setAuthNotice({
+            messageKey: 'auth.errors.callback',
+            tone: 'error',
+          });
+
           return;
         }
-      } catch {
-        if (!isActive) {
-          return;
-        }
 
-        setAuthNotice({
-          messageKey: 'auth.errors.callback',
-          tone: 'error',
-        });
+        return;
+      }
+
+      if (isEventDeepLinkUrl(url)) {
+        setPendingDeepLink(url);
       }
     }
 
     const subscription = ExpoLinking.addEventListener('url', ({ url }) => {
-      void maybeHandleAuthUrl(url);
+      void maybeHandleIncomingUrl(url);
     });
 
-    void ExpoLinking.getInitialURL().then((url) => maybeHandleAuthUrl(url));
+    void ExpoLinking.getInitialURL().then((url) => maybeHandleIncomingUrl(url));
 
     return () => {
       isActive = false;
       subscription.remove();
     };
-  }, [setAuthNotice]);
+  }, [setAuthNotice, setPendingDeepLink]);
 
   const minimumVersionQuery = useQuery({
     queryKey: ['app-config', 'minimum-version'],
@@ -155,6 +172,9 @@ function AppShell() {
       Boolean(publicEnv.privacyVersion),
     staleTime: 300_000,
   });
+  const consentAccepted = consentQuery.data;
+  const isConsentPending = consentQuery.isPending;
+  const refetchConsent = consentQuery.refetch;
 
   useEffect(() => {
     if (!profileQuery.data) {
@@ -165,6 +185,44 @@ function AppShell() {
     setSelectedCity(profileQuery.data.city);
     setLanguagePreference(profileQuery.data.language);
   }, [profileQuery.data, setLanguagePreference, setProfile, setSelectedCity]);
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated' || !userId || !pendingConsent) {
+      pendingConsentSyncRef.current = null;
+      return;
+    }
+
+    if (isConsentPending || consentAccepted !== false) {
+      return;
+    }
+
+    const syncKey = `${userId}:${pendingConsent.termsVersion}:${pendingConsent.privacyVersion}`;
+
+    if (pendingConsentSyncRef.current === syncKey) {
+      return;
+    }
+
+    pendingConsentSyncRef.current = syncKey;
+    let isActive = true;
+
+    void materializePendingConsent(userId, pendingConsent)
+      .then(() => {
+        if (!isActive) {
+          return;
+        }
+
+        void refetchConsent();
+      })
+      .catch(() => {
+        if (!isActive) {
+          return;
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [authStatus, consentAccepted, isConsentPending, pendingConsent, refetchConsent, userId]);
 
   useEffect(() => {
     if (authStatus !== 'authenticated' || !userId) {
@@ -295,26 +353,30 @@ function AppShell() {
     );
   }
 
-  return <HomeEntryScreen profile={profileQuery.data} />;
+  return <HomeEntryScreen />;
 }
 
 export default Sentry.wrap(function RootApp() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="dark" />
-        <OfflineBanner />
-        <Sentry.ErrorBoundary
-          fallback={
-            <View style={styles.errorFallback}>
-              <Text style={styles.errorTitle}>{i18n.t('foundation.errorFallbackTitle')}</Text>
-              <Text style={styles.errorBody}>{i18n.t('foundation.errorFallbackBody')}</Text>
-            </View>
-          }
-        >
-          <AppShell />
-        </Sentry.ErrorBoundary>
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          <StatusBar style="dark" />
+          <OfflineBanner />
+          <View style={styles.appBody}>
+            <Sentry.ErrorBoundary
+              fallback={
+                <View style={styles.errorFallback}>
+                  <Text style={styles.errorTitle}>{i18n.t('foundation.errorFallbackTitle')}</Text>
+                  <Text style={styles.errorBody}>{i18n.t('foundation.errorFallbackBody')}</Text>
+                </View>
+              }
+            >
+              <AppShell />
+            </Sentry.ErrorBoundary>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 });
@@ -323,6 +385,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f7f0e6',
+  },
+  appBody: {
+    flex: 1,
   },
   errorFallback: {
     flex: 1,

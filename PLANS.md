@@ -1,20 +1,19 @@
 Milestone 0 still needs later real-device proof for iOS dev-build install, offline banner verification on device, CZ/EN switch on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
-## Milestone 2 Authentication And Session Resilience
+## Milestone 3 Navigation Shell
 
 ### Problem
-Milestone 2 needs a real auth flow, launch gating, and session resilience on top of the existing Milestone 0 and 1 foundations without prematurely pulling in the Milestone 3 navigation shell.
+Milestone 3 needs the app’s final navigation shell, deep-link routing, and profile-safe main-app entry points without reopening Milestone 2 or drifting into Milestone 4 features.
 
 ### Approach
-Build a lightweight state-driven auth shell that routes between email/OAuth auth screens, terms re-consent, profile setup, force update, and the current foundation entry point; keep Supabase session refresh aligned with the repo's refresh-token-only storage pattern; add only the native dependencies needed now for OAuth browser auth, GPS city suggestion, optional profile photo selection, and push-token registration.
+Add a typed React Navigation shell on top of the existing auth/bootstrap gates, keep product screens as i18n-only stubs where Milestone 4 data does not exist yet, route event deep links through a small shared parser plus pending-link replay in Zustand, and keep foreground refresh aligned with the existing React Query/AppState setup.
 
 ### Steps
-1. Add the Milestone 2 dependencies and app config needed for OAuth browser auth, push token registration, GPS location, and optional profile photo selection.
-2. Expand the auth and user stores plus Supabase service helpers so launch bootstrap, auth state changes, 401 retry, logout cleanup, app config checks, and consent/profile gating are all handled centrally.
-3. Implement the auth, terms re-consent, profile setup, force update, and authenticated home-entry screens with `react-hook-form`, Zod, inline validation, i18n, and keyboard-aware layout.
-4. Wire profile photo upload, city auto-suggestion, push-token upsert/delete behavior, and the current repo-consistent logout/session-expiry UX.
-5. Re-run validation, prove the milestone as far as this environment allows, and update the README if setup or testing expectations changed.
+1. Install the Expo-compatible React Navigation packages and add typed root/tab/stack route definitions under `src/navigation/`.
+2. Replace the single post-auth home screen with a bottom-tab shell, nested stacks, home sub-tabs, and the required screen stubs for section 11 near-term flows.
+3. Wire event deep-link parsing, pending-link storage/replay, and navigation guards so incomplete profiles cannot bypass the existing gate.
+4. Reuse the current React Query focus/AppState wiring, add any Milestone 3-specific proof helpers, and rerun validation plus dependency checks.
 
 ### Open questions / risks
-- `AGENTS.md` says `expo-notifications` is added in Milestone 9, but Milestone 2 and `BACKEND.md` already require push-token re-registration on app launch. The smallest consistent decision is to add only the token-registration client path now, not the broader notification feature set.
-- Optional profile photo upload depends on the `avatars` storage bucket and its policies from `BACKEND.md`; if that infrastructure is missing from the current live project, the client upload path can be implemented but not fully proven from this environment.
+- Milestone 2 known debt remains visible but out of scope here unless it blocks the shell directly: the authenticated device-token RPCs are still bearer-token-sensitive, and stale backend token cleanup can still lag if network cleanup fails after logout.
+- Real device proof for Apple/Google auth, push behavior, and universal-link opening is still deferred, so this pass can only prove the shell and deep-link logic as far as the current environment allows.

@@ -1,6 +1,6 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, and the Milestone 2 authentication/session-resilience client flow.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, the Milestone 2 authentication/session-resilience flow, and the Milestone 3 typed navigation shell with deep-link routing stubs.
 
 Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
@@ -13,6 +13,7 @@ Milestone 0 is complete in code, but real-device proof is still pending until Ap
 - Supabase JS `2.100.0`
 - TanStack Query `5.95.2`
 - Zustand `5.0.12`
+- React Navigation `7.x`
 - i18next `25.10.8` + react-i18next `16.6.5`
 - Sentry React Native `7.11.0`
 - pnpm `10.13.1`
@@ -190,7 +191,7 @@ src/
   components/     shared UI building blocks
   hooks/          shared custom hooks
   utils/          pure helpers for env, dates, language, and Supabase retries
-  navigation/     reserved for the typed navigation shell in Milestone 3
+  navigation/     typed React Navigation shell, route types, and deep-link helpers
   services/       Supabase and external integration clients
   store/          Zustand stores for auth, user preferences, and UI state
   types/          shared TypeScript types
@@ -203,10 +204,12 @@ src/
 - React Query is initialized globally with `staleTime: 30s`, `gcTime: 30m`, and retry defaults for both queries and mutations.
 - Zustand stores are split by domain: auth, user, and UI.
 - Refresh tokens live in `expo-secure-store`; access tokens stay memory-only in the auth store.
-- Supabase auth bootstraps from the persisted refresh token with `supabase.auth.refreshSession({ refresh_token })` on app launch, refreshes once on 401 responses, handles OAuth/password-recovery callbacks via the `hrayem://auth/callback` deep link, and listens to `SIGNED_IN`, `TOKEN_REFRESHED`, `PASSWORD_RECOVERY`, and `SIGNED_OUT`.
+- Supabase auth bootstraps from the persisted refresh token with `supabase.auth.refreshSession({ refresh_token })` on app launch, refreshes once on 401 responses, handles OAuth/password-recovery callbacks through a single app-level `hrayem://auth/callback` listener, and listens to `SIGNED_IN`, `TOKEN_REFRESHED`, `PASSWORD_RECOVERY`, and `SIGNED_OUT`.
 - Network connectivity is tracked with NetInfo and surfaced through a persistent offline banner.
 - Launch routing is now gated by `app_config` (force update), `consent_log` (terms re-consent), and `profiles.profile_complete` before the authenticated user reaches the current foundation/home entry screen.
-- Expo push tokens are re-registered on app launch and synced to `device_tokens` when notification permission is granted.
+- Milestone 3 adds the final bottom-tab shell, typed stack routing, and pending event deep-link replay after auth/profile gating completes.
+- Expo push tokens are re-registered on app launch and claimed in `device_tokens` by token value so the same physical device token moves cleanly between accounts; the app also keeps a tiny local cleanup cache until the backend row is confirmed removed.
+- If email confirmation delays the first authenticated session, the accepted terms/privacy versions are captured during registration and materialized into `consent_log` on the first successful sign-in before the user can proceed.
 - Sentry initializes at app startup with PII scrubbing and a smoke-test button on the Milestone 0 foundation screen.
 - i18n is available from day one with Czech and English resource files and device-language detection.
 - Date formatting is centralized in `src/utils/dates.ts` using `date-fns` and `date-fns-tz`.

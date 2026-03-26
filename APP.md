@@ -106,7 +106,7 @@ This gate exists because `profiles.first_name` and `profiles.last_name` are requ
 During registration, the user must accept the Terms of Service and Privacy Policy before their account is created:
 - A checkbox with links to both documents: "I agree to the [Terms of Service] and [Privacy Policy]"
 - Registration button is disabled until the checkbox is checked
-- Consent is recorded server-side: timestamp + version of the terms accepted (see BACKEND.md `consent_log`)
+- Consent is recorded server-side: timestamp + version of the terms accepted (see BACKEND.md `consent_log`). If email confirmation delays the first authenticated session, the accepted versions are captured during registration and the `consent_log` row is materialized immediately after the user's first successful sign-in, before they can proceed into the app.
 - If the terms are updated in the future, users are prompted to accept the new version on their next app launch before proceeding
 
 This is required for GDPR compliance in the Czech Republic / EU.

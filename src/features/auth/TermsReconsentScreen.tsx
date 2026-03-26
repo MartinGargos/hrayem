@@ -7,9 +7,16 @@ import { z } from 'zod';
 
 import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../constants/external-links';
 import { acceptCurrentConsent } from '../../services/app-bootstrap';
+import { signOutAndClearState } from '../../services/auth';
 import { useUIStore } from '../../store/ui-store';
 import { publicEnv } from '../../utils/env';
-import { ActionButton, AuthScaffold, CheckboxField, NoticeBanner } from './AuthPrimitives';
+import {
+  ActionButton,
+  AuthScaffold,
+  CheckboxField,
+  NoticeBanner,
+  TextLink,
+} from './AuthPrimitives';
 import { mapAuthErrorToMessageKey } from './auth-errors';
 
 const consentSchema = z.object({
@@ -65,7 +72,11 @@ export function TermsReconsentScreen({ userId, onAccepted }: TermsReconsentScree
   }
 
   return (
-    <AuthScaffold title={t('auth.reconsent.title')} subtitle={t('auth.reconsent.subtitle')}>
+    <AuthScaffold
+      title={t('auth.reconsent.title')}
+      subtitle={t('auth.reconsent.subtitle')}
+      footer={<TextLink label={t('auth.home.logout')} onPress={signOutAndClearState} />}
+    >
       <NoticeBanner notice={notice} resolveMessage={t} />
       <Controller
         control={form.control}

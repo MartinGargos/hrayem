@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { secureStoreStorage } from '../lib/secure-store-storage';
 import type { SessionStatus } from '../types/app';
+import { readPendingConsentVersions, type PendingConsentVersions } from '../utils/consent';
 
 type AuthState = {
   accessToken: string | null;
@@ -11,6 +12,7 @@ type AuthState = {
   userId: string | null;
   expiresAt: number | null;
   pushToken: string | null;
+  pendingConsent: PendingConsentVersions | null;
   status: SessionStatus;
   errorMessageKey: string | null;
   hasHydrated: boolean;
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       userId: null,
       expiresAt: null,
       pushToken: null,
+      pendingConsent: null,
       status: 'idle',
       errorMessageKey: null,
       hasHydrated: false,
@@ -45,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: session?.refresh_token ?? null,
           userId: session?.user.id ?? null,
           expiresAt: session?.expires_at ?? null,
+          pendingConsent: session ? readPendingConsentVersions(session.user.user_metadata) : null,
           status: session ? 'authenticated' : 'signed-out',
           errorMessageKey: null,
         }),
@@ -55,6 +59,7 @@ export const useAuthStore = create<AuthState>()(
           userId: null,
           expiresAt: null,
           pushToken: null,
+          pendingConsent: null,
           status: 'signed-out',
           errorMessageKey,
         }),

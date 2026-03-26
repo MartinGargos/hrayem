@@ -28,13 +28,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 let authListenerCleanup: (() => void) | null = null;
 let autoRefreshCleanup: (() => void) | null = null;
+const handledAuthCallbacks = new Set<string>();
+const pendingAuthCallbacks = new Map<string, Promise<boolean>>();
 
 type SupabaseLikeResult<T> = {
   data: T | null;
   error: PostgrestError | AuthApiError | Error | null;
 };
 
-function clearClientState(errorMessageKey: string | null = null) {
+export function resetClientState(errorMessageKey: string | null = null) {
   useAuthStore.getState().clearSession(errorMessageKey);
   useUserStore.getState().reset();
   useUIStore.getState().reset();
@@ -67,7 +69,7 @@ async function refreshSessionWithToken(
 ): Promise<Session | null> {
   if (!refreshToken) {
     if (options?.clearOnFailure) {
-      clearClientState(options.errorMessageKey ?? null);
+      resetClientState(options.errorMessageKey ?? null);
     }
 
     return null;
@@ -80,7 +82,7 @@ async function refreshSessionWithToken(
 
     if (error || !data.session) {
       if (options?.clearOnFailure) {
-        clearClientState(options.errorMessageKey ?? 'auth.sessionExpired');
+        resetClientState(options.errorMessageKey ?? 'auth.sessionExpired');
       }
 
       return null;
@@ -90,7 +92,7 @@ async function refreshSessionWithToken(
     return data.session;
   } catch {
     if (options?.clearOnFailure) {
-      clearClientState(options.errorMessageKey ?? 'auth.sessionExpired');
+      resetClientState(options.errorMessageKey ?? 'auth.sessionExpired');
     }
 
     return null;
@@ -118,7 +120,7 @@ function handleAuthEvent(event: AuthChangeEvent, session: Session | null) {
   }
 
   if (event === 'SIGNED_OUT') {
-    clearClientState(null);
+    resetClientState(null);
   }
 }
 
@@ -232,14 +234,28 @@ export function getAuthRedirectUrl(path = 'auth/callback'): string {
   });
 }
 
-export async function handleSupabaseAuthCallback(url: string): Promise<boolean> {
-  const params = readAuthParams(url);
-  const errorDescription = getParam(params, 'error_description') ?? getParam(params, 'error');
+export function isSupabaseAuthCallbackUrl(url: string): boolean {
+  return url.startsWith(getAuthRedirectUrl());
+}
 
-  if (errorDescription) {
-    throw new Error(errorDescription);
+function buildAuthCallbackKey(params: URLSearchParams): string | null {
+  const authCode = getParam(params, 'code');
+
+  if (authCode) {
+    return `code:${authCode}`;
   }
 
+  const accessToken = getParam(params, 'access_token');
+  const refreshToken = getParam(params, 'refresh_token');
+
+  if (!accessToken || !refreshToken) {
+    return null;
+  }
+
+  return `tokens:${accessToken.slice(-12)}:${refreshToken.slice(-12)}`;
+}
+
+async function processSupabaseAuthCallback(params: URLSearchParams): Promise<boolean> {
   const authCode = getParam(params, 'code');
 
   if (authCode) {
@@ -279,6 +295,58 @@ export async function handleSupabaseAuthCallback(url: string): Promise<boolean> 
   return true;
 }
 
+export async function handleSupabaseAuthCallback(url: string): Promise<boolean> {
+  if (!isSupabaseAuthCallbackUrl(url)) {
+    return false;
+  }
+
+  const params = readAuthParams(url);
+  const errorDescription = getParam(params, 'error_description') ?? getParam(params, 'error');
+
+  if (errorDescription) {
+    throw new Error(errorDescription);
+  }
+
+  const callbackKey = buildAuthCallbackKey(params);
+
+  if (callbackKey) {
+    if (handledAuthCallbacks.has(callbackKey)) {
+      return true;
+    }
+
+    const inFlight = pendingAuthCallbacks.get(callbackKey);
+
+    if (inFlight) {
+      return inFlight;
+    }
+  }
+
+  const callbackPromise = processSupabaseAuthCallback(params);
+
+  if (callbackKey) {
+    pendingAuthCallbacks.set(callbackKey, callbackPromise);
+  }
+
+  try {
+    const handled = await callbackPromise;
+
+    if (handled && callbackKey) {
+      handledAuthCallbacks.add(callbackKey);
+
+      if (handledAuthCallbacks.size > 20) {
+        handledAuthCallbacks.clear();
+        handledAuthCallbacks.add(callbackKey);
+      }
+    }
+
+    return handled;
+  } finally {
+    if (callbackKey) {
+      pendingAuthCallbacks.delete(callbackKey);
+    }
+  }
+}
+
 export async function clearSessionWithMessage(messageKey: string | null): Promise<void> {
-  clearClientState(messageKey);
+  resetClientState(messageKey);
 }

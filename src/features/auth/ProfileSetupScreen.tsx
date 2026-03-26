@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { z } from 'zod';
 
 import { CURATED_CITIES, type CityName } from '../../constants/cities';
+import { signOutAndClearState } from '../../services/auth';
 import { detectSuggestedCity } from '../../services/location';
 import { saveProfileSetup } from '../../services/profile';
 import { useUIStore } from '../../store/ui-store';
@@ -21,6 +22,7 @@ import {
   FormTextField,
   PickerSheet,
   SelectionField,
+  TextLink,
 } from './AuthPrimitives';
 import { mapAuthErrorToMessageKey } from './auth-errors';
 
@@ -188,7 +190,11 @@ export function ProfileSetupScreen({ profile, userId, onCompleted }: ProfileSetu
   }
 
   return (
-    <AuthScaffold title={t('auth.profileSetup.title')} subtitle={t('auth.profileSetup.subtitle')}>
+    <AuthScaffold
+      title={t('auth.profileSetup.title')}
+      subtitle={t('auth.profileSetup.subtitle')}
+      footer={<TextLink label={t('auth.home.logout')} onPress={signOutAndClearState} />}
+    >
       <NoticeBanner notice={notice} resolveMessage={t} />
 
       <View style={styles.photoSection}>

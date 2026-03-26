@@ -2,14 +2,14 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Sentry from '@sentry/react-native';
 
 import { throwIfSupabaseError } from '../utils/supabase';
-import { queryClient } from '../lib/query-client';
-import { useAuthStore } from '../store/auth-store';
 import { useUIStore } from '../store/ui-store';
-import { useUserStore } from '../store/user-store';
+import { buildPendingConsentMetadata } from '../utils/consent';
+import { materializePendingConsent } from './app-bootstrap';
+import { deleteRegisteredPushToken, restoreRegisteredPushToken } from './push-notifications';
 import {
   getAuthRedirectUrl,
-  handleSupabaseAuthCallback,
-  retrySupabaseOperationOnce,
+  isSupabaseAuthCallbackUrl,
+  resetClientState,
   supabase,
 } from './supabase';
 
@@ -26,12 +26,6 @@ type RegistrationInput = EmailAuthCredentials & {
   termsVersion: string;
   privacyVersion: string;
 };
-
-function resetClientAfterLogout() {
-  queryClient.clear();
-  useUserStore.getState().reset();
-  useUIStore.getState().reset();
-}
 
 export async function signInWithPassword(credentials: EmailAuthCredentials): Promise<void> {
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
@@ -52,6 +46,7 @@ export async function signUpWithEmail(input: RegistrationInput): Promise<{
     password: input.password,
     options: {
       emailRedirectTo: getAuthRedirectUrl(),
+      data: buildPendingConsentMetadata(input.termsVersion, input.privacyVersion),
     },
   });
 
@@ -69,15 +64,14 @@ export async function signUpWithEmail(input: RegistrationInput): Promise<{
     };
   }
 
-  const consentResult = await retrySupabaseOperationOnce(() =>
-    supabase.from('consent_log').insert({
-      user_id: createdUser.id,
-      terms_version: input.termsVersion,
-      privacy_version: input.privacyVersion,
-    }),
-  );
-
-  throwIfSupabaseError(consentResult.error, 'Unable to record consent.');
+  try {
+    await materializePendingConsent(createdUser.id, {
+      termsVersion: input.termsVersion,
+      privacyVersion: input.privacyVersion,
+    });
+  } catch (error) {
+    Sentry.captureException(error);
+  }
 
   return {
     requiresEmailConfirmation: false,
@@ -132,30 +126,85 @@ export async function signInWithOAuth(provider: OAuthProvider): Promise<void> {
     throw new Error('The sign-in flow was cancelled before completion.');
   }
 
-  const handled = await handleSupabaseAuthCallback(result.url);
-
-  if (!handled) {
+  if (!isSupabaseAuthCallbackUrl(result.url)) {
     throw new Error('The sign-in callback was not recognized.');
   }
 }
 
-export async function signOutAndClearState(): Promise<void> {
-  const pushToken = useAuthStore.getState().pushToken;
-  const userId = useAuthStore.getState().userId;
+async function ensureSupabaseClientSessionCleared(): Promise<void> {
+  const { data, error } = await supabase.auth.getSession();
 
-  if (pushToken && userId) {
-    const deleteResult = await retrySupabaseOperationOnce(() =>
-      supabase.from('device_tokens').delete().eq('token', pushToken).eq('user_id', userId),
-    );
-
-    if (deleteResult.error) {
-      Sentry.captureException(deleteResult.error);
-    }
+  if (error) {
+    throw error;
   }
 
-  const { error } = await supabase.auth.signOut();
-  throwIfSupabaseError(error, 'Unable to sign out.');
+  if (data.session) {
+    throw new Error('Supabase client session is still active after sign-out.');
+  }
+}
 
-  useAuthStore.getState().setPushToken(null);
-  resetClientAfterLogout();
+async function clearSupabaseClientSession(): Promise<'global' | 'local'> {
+  const globalSignOut = await supabase.auth.signOut({
+    scope: 'global',
+  });
+
+  if (!globalSignOut.error) {
+    return 'global';
+  }
+
+  Sentry.captureException(globalSignOut.error);
+
+  const localSignOut = await supabase.auth.signOut({
+    scope: 'local',
+  });
+
+  if (localSignOut.error) {
+    throw localSignOut.error;
+  }
+
+  return 'local';
+}
+
+export async function signOutAndClearState(): Promise<void> {
+  let removedPushToken: Awaited<ReturnType<typeof deleteRegisteredPushToken>> = null;
+  let logoutWasPartial = false;
+
+  try {
+    removedPushToken = await deleteRegisteredPushToken();
+  } catch (error) {
+    logoutWasPartial = true;
+    Sentry.captureException(error);
+  }
+
+  try {
+    const clearedScope = await clearSupabaseClientSession();
+    logoutWasPartial = logoutWasPartial || clearedScope === 'local';
+    await ensureSupabaseClientSessionCleared();
+  } catch (error) {
+    Sentry.captureException(error);
+
+    if (removedPushToken) {
+      try {
+        await restoreRegisteredPushToken(removedPushToken);
+      } catch (restoreError) {
+        Sentry.captureException(restoreError);
+      }
+    }
+
+    useUIStore.getState().setAuthNotice({
+      messageKey: 'auth.errors.logoutFailed',
+      tone: 'error',
+    });
+
+    return;
+  }
+
+  resetClientState(null);
+
+  if (logoutWasPartial) {
+    useUIStore.getState().setAuthNotice({
+      messageKey: 'auth.logoutPartial',
+      tone: 'info',
+    });
+  }
 }

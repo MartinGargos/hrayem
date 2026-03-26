@@ -46,7 +46,7 @@
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy",
       "and": "and",
-      "confirmEmail": "Check your email to confirm the account, then sign in."
+      "confirmEmail": "Check your email to confirm the account, then sign in to finish consent sync and profile setup."
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -123,7 +123,8 @@
     },
     "sessionExpired": "Your session expired. Please log in again.",
     "passwordRecoveryReady": "Set a new password to finish your recovery flow.",
-    "passwordUpdated": "Your password was updated."
+    "passwordUpdated": "Your password was updated.",
+    "logoutPartial": "You were logged out on this device. Remote cleanup may take a moment."
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -179,5 +180,146 @@
     "iconAlt": "Hrayem app icon",
     "errorFallbackTitle": "Hrayem",
     "errorFallbackBody": "The foundation screen hit an unexpected error."
+  },
+  "navigation": {
+    "tabs": {
+      "home": "Home",
+      "create": "Create",
+      "myGames": "My games",
+      "profile": "Profile"
+    },
+    "titles": {
+      "home": "Home",
+      "createEvent": "Create event",
+      "myGames": "My games",
+      "profile": "Profile",
+      "eventDetail": "Event detail",
+      "chat": "Chat",
+      "playerProfile": "Player profile",
+      "postAvailability": "Post availability",
+      "settings": "Settings",
+      "accountDeletion": "Delete account",
+      "foundationTools": "Project foundation",
+      "addVenue": "Add venue",
+      "skillLevel": "Skill level"
+    }
+  },
+  "shell": {
+    "common": {
+      "cityLabel": "City",
+      "noCity": "Not selected yet"
+    },
+    "home": {
+      "title": "Home feed",
+      "subtitle": "The final shell is now in place, while the feed and availability data stay stubbed until Milestone 4.",
+      "tabs": {
+        "upcoming": "Upcoming games",
+        "availablePlayers": "Available players"
+      },
+      "upcoming": {
+        "title": "Upcoming games",
+        "placeholder": "This stub matches the final home feed position. Real event cards, filters, and pagination land in Milestone 4.",
+        "openEvent": "Open event detail stub",
+        "openCreate": "Open create event tab",
+        "secondaryTitle": "Feed behavior",
+        "secondaryPlaceholder": "Upcoming games is the default home tab, and foreground refresh now reuses the shared React Query focus wiring."
+      },
+      "availablePlayers": {
+        "title": "Available players",
+        "placeholder": "This stub reserves the passive-matchmaking surface for players who post availability in the current city.",
+        "postAvailability": "Open post availability stub",
+        "openPlayer": "Open player profile stub",
+        "secondaryTitle": "Availability flow",
+        "secondaryPlaceholder": "The tab, title, and layout are final here, while the real availability list and actions arrive in Milestone 6."
+      }
+    },
+    "eventDetail": {
+      "title": "Event detail",
+      "subtitle": "Deep links and near-term routes now land on this final event-detail position in the navigation tree.",
+      "stubTitle": "Event detail stub",
+      "placeholder": "This screen reserves the final event detail route while Milestone 4 adds real event data, sharing, and venue fields.",
+      "eventIdLabel": "Event ID",
+      "schemeLabel": "Scheme deep link",
+      "webLabel": "Web link",
+      "openChat": "Open chat stub",
+      "openPlayer": "Open player profile stub"
+    },
+    "chat": {
+      "title": "Chat",
+      "subtitle": "The chat route exists in the shell so event detail and My Games can already target it safely.",
+      "stubTitle": "Chat stub",
+      "placeholder": "Realtime messages, message history, and read-only states arrive in later milestones.",
+      "eventIdLabel": "Event ID"
+    },
+    "createEvent": {
+      "title": "Create event",
+      "subtitle": "The create flow now has its final tab position, while the real form stays out of scope until Milestone 4.",
+      "stubTitle": "Create event stub",
+      "placeholder": "The final create-event form will add sport, date, time, venue, player count, and skill range in the next milestone.",
+      "openAddVenue": "Open add venue stub",
+      "openSkillLevel": "Open skill level modal stub"
+    },
+    "addVenue": {
+      "title": "Add venue",
+      "subtitle": "This modal route is reserved for the venue-creation step from the create-event flow.",
+      "stubTitle": "Add venue stub",
+      "placeholder": "Venue search and crowdsourced venue creation arrive in Milestone 4."
+    },
+    "skillLevel": {
+      "title": "Skill level",
+      "subtitle": "This modal route is reserved for the required skill declaration flow.",
+      "stubTitle": "Skill level stub",
+      "placeholder": "The real skill-level picker appears when event creation or joining needs it."
+    },
+    "myGames": {
+      "title": "My games",
+      "subtitle": "The tab shell is final, with placeholder upcoming and past sections until event data and post-game actions arrive.",
+      "tabs": {
+        "upcoming": "Upcoming",
+        "past": "Past"
+      },
+      "upcomingTitle": "Upcoming games",
+      "upcomingPlaceholder": "This section will list games you organize or joined once the event data flow is implemented.",
+      "pastTitle": "Past games",
+      "pastPlaceholder": "This section will later host no-show reporting and thumbs-up prompts for completed events.",
+      "openEvent": "Open event detail stub",
+      "openChat": "Open chat stub"
+    },
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your profile tab now has its final place in the shell, while editable stats and connections arrive later.",
+      "stubTitle": "Profile summary",
+      "nameLabel": "Name",
+      "languageLabel": "Language",
+      "openSettings": "Open settings stub",
+      "openSkillLevel": "Open skill level stub"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Settings is wired into the final shell so language, notifications, logout, and account deletion have a stable home.",
+      "stubTitle": "Settings stub",
+      "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
+      "openAccountDeletion": "Open delete account stub",
+      "openFoundationTools": "Open project foundation"
+    },
+    "accountDeletion": {
+      "title": "Delete account",
+      "subtitle": "This route reserves the App Store-required account deletion flow before the destructive backend work lands.",
+      "stubTitle": "Delete account stub",
+      "placeholder": "The irreversible delete-account flow is intentionally left as a stub until its backend effects are implemented."
+    },
+    "playerProfile": {
+      "title": "Player profile",
+      "subtitle": "This snippet route is ready for event-detail and availability navigation.",
+      "stubTitle": "Player profile stub",
+      "placeholder": "Player stats, thumbs-up indicators, and reporting actions arrive in later milestones.",
+      "playerIdLabel": "Player ID"
+    },
+    "postAvailability": {
+      "title": "Post availability",
+      "subtitle": "This route reserves the availability posting flow from the Available players tab.",
+      "stubTitle": "Post availability stub",
+      "placeholder": "The real form for sport, date range, and time preference arrives in Milestone 6."
+    }
   }
 }

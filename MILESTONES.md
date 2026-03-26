@@ -112,7 +112,7 @@ The sequence is designed so that:
 - [ ] Login screen: email + password, Apple Sign In, Google Sign In
 - [ ] Register screen: email + password
   - **Terms checkbox:** "I agree to the [Terms of Service] and [Privacy Policy]" with tappable links — registration button disabled until checked
-  - On successful registration: insert row into `consent_log` with current `EXPO_PUBLIC_TERMS_VERSION` and `EXPO_PUBLIC_PRIVACY_VERSION`
+  - On successful registration: capture the current `EXPO_PUBLIC_TERMS_VERSION` and `EXPO_PUBLIC_PRIVACY_VERSION`, and ensure a matching `consent_log` row exists before the user can proceed into the app (if email confirmation delays the first authenticated session, materialize the row immediately after the first successful sign-in)
 - [ ] Forgot Password screen: email input → reset link sent
 
 ### Profile setup

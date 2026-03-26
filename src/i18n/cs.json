@@ -46,7 +46,7 @@
       "termsLink": "Podmínkami služby",
       "privacyLink": "Zásadami ochrany soukromí",
       "and": "a",
-      "confirmEmail": "Potvrďte účet přes e-mail a potom se přihlaste."
+      "confirmEmail": "Potvrďte účet přes e-mail a potom se přihlaste, aby se dokončil záznam souhlasu a nastavení profilu."
     },
     "forgotPassword": {
       "title": "Obnovení hesla",
@@ -123,7 +123,8 @@
     },
     "sessionExpired": "Vaše session vypršela. Přihlaste se prosím znovu.",
     "passwordRecoveryReady": "Pro dokončení obnovy nastavte nové heslo.",
-    "passwordUpdated": "Vaše heslo bylo aktualizováno."
+    "passwordUpdated": "Vaše heslo bylo aktualizováno.",
+    "logoutPartial": "Na tomto zařízení jste byli odhlášeni. Vzdálený úklid může chvíli trvat."
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -179,5 +180,146 @@
     "iconAlt": "Ikona aplikace Hrayem",
     "errorFallbackTitle": "Hrayem",
     "errorFallbackBody": "Obrazovka projektového základu narazila na neočekávanou chybu."
+  },
+  "navigation": {
+    "tabs": {
+      "home": "Domů",
+      "create": "Vytvořit",
+      "myGames": "Moje hry",
+      "profile": "Profil"
+    },
+    "titles": {
+      "home": "Domů",
+      "createEvent": "Vytvořit hru",
+      "myGames": "Moje hry",
+      "profile": "Profil",
+      "eventDetail": "Detail hry",
+      "chat": "Chat",
+      "playerProfile": "Profil hráče",
+      "postAvailability": "Přidat dostupnost",
+      "settings": "Nastavení",
+      "accountDeletion": "Smazat účet",
+      "foundationTools": "Projektový základ",
+      "addVenue": "Přidat venue",
+      "skillLevel": "Výkonnost"
+    }
+  },
+  "shell": {
+    "common": {
+      "cityLabel": "Město",
+      "noCity": "Zatím nevybráno"
+    },
+    "home": {
+      "title": "Domovský feed",
+      "subtitle": "Finální navigační shell je hotový, zatímco feed a dostupnosti zůstávají jako stuby do Milestone 4.",
+      "tabs": {
+        "upcoming": "Nadcházející hry",
+        "availablePlayers": "Dostupní hráči"
+      },
+      "upcoming": {
+        "title": "Nadcházející hry",
+        "placeholder": "Tento stub odpovídá finální pozici domovského feedu. Skutečné karty událostí, filtry a stránkování přijdou v Milestone 4.",
+        "openEvent": "Otevřít stub detailu hry",
+        "openCreate": "Otevřít tab vytvoření hry",
+        "secondaryTitle": "Chování feedu",
+        "secondaryPlaceholder": "Nadcházející hry jsou výchozí domovský tab a foreground refresh dál používá sdílené React Query focus napojení."
+      },
+      "availablePlayers": {
+        "title": "Dostupní hráči",
+        "placeholder": "Tento stub rezervuje plochu pro pasivní matchmaking hráčů, kteří zveřejní dostupnost v aktuálním městě.",
+        "postAvailability": "Otevřít stub dostupnosti",
+        "openPlayer": "Otevřít stub profilu hráče",
+        "secondaryTitle": "Tok dostupností",
+        "secondaryPlaceholder": "Tab, titul i layout jsou finální už teď, zatímco skutečný seznam dostupností a akce přijdou v Milestone 6."
+      }
+    },
+    "eventDetail": {
+      "title": "Detail hry",
+      "subtitle": "Deep linky i blízké cesty teď míří na finální pozici detailu hry v navigačním stromu.",
+      "stubTitle": "Stub detailu hry",
+      "placeholder": "Tato obrazovka rezervuje finální route detailu hry, zatímco Milestone 4 doplní skutečná data, sdílení a informace o venue.",
+      "eventIdLabel": "ID události",
+      "schemeLabel": "Scheme deep link",
+      "webLabel": "Webový odkaz",
+      "openChat": "Otevřít stub chatu",
+      "openPlayer": "Otevřít stub profilu hráče"
+    },
+    "chat": {
+      "title": "Chat",
+      "subtitle": "Route pro chat už existuje v shellu, takže na ni detail hry i Moje hry mohou bezpečně odkazovat.",
+      "stubTitle": "Stub chatu",
+      "placeholder": "Realtime zprávy, historie i read-only stavy přijdou v dalších milestones.",
+      "eventIdLabel": "ID události"
+    },
+    "createEvent": {
+      "title": "Vytvořit hru",
+      "subtitle": "Vytváření má teď finální pozici v tab baru, zatímco skutečný formulář zůstává mimo scope do Milestone 4.",
+      "stubTitle": "Stub vytvoření hry",
+      "placeholder": "Finální formulář přidá sport, datum, čas, venue, počet hráčů a skill range v dalším milestone.",
+      "openAddVenue": "Otevřít stub přidání venue",
+      "openSkillLevel": "Otevřít stub modalu výkonnosti"
+    },
+    "addVenue": {
+      "title": "Přidat venue",
+      "subtitle": "Tato modal route je vyhrazená pro krok vytvoření venue v průběhu vytváření hry.",
+      "stubTitle": "Stub přidání venue",
+      "placeholder": "Vyhledávání venue a crowdsourcované vytváření venue přijdou v Milestone 4."
+    },
+    "skillLevel": {
+      "title": "Výkonnost",
+      "subtitle": "Tato modal route je vyhrazená pro povinný tok deklarace výkonnosti.",
+      "stubTitle": "Stub výkonnosti",
+      "placeholder": "Skutečný výběr skill levelu se objeví, až to bude vyžadovat vytváření nebo přidání do hry."
+    },
+    "myGames": {
+      "title": "Moje hry",
+      "subtitle": "Shell tabu je finální, s placeholder sekcemi pro budoucí a minulé hry, dokud nedorazí event data a pozápasové akce.",
+      "tabs": {
+        "upcoming": "Nadcházející",
+        "past": "Minulé"
+      },
+      "upcomingTitle": "Nadcházející hry",
+      "upcomingPlaceholder": "Tato sekce bude zobrazovat hry, které organizujete nebo jste se k nim přidali, jakmile se doplní tok dat událostí.",
+      "pastTitle": "Minulé hry",
+      "pastPlaceholder": "Tato sekce později nabídne hlášení no-show a thumbs-up prompty pro dokončené hry.",
+      "openEvent": "Otevřít stub detailu hry",
+      "openChat": "Otevřít stub chatu"
+    },
+    "profile": {
+      "title": "Profil",
+      "subtitle": "Tab profilu má teď finální místo v shellu, zatímco editovatelné statistiky a connections přijdou později.",
+      "stubTitle": "Souhrn profilu",
+      "nameLabel": "Jméno",
+      "languageLabel": "Jazyk",
+      "openSettings": "Otevřít stub nastavení",
+      "openSkillLevel": "Otevřít stub výkonnosti"
+    },
+    "settings": {
+      "title": "Nastavení",
+      "subtitle": "Nastavení je zapojené do finálního shellu, takže jazyk, notifikace, odhlášení i smazání účtu mají stabilní domov.",
+      "stubTitle": "Stub nastavení",
+      "placeholder": "Preference notifikací a editovatelné nastavení aplikace zůstávají jako stuby, dokud nezačne jejich milestone práce.",
+      "openAccountDeletion": "Otevřít stub smazání účtu",
+      "openFoundationTools": "Otevřít projektový základ"
+    },
+    "accountDeletion": {
+      "title": "Smazat účet",
+      "subtitle": "Tato route rezervuje App Store povinný tok smazání účtu před tím, než dorazí destruktivní backendová logika.",
+      "stubTitle": "Stub smazání účtu",
+      "placeholder": "Nevratný tok smazání účtu zůstává záměrně jako stub, dokud nebudou hotové jeho backendové dopady."
+    },
+    "playerProfile": {
+      "title": "Profil hráče",
+      "subtitle": "Tato snippet route je připravená pro navigaci z detailu hry i ze seznamu dostupností.",
+      "stubTitle": "Stub profilu hráče",
+      "placeholder": "Statistiky hráče, indikátory thumbs-up i nahlašování přijdou v dalších milestones.",
+      "playerIdLabel": "ID hráče"
+    },
+    "postAvailability": {
+      "title": "Přidat dostupnost",
+      "subtitle": "Tato route rezervuje tok zveřejnění dostupnosti z tabu Dostupní hráči.",
+      "stubTitle": "Stub dostupnosti",
+      "placeholder": "Skutečný formulář pro sport, rozsah dat a časovou preferenci přijde v Milestone 6."
+    }
   }
 }

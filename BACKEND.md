@@ -60,10 +60,12 @@ token       text NOT NULL
 platform    text NOT NULL CHECK (platform IN ('ios', 'android'))
 created_at  timestamptz NOT NULL DEFAULT now()
 updated_at  timestamptz NOT NULL DEFAULT now()
-UNIQUE (user_id, token)
+UNIQUE (token)
 ```
 
-On login: upsert the device's Expo push token. On logout: delete the row for that token.
+The Expo push token is treated as the device identity for MVP, so the same token must never stay attached to multiple users over time. The client claims token ownership through an authenticated RPC that upserts on `token`, moving the row to the current user if the account on this device changes. Deletion also happens through an authenticated token-keyed RPC so a previously cached token can be cleaned up even after account switches or permission loss.
+
+On login/app launch: claim the device's Expo push token. On logout or permission loss: delete the row for that token.
 Push notifications fan out to all `device_tokens` rows for a given `user_id`.
 
 ---
@@ -387,7 +389,7 @@ accepted_at     timestamptz NOT NULL DEFAULT now()
 ip_address      text              -- optional; for legal compliance
 ```
 
-On registration: the client sends the current terms/privacy version. The Edge Function (or client via PostgREST) inserts a row.
+On registration: the client sends the current terms/privacy version. When the user already has an authenticated session, the client inserts the `consent_log` row immediately. If email confirmation delays authentication, the accepted versions are first captured in auth metadata and the app materializes the `consent_log` row immediately after the user's first successful sign-in, before app access continues.
 
 If the terms are updated (new version deployed), the client checks on launch whether the user has a `consent_log` row matching the current version. If not, the user is prompted to accept the new terms before proceeding.
 
@@ -505,7 +507,7 @@ All tables have RLS enabled. The `service_role` key (used only by Edge Functions
 | Table | Read | Write |
 |---|---|---|
 | `profiles` | Any authenticated user; `is_deleted = false` only | Own row only; **`is_deleted` and `profile_complete` columns are excluded** — these are server-managed |
-| `device_tokens` | Own rows only | Own rows only |
+| `device_tokens` | Own rows only | Authenticated token-claim/delete RPCs keyed by `token`; direct row ownership stays read-only |
 | `sports` | Any authenticated user (`is_active = true`) | Service role only |
 | `venues` | Any authenticated user | Insert: any authenticated user; Update/Delete: service role only |
 | `user_sports` | Any authenticated user | **Own rows, `skill_level` column only** — see policy below |
@@ -1172,10 +1174,10 @@ Expo push tokens can change silently (OS updates, app reinstalls, token rotation
 **On every app launch (not just login):**
 1. Call `Notifications.getExpoPushTokenAsync()`
 2. Compare with the token stored in Zustand
-3. If different: upsert to `device_tokens` table
-4. Update the stored token in Zustand
+3. Claim the token in `device_tokens` by `token` value so ownership moves cleanly if the account on this device changed
+4. Update the stored token in Zustand and keep a last-known cleanup token locally until backend cleanup succeeds
 
-**On logout:** delete the token row from `device_tokens` and clear from Zustand.
+**On logout:** delete the token row from `device_tokens`, clear it from Zustand, and keep retryable local cleanup state only until the backend row is confirmed gone.
 
 ### 16.6 Deep linking and event sharing
 

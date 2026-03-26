@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import type { CityName } from '../constants/cities';
 import type { AppLanguage, UserProfile } from '../types/app';
+import type { PendingConsentVersions } from '../utils/consent';
 import { throwIfSupabaseError } from '../utils/supabase';
 import { retrySupabaseOperationOnce, supabase } from './supabase';
 
@@ -111,4 +112,30 @@ export async function acceptCurrentConsent(
   );
 
   throwIfSupabaseError(result.error, 'Unable to record consent.');
+}
+
+export async function materializePendingConsent(
+  userId: string,
+  pendingConsent: PendingConsentVersions,
+): Promise<boolean> {
+  const alreadyAccepted = await hasAcceptedConsentVersions(
+    userId,
+    pendingConsent.termsVersion,
+    pendingConsent.privacyVersion,
+  );
+
+  if (alreadyAccepted) {
+    return false;
+  }
+
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase.from('consent_log').insert({
+      user_id: userId,
+      terms_version: pendingConsent.termsVersion,
+      privacy_version: pendingConsent.privacyVersion,
+    }),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to record consent.');
+  return true;
 }
