@@ -199,7 +199,7 @@ export function CheckboxField({ label, checked, onPress, error }: CheckboxFieldP
   );
 }
 
-type ChoiceOption<TValue extends string> = {
+type ChoiceOption<TValue extends string | number> = {
   label: string;
   value: TValue;
 };
@@ -231,7 +231,7 @@ export function SelectionField({ label, value, placeholder, onPress, error }: Se
   );
 }
 
-type ChoiceChipsProps<TValue extends string> = {
+type ChoiceChipsProps<TValue extends string | number> = {
   label: string;
   options: ChoiceOption<TValue>[];
   value: TValue | null;
@@ -239,7 +239,7 @@ type ChoiceChipsProps<TValue extends string> = {
   error?: string | null;
 };
 
-export function ChoiceChips<TValue extends string>({
+export function ChoiceChips<TValue extends string | number>({
   label,
   options,
   value,

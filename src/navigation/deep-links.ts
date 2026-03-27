@@ -7,6 +7,8 @@ export type EventDeepLinkTarget = {
   normalizedUrl: string;
 };
 
+export type DeveloperSurfaceTarget = 'foundation';
+
 function normalizeDeepLinkUrl(url: string): string {
   const trimmedUrl = url.trim();
 
@@ -58,4 +60,25 @@ export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
 
 export function isEventDeepLinkUrl(url: string): boolean {
   return parseEventDeepLink(url) !== null;
+}
+
+export function parseDeveloperSurfaceUrl(url: string): DeveloperSurfaceTarget | null {
+  if (!__DEV__) {
+    return null;
+  }
+
+  const normalizedUrl = normalizeDeepLinkUrl(url);
+  const parsedUrl = ExpoLinking.parse(normalizedUrl);
+  const scheme = parsedUrl.scheme?.toLowerCase() ?? null;
+  const hostname = parsedUrl.hostname?.toLowerCase() ?? null;
+  const pathSegments = (parsedUrl.path ?? '')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (scheme === appMetadata.scheme && hostname === 'dev' && pathSegments[0] === 'foundation') {
+    return 'foundation';
+  }
+
+  return null;
 }

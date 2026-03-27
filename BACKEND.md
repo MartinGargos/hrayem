@@ -404,6 +404,8 @@ Used by the home feed. Joins event + sport + venue + organizer + live spot count
 
 The view must be created with `security_invoker = true` and granted only to `authenticated` (plus `service_role`). This keeps the feed on the same access model as the underlying tables. Waitlist and confirmed counts are exposed through a narrow private aggregate function so the feed can show safe totals without exposing raw `event_players` waitlist rows.
 
+Event detail must **not** read from `event_feed_view`. Use a separate detail read surface (for example `event_detail_view`) that keeps the same safe aggregate counts but is keyed by event visibility rules, not by feed eligibility. This allows deep-linked or shared event detail to remain readable after an event leaves the feed.
+
 ```sql
 CREATE OR REPLACE FUNCTION private.event_player_counts(target_event_id uuid)
 RETURNS TABLE (spots_taken bigint, waitlist_count bigint)
@@ -559,7 +561,7 @@ CREATE POLICY profiles_update_own ON profiles
 CREATE POLICY venues_insert_authenticated ON venues
   FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (created_by = auth.uid());
 
 -- No UPDATE or DELETE policy for authenticated users.
 -- Venue edits/merges are admin operations handled via service role.

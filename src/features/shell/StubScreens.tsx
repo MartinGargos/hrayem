@@ -6,7 +6,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 
 import { ScreenCard, ScreenShell, SegmentedTabs, DetailRow } from '../../components/ScreenShell';
-import { FoundationScreen } from '../foundation/FoundationScreen';
 import { ActionButton } from '../auth/AuthPrimitives';
 import { buildEventSchemeUrl, buildEventWebUrl } from '../../navigation/deep-links';
 import { signOutAndClearState } from '../../services/auth';
@@ -296,11 +295,6 @@ export function SettingsScreen() {
           label={t('shell.settings.openAccountDeletion')}
           onPress={() => navigation.navigate('AccountDeletion')}
         />
-        <ActionButton
-          label={t('shell.settings.openFoundationTools')}
-          onPress={() => navigation.navigate('FoundationTools')}
-          variant="secondary"
-        />
         <ActionButton label={t('auth.home.logout')} onPress={handleLogout} variant="secondary" />
       </ScreenCard>
     </ScreenShell>
@@ -358,10 +352,6 @@ export function PostAvailabilityScreen() {
       </ScreenCard>
     </ScreenShell>
   );
-}
-
-export function FoundationToolsScreen() {
-  return <FoundationScreen />;
 }
 
 const styles = StyleSheet.create({

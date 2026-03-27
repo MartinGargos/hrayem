@@ -33,5 +33,4 @@ export type RootStackParamList = {
   SkillLevel: undefined;
   Settings: undefined;
   AccountDeletion: undefined;
-  FoundationTools: undefined;
 };

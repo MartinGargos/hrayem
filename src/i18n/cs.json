@@ -185,6 +185,7 @@
     "tabs": {
       "home": "Domů",
       "create": "Vytvořit",
+      "createPlus": "+",
       "myGames": "Moje hry",
       "profile": "Profil"
     },
@@ -199,7 +200,6 @@
       "postAvailability": "Přidat dostupnost",
       "settings": "Nastavení",
       "accountDeletion": "Smazat účet",
-      "foundationTools": "Projektový základ",
       "addVenue": "Přidat venue",
       "skillLevel": "Výkonnost"
     }
@@ -211,7 +211,7 @@
     },
     "home": {
       "title": "Domovský feed",
-      "subtitle": "Finální navigační shell je hotový, zatímco feed a dostupnosti zůstávají jako stuby do Milestone 4.",
+      "subtitle": "Procházejte nadcházející hry ve svém městě, upravujte filtry a otevírejte detail hry bez opuštění hlavního shellu.",
       "tabs": {
         "upcoming": "Nadcházející hry",
         "availablePlayers": "Dostupní hráči"
@@ -235,7 +235,7 @@
     },
     "eventDetail": {
       "title": "Detail hry",
-      "subtitle": "Deep linky i blízké cesty teď míří na finální pozici detailu hry v navigačním stromu.",
+      "subtitle": "Zobrazte venue, organizátora i potvrzené hráče a sdílejte odkaz z finální route detailu hry.",
       "stubTitle": "Stub detailu hry",
       "placeholder": "Tato obrazovka rezervuje finální route detailu hry, zatímco Milestone 4 doplní skutečná data, sdílení a informace o venue.",
       "eventIdLabel": "ID události",
@@ -253,7 +253,7 @@
     },
     "createEvent": {
       "title": "Vytvořit hru",
-      "subtitle": "Vytváření má teď finální pozici v tab baru, zatímco skutečný formulář zůstává mimo scope do Milestone 4.",
+      "subtitle": "Nastavte sport, termín, venue a skill range v jednom scrollovatelném formuláři a potom hru publikujte.",
       "stubTitle": "Stub vytvoření hry",
       "placeholder": "Finální formulář přidá sport, datum, čas, venue, počet hráčů a skill range v dalším milestone.",
       "openAddVenue": "Otevřít stub přidání venue",
@@ -299,8 +299,7 @@
       "subtitle": "Nastavení je zapojené do finálního shellu, takže jazyk, notifikace, odhlášení i smazání účtu mají stabilní domov.",
       "stubTitle": "Stub nastavení",
       "placeholder": "Preference notifikací a editovatelné nastavení aplikace zůstávají jako stuby, dokud nezačne jejich milestone práce.",
-      "openAccountDeletion": "Otevřít stub smazání účtu",
-      "openFoundationTools": "Otevřít projektový základ"
+      "openAccountDeletion": "Otevřít stub smazání účtu"
     },
     "accountDeletion": {
       "title": "Smazat účet",
@@ -320,6 +319,150 @@
       "subtitle": "Tato route rezervuje tok zveřejnění dostupnosti z tabu Dostupní hráči.",
       "stubTitle": "Stub dostupnosti",
       "placeholder": "Skutečný formulář pro sport, rozsah dat a časovou preferenci přijde v Milestone 6."
+    }
+  },
+  "events": {
+    "common": {
+      "organizerFallback": "Organizátor",
+      "retry": "Zkusit znovu",
+      "pickerCancel": "Zrušit",
+      "pickerDone": "Hotovo",
+      "errors": {
+        "generic": "Při práci s touto hrou se něco pokazilo. Zkuste to prosím znovu."
+      }
+    },
+    "reservationType": {
+      "reserved": "Kurt rezervován",
+      "to_be_arranged": "Kurt se domluví"
+    },
+    "feed": {
+      "filtersTitle": "Filtry",
+      "startDate": "Od",
+      "startDatePlaceholder": "Vyberte počáteční datum",
+      "endDate": "Do",
+      "endDatePlaceholder": "Vyberte koncové datum",
+      "errorTitle": "Nepodařilo se načíst hry",
+      "errorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online feed znovu otevřete.",
+      "emptyTitle": "Žádné hry nenalezeny",
+      "emptyBody": "Tomuto nastavení filtrů neodpovídají žádné hry. Vytvořte první.",
+      "emptyCreateAction": "Vytvořit první hru",
+      "statusFull": "Plno",
+      "waitlistCount": "Čekačka: {{count}}",
+      "spotsTaken": "{{current}}/{{total}} hráčů",
+      "skillRange": "Skill {{min}}-{{max}}"
+    },
+    "detail": {
+      "loadingTitle": "Načítám hru",
+      "loadingSubtitle": "Načítají se aktuální informace o venue, organizátorovi a hráčích.",
+      "errorTitle": "Nepodařilo se načíst detail hry",
+      "errorSubtitle": "Route detailu je připravená, ale tuto hru teď nešlo načíst.",
+      "errorBody": "Zkuste to prosím znovu. Pokud je odkaz starší, hra už nemusí být veřejně viditelná v aktivním feedu.",
+      "whenWhereTitle": "Kdy a kde",
+      "dateTimeLabel": "Datum a čas",
+      "venueLabel": "Venue",
+      "addressLabel": "Adresa",
+      "addressFallback": "Adresa zatím není uvedená",
+      "waitlistLabel": "Čekačka",
+      "skillTitle": "Skill range",
+      "skillRangeNote": "Hráči mimo tento rozsah se stále mohou přidat. Rozsah tu slouží hlavně k nastavení očekávání před joinem.",
+      "descriptionTitle": "Popis",
+      "noDescription": "K této hře nebyla přidaná žádná doplňující poznámka.",
+      "organizerTitle": "Organizátor",
+      "organizerStats": "{{games}} odehraných her · {{noShows}} no-show",
+      "openOrganizerProfile": "Otevřít profil organizátora",
+      "confirmedPlayersTitle": "Potvrzení hráči",
+      "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
+      "skillUnknown": "Skill zatím není nastavený",
+      "shareAction": "Sdílet hru",
+      "shareMessage": "{{sport}} ve venue {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}"
+    },
+    "create": {
+      "submit": "Vytvořit hru",
+      "previewTitle": "Náhled",
+      "previewSportFallback": "Vyberte sport",
+      "previewVenueFallback": "Vyberte venue",
+      "eventDate": "Datum",
+      "eventDatePlaceholder": "Vyberte datum hry",
+      "startTime": "Začátek",
+      "startTimePlaceholder": "Vyberte čas začátku",
+      "endTime": "Konec",
+      "endTimePlaceholder": "Vyberte čas konce",
+      "venueSearch": "Hledání venue",
+      "venueSearchPlaceholder": "Hledejte venue ve svém městě",
+      "reservationType": "Stav kurtu",
+      "playerCountTotal": "Celkový počet hráčů",
+      "skillMin": "Minimální skill",
+      "skillMax": "Maximální skill",
+      "skillHelper": "Tento rozsah nastavuje očekávání. Hráči mimo něj se v dalších milestones stále budou moci přidat.",
+      "description": "Popis",
+      "descriptionPlaceholder": "Volitelná poznámka k formátu, úrovni nebo tomu, co si mají hráči vzít s sebou.",
+      "descriptionCounter": "{{count}}/{{max}} znaků",
+      "skillRequired": "Než půjde hru vytvořit, vyberte si pro tento sport svou výkonnost.",
+      "errors": {
+        "validation": "Detaily hry potřebují ještě upravit, než je půjde odeslat."
+      },
+      "sections": {
+        "sport": "Sport",
+        "schedule": "Termín",
+        "venue": "Venue",
+        "rules": "Nastavení hry",
+        "description": "Poznámky"
+      },
+      "validation": {
+        "sport": "Vyberte sport.",
+        "venue": "Vyberte venue.",
+        "description": "Popis musí zůstat do 500 znaků.",
+        "skillRange": "Minimální skill musí být menší nebo stejný jako maximální skill.",
+        "endTime": "Čas konce musí být později než čas začátku.",
+        "futureStart": "Hra musí začínat v budoucnu."
+      }
+    },
+    "venue": {
+      "noAddress": "Adresa není uvedená",
+      "noMatch": "Ve vašem městě zatím nebyla nalezena žádná odpovídající venue.",
+      "addInlineAction": "Přidat novou venue",
+      "submit": "Uložit venue",
+      "fields": {
+        "name": "Název venue",
+        "address": "Adresa"
+      },
+      "placeholders": {
+        "name": "např. Padel Club Ostrava",
+        "address": "Ulice nebo adresa areálu"
+      },
+      "errors": {
+        "missing": "Vybranou venue už se nepodařilo najít.",
+        "cityRequired": "Než přidáte novou venue, nastavte si ve svém profilu město."
+      },
+      "validation": {
+        "name": "Zadejte název venue.",
+        "address": "Adresa musí zůstat do 200 znaků."
+      }
+    },
+    "skillLevel": {
+      "modalSubtitle": "Než Hrayem vytvoří hru, potřebujeme znát vaši aktuální úroveň pro tento sport.",
+      "confirm": "Uložit skill a pokračovat",
+      "short": {
+        "1": "B1",
+        "2": "I2",
+        "3": "A3",
+        "4": "P4"
+      },
+      "label": {
+        "1": "Začátečník",
+        "2": "Středně pokročilý",
+        "3": "Pokročilý",
+        "4": "Pro"
+      },
+      "description": {
+        "1": "Teprve začínám nebo hraju spíš příležitostně.",
+        "2": "Hraju pravidelně a dobře ovládám základy.",
+        "3": "Jsem soutěživý a cítím se dobře i v silných hrách.",
+        "4": "Hraju turnaje nebo se pohybuji na profesionální úrovni."
+      },
+      "errors": {
+        "saveFailed": "Vaši výkonnost se nepodařilo uložit. Zkuste to prosím znovu."
+      }
     }
   }
 }

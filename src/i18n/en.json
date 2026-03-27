@@ -185,6 +185,7 @@
     "tabs": {
       "home": "Home",
       "create": "Create",
+      "createPlus": "+",
       "myGames": "My games",
       "profile": "Profile"
     },
@@ -199,7 +200,6 @@
       "postAvailability": "Post availability",
       "settings": "Settings",
       "accountDeletion": "Delete account",
-      "foundationTools": "Project foundation",
       "addVenue": "Add venue",
       "skillLevel": "Skill level"
     }
@@ -211,7 +211,7 @@
     },
     "home": {
       "title": "Home feed",
-      "subtitle": "The final shell is now in place, while the feed and availability data stay stubbed until Milestone 4.",
+      "subtitle": "Browse upcoming games in your city, adjust filters, and jump into event detail without leaving the main shell.",
       "tabs": {
         "upcoming": "Upcoming games",
         "availablePlayers": "Available players"
@@ -235,7 +235,7 @@
     },
     "eventDetail": {
       "title": "Event detail",
-      "subtitle": "Deep links and near-term routes now land on this final event-detail position in the navigation tree.",
+      "subtitle": "Review the venue, organizer, and confirmed players, then share the game link from the final detail route.",
       "stubTitle": "Event detail stub",
       "placeholder": "This screen reserves the final event detail route while Milestone 4 adds real event data, sharing, and venue fields.",
       "eventIdLabel": "Event ID",
@@ -253,7 +253,7 @@
     },
     "createEvent": {
       "title": "Create event",
-      "subtitle": "The create flow now has its final tab position, while the real form stays out of scope until Milestone 4.",
+      "subtitle": "Set the sport, schedule, venue, and skill range in one scrollable form before publishing the game.",
       "stubTitle": "Create event stub",
       "placeholder": "The final create-event form will add sport, date, time, venue, player count, and skill range in the next milestone.",
       "openAddVenue": "Open add venue stub",
@@ -299,8 +299,7 @@
       "subtitle": "Settings is wired into the final shell so language, notifications, logout, and account deletion have a stable home.",
       "stubTitle": "Settings stub",
       "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
-      "openAccountDeletion": "Open delete account stub",
-      "openFoundationTools": "Open project foundation"
+      "openAccountDeletion": "Open delete account stub"
     },
     "accountDeletion": {
       "title": "Delete account",
@@ -320,6 +319,150 @@
       "subtitle": "This route reserves the availability posting flow from the Available players tab.",
       "stubTitle": "Post availability stub",
       "placeholder": "The real form for sport, date range, and time preference arrives in Milestone 6."
+    }
+  },
+  "events": {
+    "common": {
+      "organizerFallback": "Organizer",
+      "retry": "Try again",
+      "pickerCancel": "Cancel",
+      "pickerDone": "Done",
+      "errors": {
+        "generic": "Something went wrong while handling this event. Please try again."
+      }
+    },
+    "reservationType": {
+      "reserved": "Court reserved",
+      "to_be_arranged": "To be arranged"
+    },
+    "feed": {
+      "filtersTitle": "Filters",
+      "startDate": "From",
+      "startDatePlaceholder": "Choose a start date",
+      "endDate": "To",
+      "endDatePlaceholder": "Choose an end date",
+      "errorTitle": "We couldn't load games",
+      "errorBody": "Please try again. If the problem keeps happening, check your connection and reopen the feed once you're back online.",
+      "emptyTitle": "No games found",
+      "emptyBody": "No games matched this filter set. Be the first to create one.",
+      "emptyCreateAction": "Create the first game",
+      "statusFull": "Full",
+      "waitlistCount": "Waitlist: {{count}}",
+      "spotsTaken": "{{current}}/{{total}} players",
+      "skillRange": "Skill {{min}}-{{max}}"
+    },
+    "detail": {
+      "loadingTitle": "Loading event",
+      "loadingSubtitle": "Fetching the latest venue, organizer, and player details for this game.",
+      "errorTitle": "We couldn't load this event",
+      "errorSubtitle": "The event detail route is ready, but this game could not be loaded right now.",
+      "errorBody": "Please try again. If the link is old, the event may no longer be publicly visible in the active feed.",
+      "whenWhereTitle": "When and where",
+      "dateTimeLabel": "Date and time",
+      "venueLabel": "Venue",
+      "addressLabel": "Address",
+      "addressFallback": "Address not provided yet",
+      "waitlistLabel": "Waitlist",
+      "skillTitle": "Skill range",
+      "skillRangeNote": "Players outside this range can still join. The range is there to set expectations before someone joins.",
+      "descriptionTitle": "Description",
+      "noDescription": "No extra notes were added for this game.",
+      "organizerTitle": "Organizer",
+      "organizerStats": "{{games}} games played · {{noShows}} no-shows",
+      "openOrganizerProfile": "Open organizer profile",
+      "confirmedPlayersTitle": "Confirmed players",
+      "confirmedPlayersEmpty": "No confirmed players are visible yet beyond the organizer.",
+      "skillUnknown": "Skill not set yet",
+      "shareAction": "Share event",
+      "shareMessage": "{{sport}} at {{venue}} on {{date}} — join me on Hrayem! {{url}}"
+    },
+    "create": {
+      "submit": "Create event",
+      "previewTitle": "Preview",
+      "previewSportFallback": "Pick a sport",
+      "previewVenueFallback": "Pick a venue",
+      "eventDate": "Date",
+      "eventDatePlaceholder": "Choose the event date",
+      "startTime": "Start time",
+      "startTimePlaceholder": "Choose a start time",
+      "endTime": "End time",
+      "endTimePlaceholder": "Choose an end time",
+      "venueSearch": "Venue search",
+      "venueSearchPlaceholder": "Search venues in your city",
+      "reservationType": "Court status",
+      "playerCountTotal": "Total player count",
+      "skillMin": "Minimum skill",
+      "skillMax": "Maximum skill",
+      "skillHelper": "This range helps set expectations. Players outside it can still join in later milestones.",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional note about format, level, or what players should bring.",
+      "descriptionCounter": "{{count}}/{{max}} characters",
+      "skillRequired": "Choose your skill level for this sport before the event can be created.",
+      "errors": {
+        "validation": "The event details need another look before they can be sent."
+      },
+      "sections": {
+        "sport": "Sport",
+        "schedule": "Schedule",
+        "venue": "Venue",
+        "rules": "Game setup",
+        "description": "Notes"
+      },
+      "validation": {
+        "sport": "Choose a sport.",
+        "venue": "Choose a venue.",
+        "description": "Keep the description under 500 characters.",
+        "skillRange": "The minimum skill must be lower than or equal to the maximum skill.",
+        "endTime": "The end time must be later than the start time.",
+        "futureStart": "The game must start in the future."
+      }
+    },
+    "venue": {
+      "noAddress": "Address not provided",
+      "noMatch": "No matching venue was found in your city yet.",
+      "addInlineAction": "Add new venue",
+      "submit": "Save venue",
+      "fields": {
+        "name": "Venue name",
+        "address": "Address"
+      },
+      "placeholders": {
+        "name": "e.g. Padel Club Ostrava",
+        "address": "Street or facility address"
+      },
+      "errors": {
+        "missing": "The selected venue could not be found anymore.",
+        "cityRequired": "Choose your city in the profile before adding a new venue."
+      },
+      "validation": {
+        "name": "Enter a venue name.",
+        "address": "Keep the address under 200 characters."
+      }
+    },
+    "skillLevel": {
+      "modalSubtitle": "We need your current level for this sport before Hrayem can create the game.",
+      "confirm": "Save skill and continue",
+      "short": {
+        "1": "B1",
+        "2": "I2",
+        "3": "A3",
+        "4": "P4"
+      },
+      "label": {
+        "1": "Beginner",
+        "2": "Intermediate",
+        "3": "Advanced",
+        "4": "Pro"
+      },
+      "description": {
+        "1": "I'm just starting out or I play casually.",
+        "2": "I play regularly and know the fundamentals well.",
+        "3": "I'm competitive and comfortable in strong games.",
+        "4": "I compete seriously or play at tournament level."
+      },
+      "errors": {
+        "saveFailed": "Your skill level could not be saved. Please try again."
+      }
     }
   }
 }

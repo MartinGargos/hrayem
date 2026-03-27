@@ -1,6 +1,6 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, the Milestone 2 authentication/session-resilience flow, and the Milestone 3 typed navigation shell with deep-link routing stubs.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, the Milestone 2 authentication/session-resilience flow, the Milestone 3 typed navigation shell, and the Milestone 4 venue search, event creation, feed, and event-detail foundation.
 
 Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
@@ -151,6 +151,7 @@ The repo now includes the Milestone 1 Supabase assets:
 - A verification script in `scripts/verify-milestone1.mjs` for the required trigger and RLS checks
 - The authoritative allowed city set lives in the migration-seeded `private.cities` table; `src/constants/cities.ts` is the client mirror and the verification script checks they stay in sync
 - Milestone 2 adds launch-time `app_config` reads for force-update checks and an `avatars` Storage bucket migration for optional profile photos
+- Milestone 4 adds the `events` Edge Function for event creation plus `scripts/verify-milestone4.mjs` for venue search, `SKILL_LEVEL_REQUIRED`, feed pagination, and event-detail proof
 
 Use this workflow once `.env` contains real `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` values:
 
@@ -158,10 +159,12 @@ Use this workflow once `.env` contains real `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PU
 pnpm dlx supabase login
 pnpm dlx supabase link --project-ref <project-ref>
 pnpm dlx supabase db push
+pnpm dlx supabase functions deploy events
 pnpm run verify:milestone1
+pnpm run verify:milestone4
 ```
 
-Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. Edge Functions are still added in later milestones, so there are no function deployments yet.
+Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
 
 For Milestone 2 auth flows, also configure these Supabase Auth settings:
 

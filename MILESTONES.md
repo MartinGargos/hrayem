@@ -164,7 +164,7 @@ The sequence is designed so that:
 - [ ] Profile completion gate enforced on all main screens
 - [ ] **App foreground refresh:** set up `AppState` listener that triggers React Query refetch on app foreground (`active` state); all stale queries refresh silently in background
 
-**Checkpoint:** Every screen in `APP.md` section 11 is reachable by tapping through the app. Home feed has both tabs. Deep link `hrayem://event/test-id` navigates to event detail stub. Background/foreground transition triggers data refetch. No navigation errors. Types are clean. This structure does not change after this milestone.
+**Checkpoint:** Every navigable product screen in `APP.md` section 11 is reachable by tapping through the app; state-driven launch/auth screens remain reachable through their corresponding app states. Home feed has both tabs. Deep link `hrayem://event/test-id` navigates to event detail stub, and a pending event link survives logout/account-switch flows until the correct account reaches the shell. Background/foreground transition triggers data refetch wiring. No navigation errors. Types are clean. This structure does not change after this milestone.
 
 ---
 

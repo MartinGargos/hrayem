@@ -2,7 +2,7 @@ import * as ExpoLinking from 'expo-linking';
 import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,10 +13,11 @@ import { ForceUpdateScreen } from './src/features/auth/ForceUpdateScreen';
 import { LoadingScreen } from './src/features/auth/LoadingScreen';
 import { ProfileSetupScreen } from './src/features/auth/ProfileSetupScreen';
 import { TermsReconsentScreen } from './src/features/auth/TermsReconsentScreen';
+import { FoundationScreen } from './src/features/foundation/FoundationScreen';
 import { HomeEntryScreen } from './src/features/home/HomeEntryScreen';
 import i18n from './src/i18n';
 import { bindAppStateToQueryFocus, queryClient } from './src/lib/query-client';
-import { isEventDeepLinkUrl } from './src/navigation/deep-links';
+import { isEventDeepLinkUrl, parseDeveloperSurfaceUrl } from './src/navigation/deep-links';
 import {
   fetchCurrentUserProfile,
   fetchMinimumSupportedVersion,
@@ -65,6 +66,7 @@ function AppShell() {
   const setPendingDeepLink = useUIStore((state) => state.setPendingDeepLink);
   const bootstrapStartedRef = useRef(false);
   const pendingConsentSyncRef = useRef<string | null>(null);
+  const [developerSurface, setDeveloperSurface] = useState<'foundation' | null>(null);
 
   useEffect(() => {
     const unsubscribe = registerSupabaseAuthListener();
@@ -103,6 +105,13 @@ function AppShell() {
 
     async function maybeHandleIncomingUrl(url: string | null) {
       if (!url) {
+        return;
+      }
+
+      const developerSurfaceTarget = parseDeveloperSurfaceUrl(url);
+
+      if (developerSurfaceTarget) {
+        setDeveloperSurface(developerSurfaceTarget);
         return;
       }
 
@@ -248,6 +257,14 @@ function AppShell() {
   }, [authStatus, setAuthNotice, userId]);
 
   const isStoresHydrating = !authHasHydrated || !userHasHydrated;
+  if (isStoresHydrating) {
+    return <LoadingScreen />;
+  }
+
+  if (__DEV__ && developerSurface === 'foundation') {
+    return <FoundationScreen />;
+  }
+
   const isAuthBootstrapping = authStatus === 'idle' || authStatus === 'loading';
   const isAuthenticatedLoading =
     authStatus === 'authenticated' &&
@@ -255,12 +272,7 @@ function AppShell() {
       consentQuery.isPending ||
       (!profileQuery.data && !profileQuery.isError));
 
-  if (
-    isStoresHydrating ||
-    isAuthBootstrapping ||
-    minimumVersionQuery.isPending ||
-    isAuthenticatedLoading
-  ) {
+  if (isAuthBootstrapping || minimumVersionQuery.isPending || isAuthenticatedLoading) {
     return <LoadingScreen />;
   }
 

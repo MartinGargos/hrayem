@@ -13,10 +13,6 @@ import {
   AccountDeletionScreen,
   AddVenueScreen,
   ChatScreen,
-  CreateEventScreen,
-  EventDetailScreen,
-  FoundationToolsScreen,
-  HomeFeedScreen,
   MyGamesScreen,
   PlayerProfileScreen,
   PostAvailabilityScreen,
@@ -24,7 +20,12 @@ import {
   SettingsScreen,
   SkillLevelScreen,
 } from '../features/shell/StubScreens';
+import { CreateEventScreen } from '../features/events/CreateEventScreen';
+import { EventDetailScreen } from '../features/events/EventDetailScreen';
+import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
+import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
+import { getPendingDeepLinkReplayAction } from './pending-deep-link';
 import { useUIStore } from '../store/ui-store';
 import type {
   CreateStackParamList,
@@ -149,7 +150,7 @@ function MainTabNavigator() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={() => ({
         headerShown: false,
         tabBarActiveTintColor: '#183153',
         tabBarInactiveTintColor: '#7a8ca3',
@@ -178,6 +179,13 @@ function MainTabNavigator() {
         name="CreateEventTab"
         options={{
           title: t('navigation.tabs.create'),
+          tabBarAccessibilityLabel: t('navigation.tabs.create'),
+          tabBarLabel: t('navigation.tabs.createPlus'),
+          tabBarLabelStyle: {
+            fontSize: 22,
+            fontWeight: '800',
+            marginTop: -2,
+          },
         }}
       />
       <Tab.Screen
@@ -200,26 +208,54 @@ function MainTabNavigator() {
 
 export function AppNavigator() {
   const { t } = useTranslation();
+  const userId = useAuthStore((state) => state.userId);
   const pendingDeepLink = useUIStore((state) => state.pendingDeepLink);
+  const pendingDeepLinkHandledUserId = useUIStore((state) => state.pendingDeepLinkHandledUserId);
   const clearPendingDeepLink = useUIStore((state) => state.clearPendingDeepLink);
+  const markPendingDeepLinkHandledByUser = useUIStore(
+    (state) => state.markPendingDeepLinkHandledByUser,
+  );
   const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   useEffect(() => {
-    if (!isNavigationReady || !pendingDeepLink || !navigationRef.isReady()) {
+    if (!isNavigationReady || !pendingDeepLink || !navigationRef.isReady() || !userId) {
       return;
     }
 
     const target = parseEventDeepLink(pendingDeepLink);
-    clearPendingDeepLink();
 
     if (!target) {
+      clearPendingDeepLink();
+      return;
+    }
+
+    const replayAction = getPendingDeepLinkReplayAction({
+      currentUserId: userId,
+      handledUserId: pendingDeepLinkHandledUserId,
+    });
+
+    if (replayAction === 'wait' || replayAction === 'skip') {
       return;
     }
 
     navigationRef.navigate('EventDetail', {
       eventId: target.eventId,
     });
-  }, [clearPendingDeepLink, isNavigationReady, pendingDeepLink]);
+
+    if (replayAction === 'clear') {
+      clearPendingDeepLink();
+      return;
+    }
+
+    markPendingDeepLinkHandledByUser(userId);
+  }, [
+    clearPendingDeepLink,
+    isNavigationReady,
+    markPendingDeepLinkHandledByUser,
+    pendingDeepLink,
+    pendingDeepLinkHandledUserId,
+    userId,
+  ]);
 
   return (
     <NavigationContainer
@@ -285,13 +321,6 @@ export function AppNavigator() {
           name="AccountDeletion"
           options={{
             title: t('navigation.titles.accountDeletion'),
-          }}
-        />
-        <RootStack.Screen
-          component={FoundationToolsScreen}
-          name="FoundationTools"
-          options={{
-            title: t('navigation.titles.foundationTools'),
           }}
         />
         <RootStack.Screen
