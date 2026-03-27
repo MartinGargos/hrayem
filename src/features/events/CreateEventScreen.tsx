@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -21,8 +20,9 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { ActionButton, ChoiceChips, FormTextField, NoticeBanner } from '../auth/AuthPrimitives';
-import { AvatarPhoto, SportBadge, SportChoiceChip, StepperField } from './EventPrimitives';
+import { AvatarPhoto, SportChoiceChip, StepperField } from './EventPrimitives';
 import { NativePickerField } from './NativePickerField';
+import { SkillLevelModal } from './SkillLevelModal';
 import {
   fetchActiveSports,
   createEvent,
@@ -718,67 +718,15 @@ export function CreateEventScreen() {
         </View>
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        onRequestClose={() => setIsSkillModalVisible(false)}
-        transparent
+      <SkillLevelModal
+        language={language}
+        onClose={() => setIsSkillModalVisible(false)}
+        onConfirm={handleConfirmSkillLevel}
+        onSelectSkillLevel={setSelectedSkillLevel}
+        selectedSkillLevel={selectedSkillLevel}
+        sport={skillModalSport ?? null}
         visible={isSkillModalVisible}
-      >
-        <Pressable onPress={() => setIsSkillModalVisible(false)} style={styles.modalBackdrop}>
-          <Pressable style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('shell.skillLevel.title')}</Text>
-            {skillModalSport ? (
-              <View style={styles.modalSportHeader}>
-                <SportBadge
-                  colorHex={skillModalSport.colorHex}
-                  label={
-                    language === 'cs'
-                      ? skillModalSport.nameCs.slice(0, 2).toUpperCase()
-                      : skillModalSport.nameEn.slice(0, 2).toUpperCase()
-                  }
-                />
-                <Text style={styles.modalSportName}>
-                  {language === 'cs' ? skillModalSport.nameCs : skillModalSport.nameEn}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={styles.modalSubtitle}>{t('events.skillLevel.modalSubtitle')}</Text>
-            {skillLevelValues.map((value) => {
-              const selected = selectedSkillLevel === value;
-
-              return (
-                <Pressable
-                  key={value}
-                  onPress={() => setSelectedSkillLevel(value)}
-                  style={[styles.skillOption, selected ? styles.skillOptionSelected : undefined]}
-                >
-                  <Text
-                    style={[
-                      styles.skillOptionTitle,
-                      selected ? styles.skillOptionTitleSelected : undefined,
-                    ]}
-                  >
-                    {t(`events.skillLevel.label.${value}`)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.skillOptionBody,
-                      selected ? styles.skillOptionBodySelected : undefined,
-                    ]}
-                  >
-                    {t(`events.skillLevel.description.${value}`)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            <ActionButton
-              disabled={!selectedSkillLevel}
-              label={t('events.skillLevel.confirm')}
-              onPress={handleConfirmSkillLevel}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -952,67 +900,5 @@ const styles = StyleSheet.create({
   previewEventMeta: {
     fontSize: 14,
     color: '#5a6475',
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-  },
-  modalCard: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: '#fff9f1',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    gap: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#183153',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#5a6475',
-  },
-  modalSportHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  modalSportName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#183153',
-  },
-  skillOption: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#d8c8b2',
-    padding: 14,
-    gap: 4,
-    backgroundColor: '#fffdf9',
-  },
-  skillOptionSelected: {
-    borderColor: '#183153',
-    backgroundColor: '#183153',
-  },
-  skillOptionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#183153',
-  },
-  skillOptionTitleSelected: {
-    color: '#fff8f0',
-  },
-  skillOptionBody: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#5a6475',
-  },
-  skillOptionBodySelected: {
-    color: '#d2dde8',
   },
 });

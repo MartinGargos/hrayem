@@ -34,3 +34,38 @@ Add a dedicated event-detail read surface that follows event visibility rules in
 ### Open questions / risks
 - The accepted Milestone 3 deep-link replay edge case stays deferred; this pass must not reopen that shell debt.
 - The current `events` Edge Function JWT gateway drift may not be cheap to resolve safely, so it should only be touched if the fix is straightforward and provable.
+
+## Milestone 5
+
+### Problem
+Milestone 5 needs to make joining, leaving, waitlist promotion, realtime player updates, and My Games Upcoming work without reopening already accepted Milestone 2, 3, or 4 debt.
+
+### Approach
+Add versioned server-side join/leave functions with row locking and notification logging, then wire event detail and My Games to them with typed React Query optimistic updates plus event-specific Realtime subscriptions.
+
+### Steps
+1. Add the Milestone 5 backend path: SQL helpers plus versioned Edge Functions for join/leave, along with any minimal read surfaces needed for membership and My Games.
+2. Upgrade event detail with join/leave states, skill gating, soft warning, optimistic cache updates, waitlist visibility rules, and Realtime player/status refresh.
+3. Replace the My Games Upcoming stub with a real query, add a Milestone 5 verifier, then validate/apply/deploy and prove as much of the checkpoint as the current environment allows.
+
+### Open questions / risks
+- `MILESTONES.md` still lists Add to calendar in Milestone 5 while the current implementation brief focuses on joining, leaving, waitlist, Realtime, and My Games. I will follow the explicit current task scope unless calendar becomes necessary for Milestone 5 correctness.
+- Existing Milestone 2 push-token/auth debt stays visible but out of scope unless it directly breaks join/leave correctness or My Games accuracy.
+- The accepted Milestone 3 pending deep-link edge case and accepted Milestone 4 likely-soon detail/feed issues remain visible but out of scope unless they directly block correct Milestone 5 behavior.
+
+## Milestone 5 Privacy Fix Pass
+
+### Problem
+The current `event_players` read model lets organizers access raw waitlisted identities, which conflicts with the product contract that Event Detail exposes only confirmed player identities plus safe waitlist aggregates.
+
+### Approach
+Tighten `event_players` read access so only confirmed rows and the viewer's own row are visible, keep waitlist count and per-viewer waitlist position on the existing safe detail surface, and make join/leave always touch the parent event so the current Realtime invalidation path still refreshes private-safe counts.
+
+### Steps
+1. Add a corrective migration that updates the `event_players` select policy and replaces the join/leave SQL functions with event-touch behavior on every membership change.
+2. Extend the verifier to prove organizers cannot read waitlisted identities while waitlisted players still see their own row and detail position.
+3. Re-run validation, apply the live migration, re-run the Milestone 5 verifier, and report any remaining unproven Realtime gaps honestly.
+
+### Open questions / risks
+- The broad milestone docs still include Add to calendar, but that is a larger native-permission feature and is only worth touching here if it stays tiny and low-risk after the privacy fix.
+- Realtime proof may still be environment-limited even if the underlying privacy model is corrected, so the likely outcome is stronger DB proof plus honest runtime proof limits.

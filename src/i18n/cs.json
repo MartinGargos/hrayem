@@ -273,13 +273,18 @@
     },
     "myGames": {
       "title": "Moje hry",
-      "subtitle": "Shell tabu je finální, s placeholder sekcemi pro budoucí a minulé hry, dokud nedorazí event data a pozápasové akce.",
+      "subtitle": "Sledujte hry, které organizujete nebo jste v nich potvrzení. Záložka Past zůstává vyhrazená pro pozdější post-game práci.",
       "tabs": {
         "upcoming": "Nadcházející",
         "past": "Minulé"
       },
       "upcomingTitle": "Nadcházející hry",
       "upcomingPlaceholder": "Tato sekce bude zobrazovat hry, které organizujete nebo jste se k nim přidali, jakmile se doplní tok dat událostí.",
+      "errorTitle": "Nepodařilo se načíst vaše nadcházející hry",
+      "errorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online znovu otevřete Moje hry.",
+      "emptyTitle": "Zatím žádné nadcházející hry",
+      "emptyBody": "Jakmile hru vytvoříte nebo se do ní potvrdíte, objeví se tady seřazená podle data.",
+      "openCreate": "Vytvořit hru",
       "pastTitle": "Minulé hry",
       "pastPlaceholder": "Tato sekce později nabídne hlášení no-show a thumbs-up prompty pro dokončené hry.",
       "openEvent": "Otevřít stub detailu hry",
@@ -325,6 +330,7 @@
     "common": {
       "organizerFallback": "Organizátor",
       "retry": "Zkusit znovu",
+      "cancel": "Zrušit",
       "pickerCancel": "Zrušit",
       "pickerDone": "Hotovo",
       "errors": {
@@ -356,13 +362,15 @@
       "loadingSubtitle": "Načítají se aktuální informace o venue, organizátorovi a hráčích.",
       "errorTitle": "Nepodařilo se načíst detail hry",
       "errorSubtitle": "Route detailu je připravená, ale tuto hru teď nešlo načíst.",
-      "errorBody": "Zkuste to prosím znovu. Pokud je odkaz starší, hra už nemusí být veřejně viditelná v aktivním feedu.",
+      "errorBody": "Zkuste to prosím znovu. Pokud je odkaz starší nebo byla hra odstraněna, detail už nemusí být dostupný.",
       "whenWhereTitle": "Kdy a kde",
       "dateTimeLabel": "Datum a čas",
       "venueLabel": "Venue",
       "addressLabel": "Adresa",
       "addressFallback": "Adresa zatím není uvedená",
       "waitlistLabel": "Čekačka",
+      "yourStatusTitle": "Váš stav",
+      "yourSkill": "Vaše úroveň: {{level}}",
       "skillTitle": "Skill range",
       "skillRangeNote": "Hráči mimo tento rozsah se stále mohou přidat. Rozsah tu slouží hlavně k nastavení očekávání před joinem.",
       "descriptionTitle": "Popis",
@@ -374,7 +382,53 @@
       "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
       "skillUnknown": "Skill zatím není nastavený",
       "shareAction": "Sdílet hru",
-      "shareMessage": "{{sport}} ve venue {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}"
+      "shareMessage": "{{sport}} ve venue {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}",
+      "state": {
+        "joinTitle": "Připraveno k joinu",
+        "joinBody": "Tlačítkem níže si vezmete potvrzené místo, pokud je ještě volné.",
+        "joinWaitlistBody": "Tato hra je právě plná. Noví hráči půjdou na čekačku ve strict FIFO pořadí.",
+        "organizerTitle": "Tuto hru organizujete",
+        "organizerBody": "Organizátor zůstává potvrzený automaticky a v dalších milestones bude event spravovat z detailu.",
+        "organizerLabel": "Organizátor",
+        "confirmedTitle": "Jste potvrzený",
+        "confirmedBody": "Jste ve hře. Když se vám plány změní ještě před startem, odejděte tady a čekačka se automaticky posune.",
+        "waitlistedTitle": "Jste na čekačce (#{{position}})",
+        "waitlistedBody": "Když někdo z potvrzených hráčů odejde, první hráč z čekačky se automaticky povýší.",
+        "closedTitle": "Tato hra už není otevřená",
+        "closedBody": "Join i leave jsou dostupné jen dokud je hra ještě nadcházející a aktivní."
+      }
+    },
+    "membership": {
+      "organizer": "Organizátor",
+      "confirmed": "Potvrzený"
+    },
+    "join": {
+      "action": "Chci si zahrát",
+      "pending": "Připojuji...",
+      "skillRequired": "Než se do této hry přidáte, vyberte si pro tento sport svou výkonnost.",
+      "skillModalSubtitle": "Než vás Hrayem přidá do hry, potřebujeme znát vaši aktuální úroveň pro tento sport.",
+      "successConfirmed": "Jste v této hře potvrzený.",
+      "successWaitlisted": "Jste na čekačce pro tuto hru.",
+      "warningTitle": "Upozornění na skill range",
+      "warningBody": "Tato hra je nastavená pro hráče na úrovni {{range}}. Vaše úroveň je {{level}}. Stále se můžete přidat, ale organizátor nastavil tento rozsah, aby našel hráče s podobnou úrovní. Pokračovat?",
+      "warningRange": "{{min}}-{{max}}",
+      "warningContinue": "Přidat se i tak",
+      "errors": {
+        "alreadyJoined": "V této hře už jste.",
+        "unavailable": "Tato hra už není otevřená pro nové joiny.",
+        "organizerCannotJoin": "Organizátor se nemůže přidat do vlastní hry."
+      }
+    },
+    "leave": {
+      "action": "Opustit hru",
+      "pending": "Odcházím...",
+      "waitlistAction": "Opustit čekačku",
+      "waitlistPending": "Odcházím z čekačky...",
+      "success": "Opustili jste tuto hru.",
+      "errors": {
+        "unavailable": "Tuto hru už nejde z aplikace opustit.",
+        "organizerCannotLeave": "Organizátor nemůže opustit vlastní hru."
+      }
     },
     "create": {
       "submit": "Vytvořit hru",

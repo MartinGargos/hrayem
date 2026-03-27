@@ -2,6 +2,8 @@ export type ReservationType = 'reserved' | 'to_be_arranged';
 
 export type EventStatus = 'active' | 'full' | 'finished' | 'cancelled';
 
+export type EventMembershipStatus = 'organizer' | 'confirmed' | 'waitlisted';
+
 export type SportSummary = {
   id: string;
   slug: string;
@@ -72,6 +74,12 @@ export type EventConfirmedPlayer = {
 
 export type EventDetail = EventFeedItem & {
   organizerLastName: string | null;
+  viewerMembershipStatus: EventMembershipStatus | null;
+  viewerWaitlistPosition: number | null;
+};
+
+export type MyGamesUpcomingItem = EventFeedItem & {
+  viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
 
 export type EventFeedFilters = {
@@ -117,7 +125,45 @@ export type CreateEventResponse = {
 export type CreateEventErrorCode =
   | 'SKILL_LEVEL_REQUIRED'
   | 'VENUE_NOT_FOUND'
+  | 'EVENT_NOT_FOUND'
+  | 'EVENT_NOT_JOINABLE'
+  | 'EVENT_NOT_LEAVABLE'
+  | 'EVENT_ALREADY_STARTED'
+  | 'ALREADY_JOINED'
+  | 'ORGANIZER_CANNOT_JOIN'
+  | 'ORGANIZER_CANNOT_LEAVE'
+  | 'PLAYER_NOT_IN_EVENT'
+  | 'FORBIDDEN'
+  | 'INVALID_SKILL_LEVEL'
   | 'UNAUTHORIZED'
   | 'VALIDATION_ERROR'
   | 'INVALID_JSON'
   | 'INTERNAL_ERROR';
+
+export type JoinEventInput = {
+  eventId: string;
+  skillLevel?: number | null;
+};
+
+export type JoinEventResponse = {
+  event_id: string;
+  membership_status: Extract<EventMembershipStatus, 'confirmed' | 'waitlisted'>;
+  waitlist_position: number | null;
+  event_status: EventStatus;
+  spots_taken: number;
+  waitlist_count: number;
+};
+
+export type LeaveEventInput = {
+  eventId: string;
+};
+
+export type LeaveEventResponse = {
+  event_id: string;
+  membership_status: null;
+  waitlist_position: null;
+  event_status: EventStatus;
+  spots_taken: number;
+  waitlist_count: number;
+  promoted_user_id: string | null;
+};

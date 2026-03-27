@@ -15,7 +15,8 @@
     "export:check": "bash ./scripts/with-node20.sh expo export --platform android --platform ios",
     "verify:milestone1": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone1.mjs",
     "verify:milestone2": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone2.mjs",
-    "verify:milestone4": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone4.mjs"
+    "verify:milestone4": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone4.mjs",
+    "verify:milestone5": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone5.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

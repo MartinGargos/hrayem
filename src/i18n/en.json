@@ -273,13 +273,18 @@
     },
     "myGames": {
       "title": "My games",
-      "subtitle": "The tab shell is final, with placeholder upcoming and past sections until event data and post-game actions arrive.",
+      "subtitle": "Track the games you organize or already confirmed for, while Past stays reserved for later post-game work.",
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
       },
       "upcomingTitle": "Upcoming games",
       "upcomingPlaceholder": "This section will list games you organize or joined once the event data flow is implemented.",
+      "errorTitle": "We couldn't load your upcoming games",
+      "errorBody": "Please try again. If the problem keeps happening, check your connection and reopen My Games once you're back online.",
+      "emptyTitle": "No upcoming games yet",
+      "emptyBody": "Once you create or confirm a game, it will appear here in date order.",
+      "openCreate": "Create a game",
       "pastTitle": "Past games",
       "pastPlaceholder": "This section will later host no-show reporting and thumbs-up prompts for completed events.",
       "openEvent": "Open event detail stub",
@@ -325,6 +330,7 @@
     "common": {
       "organizerFallback": "Organizer",
       "retry": "Try again",
+      "cancel": "Cancel",
       "pickerCancel": "Cancel",
       "pickerDone": "Done",
       "errors": {
@@ -356,13 +362,15 @@
       "loadingSubtitle": "Fetching the latest venue, organizer, and player details for this game.",
       "errorTitle": "We couldn't load this event",
       "errorSubtitle": "The event detail route is ready, but this game could not be loaded right now.",
-      "errorBody": "Please try again. If the link is old, the event may no longer be publicly visible in the active feed.",
+      "errorBody": "Please try again. If the link is old or the event was removed, this detail may no longer be available.",
       "whenWhereTitle": "When and where",
       "dateTimeLabel": "Date and time",
       "venueLabel": "Venue",
       "addressLabel": "Address",
       "addressFallback": "Address not provided yet",
       "waitlistLabel": "Waitlist",
+      "yourStatusTitle": "Your status",
+      "yourSkill": "Your level: {{level}}",
       "skillTitle": "Skill range",
       "skillRangeNote": "Players outside this range can still join. The range is there to set expectations before someone joins.",
       "descriptionTitle": "Description",
@@ -374,7 +382,53 @@
       "confirmedPlayersEmpty": "No confirmed players are visible yet beyond the organizer.",
       "skillUnknown": "Skill not set yet",
       "shareAction": "Share event",
-      "shareMessage": "{{sport}} at {{venue}} on {{date}} — join me on Hrayem! {{url}}"
+      "shareMessage": "{{sport}} at {{venue}} on {{date}} — join me on Hrayem! {{url}}",
+      "state": {
+        "joinTitle": "Ready to join",
+        "joinBody": "Tap below to claim a confirmed spot if one is still open.",
+        "joinWaitlistBody": "This game is currently full. New joins will go onto the waitlist in FIFO order.",
+        "organizerTitle": "You're organizing this game",
+        "organizerBody": "Organizers stay confirmed automatically and manage this event from the detail screen in later milestones.",
+        "organizerLabel": "Organizer",
+        "confirmedTitle": "You're confirmed",
+        "confirmedBody": "You're in. If your plans change before the game starts, leave here and the waitlist will promote automatically.",
+        "waitlistedTitle": "You're waitlisted (#{{position}})",
+        "waitlistedBody": "If a confirmed player leaves, the first waitlisted player is promoted automatically.",
+        "closedTitle": "This game is no longer open",
+        "closedBody": "Join and leave actions are only available while the game is still upcoming and active."
+      }
+    },
+    "membership": {
+      "organizer": "Organizer",
+      "confirmed": "Confirmed"
+    },
+    "join": {
+      "action": "I want to play",
+      "pending": "Joining...",
+      "skillRequired": "Choose your skill level for this sport before joining this game.",
+      "skillModalSubtitle": "We need your current level for this sport before Hrayem can join the game for you.",
+      "successConfirmed": "You're confirmed for this game.",
+      "successWaitlisted": "You're on the waitlist for this game.",
+      "warningTitle": "Skill range warning",
+      "warningBody": "This game is set for {{range}} players. Your level is {{level}}. You can still join, but the organizer set this range to find players at a similar level. Continue?",
+      "warningRange": "{{min}}-{{max}}",
+      "warningContinue": "Join anyway",
+      "errors": {
+        "alreadyJoined": "You're already in this game.",
+        "unavailable": "This game is no longer open for new joins.",
+        "organizerCannotJoin": "The organizer cannot join their own game."
+      }
+    },
+    "leave": {
+      "action": "Leave game",
+      "pending": "Leaving...",
+      "waitlistAction": "Leave waitlist",
+      "waitlistPending": "Leaving waitlist...",
+      "success": "You left this game.",
+      "errors": {
+        "unavailable": "This game can no longer be left from the app.",
+        "organizerCannotLeave": "The organizer cannot leave their own game."
+      }
     },
     "create": {
       "submit": "Create event",

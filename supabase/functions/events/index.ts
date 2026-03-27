@@ -12,14 +12,37 @@ type CreateEventPayload = {
   description?: string | null;
 };
 
+type JoinEventPayload = {
+  skill_level?: number | null;
+};
+
+type LeaveEventPayload = {
+  target_user_id?: string | null;
+};
+
 type ApiErrorCode =
   | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
   | 'METHOD_NOT_ALLOWED'
   | 'INVALID_JSON'
   | 'VALIDATION_ERROR'
   | 'VENUE_NOT_FOUND'
+  | 'EVENT_NOT_FOUND'
+  | 'EVENT_NOT_JOINABLE'
+  | 'EVENT_NOT_LEAVABLE'
+  | 'EVENT_ALREADY_STARTED'
   | 'SKILL_LEVEL_REQUIRED'
+  | 'ALREADY_JOINED'
+  | 'ORGANIZER_CANNOT_JOIN'
+  | 'ORGANIZER_CANNOT_LEAVE'
+  | 'PLAYER_NOT_IN_EVENT'
+  | 'INVALID_SKILL_LEVEL'
   | 'INTERNAL_ERROR';
+
+type EventsRoute =
+  | { kind: 'create' }
+  | { kind: 'join'; eventId: string }
+  | { kind: 'leave'; eventId: string };
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,7 +84,46 @@ function isSkillLevel(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 4;
 }
 
-function validatePayload(value: unknown): CreateEventPayload {
+async function readJsonBody(request: Request): Promise<unknown> {
+  const rawBody = await request.text();
+
+  if (!rawBody.trim()) {
+    return {};
+  }
+
+  return JSON.parse(rawBody) as unknown;
+}
+
+function parseEventsRoute(requestUrl: string): EventsRoute {
+  const url = new URL(requestUrl);
+  const segments = url.pathname.split('/').filter(Boolean);
+  const eventsIndex = segments.lastIndexOf('events');
+  const tail = eventsIndex >= 0 ? segments.slice(eventsIndex + 1) : [];
+
+  if (tail.length === 0) {
+    return {
+      kind: 'create',
+    };
+  }
+
+  if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'join') {
+    return {
+      kind: 'join',
+      eventId: tail[0]!,
+    };
+  }
+
+  if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'leave') {
+    return {
+      kind: 'leave',
+      eventId: tail[0]!,
+    };
+  }
+
+  throw new Error('Unsupported events route.');
+}
+
+function validateCreatePayload(value: unknown): CreateEventPayload {
   if (!value || typeof value !== 'object') {
     throw new Error('Body must be a JSON object.');
   }
@@ -141,29 +203,181 @@ function validatePayload(value: unknown): CreateEventPayload {
   };
 }
 
-Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', {
-      headers: corsHeaders,
-    });
+function validateJoinPayload(value: unknown): JoinEventPayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Body must be a JSON object.');
   }
 
-  if (request.method !== 'POST') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for /v1/events.', 405);
+  const payload = value as Record<string, unknown>;
+  const skillLevel = payload.skill_level;
+
+  if (typeof skillLevel !== 'undefined' && skillLevel !== null && !isSkillLevel(skillLevel)) {
+    throw new Error('skill_level must be null, omitted, or an integer between 1 and 4.');
   }
 
+  return {
+    skill_level: typeof skillLevel === 'number' ? skillLevel : null,
+  };
+}
+
+function validateLeavePayload(value: unknown): LeaveEventPayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Body must be a JSON object.');
+  }
+
+  const payload = value as Record<string, unknown>;
+  const targetUserId = payload.target_user_id;
+
+  if (
+    typeof targetUserId !== 'undefined' &&
+    targetUserId !== null &&
+    (typeof targetUserId !== 'string' || !isUuid(targetUserId))
+  ) {
+    throw new Error('target_user_id must be null, omitted, or a UUID.');
+  }
+
+  return {
+    target_user_id: typeof targetUserId === 'string' ? targetUserId : null,
+  };
+}
+
+function mapCreateEventError(message: string): {
+  code: ApiErrorCode;
+  status: number;
+  message: string;
+} {
+  const normalizedMessage = message.toUpperCase();
+
+  if (normalizedMessage.includes('VENUE_NOT_FOUND')) {
+    return {
+      code: 'VENUE_NOT_FOUND',
+      status: 404,
+      message: 'The selected venue no longer exists.',
+    };
+  }
+
+  return {
+    code: 'INTERNAL_ERROR',
+    status: 500,
+    message,
+  };
+}
+
+function mapJoinOrLeaveError(message: string): {
+  code: ApiErrorCode;
+  status: number;
+  message: string;
+} {
+  const normalizedMessage = message.toUpperCase();
+
+  if (normalizedMessage.includes('EVENT_NOT_FOUND')) {
+    return {
+      code: 'EVENT_NOT_FOUND',
+      status: 404,
+      message: 'This event could not be found.',
+    };
+  }
+
+  if (normalizedMessage.includes('EVENT_ALREADY_STARTED')) {
+    return {
+      code: 'EVENT_ALREADY_STARTED',
+      status: 409,
+      message: 'This event has already started.',
+    };
+  }
+
+  if (normalizedMessage.includes('EVENT_NOT_JOINABLE')) {
+    return {
+      code: 'EVENT_NOT_JOINABLE',
+      status: 409,
+      message: 'This event is not open for new joins anymore.',
+    };
+  }
+
+  if (normalizedMessage.includes('EVENT_NOT_LEAVABLE')) {
+    return {
+      code: 'EVENT_NOT_LEAVABLE',
+      status: 409,
+      message: 'This event can no longer be left from the app.',
+    };
+  }
+
+  if (normalizedMessage.includes('SKILL_LEVEL_REQUIRED')) {
+    return {
+      code: 'SKILL_LEVEL_REQUIRED',
+      status: 409,
+      message: 'Choose your skill level for this sport before joining.',
+    };
+  }
+
+  if (normalizedMessage.includes('ALREADY_JOINED')) {
+    return {
+      code: 'ALREADY_JOINED',
+      status: 409,
+      message: 'You already joined this event.',
+    };
+  }
+
+  if (normalizedMessage.includes('ORGANIZER_CANNOT_JOIN')) {
+    return {
+      code: 'ORGANIZER_CANNOT_JOIN',
+      status: 409,
+      message: 'The organizer cannot join their own event.',
+    };
+  }
+
+  if (normalizedMessage.includes('ORGANIZER_CANNOT_LEAVE')) {
+    return {
+      code: 'ORGANIZER_CANNOT_LEAVE',
+      status: 409,
+      message: 'The organizer cannot leave their own event.',
+    };
+  }
+
+  if (normalizedMessage.includes('PLAYER_NOT_IN_EVENT')) {
+    return {
+      code: 'PLAYER_NOT_IN_EVENT',
+      status: 409,
+      message: 'The selected player is not in this event anymore.',
+    };
+  }
+
+  if (normalizedMessage.includes('INVALID_SKILL_LEVEL')) {
+    return {
+      code: 'INVALID_SKILL_LEVEL',
+      status: 400,
+      message: 'The provided skill level is invalid.',
+    };
+  }
+
+  if (normalizedMessage.includes('FORBIDDEN')) {
+    return {
+      code: 'FORBIDDEN',
+      status: 403,
+      message: 'You are not allowed to perform this action.',
+    };
+  }
+
+  return {
+    code: 'INTERNAL_ERROR',
+    status: 500,
+    message,
+  };
+}
+
+function createSupabaseClients(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
-    return errorResponse('INTERNAL_ERROR', 'Supabase environment is not configured.', 500);
+    throw new Error('Supabase environment is not configured.');
   }
 
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader) {
-    return errorResponse('UNAUTHORIZED', 'Missing Authorization header.', 401);
+    throw new Error('Missing Authorization header.');
   }
 
   const authClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -185,26 +399,51 @@ Deno.serve(async (request) => {
     },
   });
 
+  return {
+    authClient,
+    adminClient,
+  };
+}
+
+async function requireAuthenticatedUser(request: Request) {
+  const { authClient, adminClient } = createSupabaseClients(request);
   const {
     data: { user },
     error: userError,
   } = await authClient.auth.getUser();
 
   if (userError || !user) {
-    return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+    return {
+      ok: false as const,
+      response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
+    };
+  }
+
+  return {
+    ok: true as const,
+    user,
+    adminClient,
+  };
+}
+
+async function handleCreateRoute(request: Request): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
   let payload: CreateEventPayload;
 
   try {
-    payload = validatePayload(await request.json());
+    payload = validateCreatePayload(await readJsonBody(request));
   } catch (error) {
     const isInvalidJson = error instanceof SyntaxError;
     const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
     return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
   }
 
-  const venueResult = await adminClient
+  const venueResult = await authResult.adminClient
     .from('venues')
     .select('id')
     .eq('id', payload.venue_id)
@@ -218,10 +457,10 @@ Deno.serve(async (request) => {
     return errorResponse('VENUE_NOT_FOUND', 'The selected venue no longer exists.', 404);
   }
 
-  const userSportResult = await adminClient
+  const userSportResult = await authResult.adminClient
     .from('user_sports')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', authResult.user.id)
     .eq('sport_id', payload.sport_id)
     .limit(1)
     .maybeSingle();
@@ -238,9 +477,9 @@ Deno.serve(async (request) => {
     );
   }
 
-  const createEventResult = await adminClient.rpc('create_event_atomic', {
+  const createEventResult = await authResult.adminClient.rpc('create_event_atomic', {
     p_sport_id: payload.sport_id,
-    p_organizer_id: user.id,
+    p_organizer_id: authResult.user.id,
     p_venue_id: payload.venue_id,
     p_starts_at: payload.starts_at,
     p_ends_at: payload.ends_at,
@@ -252,11 +491,8 @@ Deno.serve(async (request) => {
   });
 
   if (createEventResult.error) {
-    if (createEventResult.error.message.includes('VENUE_NOT_FOUND')) {
-      return errorResponse('VENUE_NOT_FOUND', 'The selected venue no longer exists.', 404);
-    }
-
-    return errorResponse('INTERNAL_ERROR', createEventResult.error.message, 500);
+    const mappedError = mapCreateEventError(createEventResult.error.message);
+    return errorResponse(mappedError.code, mappedError.message, mappedError.status);
   }
 
   const createdEvent = Array.isArray(createEventResult.data)
@@ -273,4 +509,114 @@ Deno.serve(async (request) => {
     },
     201,
   );
+}
+
+async function handleJoinRoute(request: Request, eventId: string): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  let payload: JoinEventPayload;
+
+  try {
+    payload = validateJoinPayload(await readJsonBody(request));
+  } catch (error) {
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+  }
+
+  const joinResult = await authResult.adminClient.rpc('join_event_atomic', {
+    p_event_id: eventId,
+    p_user_id: authResult.user.id,
+    p_skill_level: payload.skill_level,
+  });
+
+  if (joinResult.error) {
+    const mappedError = mapJoinOrLeaveError(joinResult.error.message);
+    return errorResponse(mappedError.code, mappedError.message, mappedError.status);
+  }
+
+  if (!joinResult.data) {
+    return errorResponse('INTERNAL_ERROR', 'The server did not return join state.', 500);
+  }
+
+  return jsonResponse({
+    data: joinResult.data,
+  });
+}
+
+async function handleLeaveRoute(request: Request, eventId: string): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  let payload: LeaveEventPayload;
+
+  try {
+    payload = validateLeavePayload(await readJsonBody(request));
+  } catch (error) {
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+  }
+
+  const leaveResult = await authResult.adminClient.rpc('leave_event_atomic', {
+    p_event_id: eventId,
+    p_actor_user_id: authResult.user.id,
+    p_target_user_id: payload.target_user_id,
+  });
+
+  if (leaveResult.error) {
+    const mappedError = mapJoinOrLeaveError(leaveResult.error.message);
+    return errorResponse(mappedError.code, mappedError.message, mappedError.status);
+  }
+
+  if (!leaveResult.data) {
+    return errorResponse('INTERNAL_ERROR', 'The server did not return leave state.', 500);
+  }
+
+  return jsonResponse({
+    data: leaveResult.data,
+  });
+}
+
+Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: corsHeaders,
+    });
+  }
+
+  if (request.method !== 'POST') {
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);
+  }
+
+  let route: EventsRoute;
+
+  try {
+    route = parseEventsRoute(request.url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unsupported events route.';
+    return errorResponse('VALIDATION_ERROR', message, 400);
+  }
+
+  try {
+    if (route.kind === 'create') {
+      return await handleCreateRoute(request);
+    }
+
+    if (route.kind === 'join') {
+      return await handleJoinRoute(request, route.eventId);
+    }
+
+    return await handleLeaveRoute(request, route.eventId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected server error.';
+    return errorResponse('INTERNAL_ERROR', message, 500);
+  }
 });

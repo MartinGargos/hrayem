@@ -13,7 +13,6 @@ import {
   AccountDeletionScreen,
   AddVenueScreen,
   ChatScreen,
-  MyGamesScreen,
   PlayerProfileScreen,
   PostAvailabilityScreen,
   ProfileScreen,
@@ -23,6 +22,7 @@ import {
 import { CreateEventScreen } from '../features/events/CreateEventScreen';
 import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
+import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
 import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
 import { getPendingDeepLinkReplayAction } from './pending-deep-link';

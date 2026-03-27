@@ -514,7 +514,7 @@ All tables have RLS enabled. The `service_role` key (used only by Edge Functions
 | `venues` | Any authenticated user | Insert: any authenticated user; Update/Delete: service role only |
 | `user_sports` | Any authenticated user | **Own rows, `skill_level` column only** — see policy below |
 | `events` | Any authenticated user | Service role only (via Edge Functions) |
-| `event_players` | Organizer can read all rows for their own event; any authenticated user can read `confirmed` rows only; each user can always read their own row | Service role only (via Edge Functions) |
+| `event_players` | Any authenticated user can read `confirmed` rows only; each user can always read their own row. Waitlisted identities stay hidden from everyone else, including the organizer. | Service role only (via Edge Functions) |
 | `chat_messages` | Organizer or confirmed player of that event only | Service role only (via Edge Functions) |
 | `no_show_reports` | Organizer of event only | Service role only (via Edge Functions) |
 | `post_game_thumbs` | Any authenticated user (thumbs are anonymous but readable for connection checks) | Service role only (via Edge Function) |
@@ -788,10 +788,10 @@ Logic:
 | Channel | Table | Filter | Events | Screen |
 |---|---|---|---|---|
 | `event:{id}:chat` | `chat_messages` | `event_id = {id}` | `INSERT` | Chat screen |
-| `event:{id}:players` | `event_players` | `event_id = {id}` | `INSERT`, `UPDATE` | Event detail |
+| `event:{id}:players` | `event_players` | `event_id = {id}` | `INSERT`, `UPDATE` | Event detail (confirmed rows + viewer's own row only) |
 | `event:{id}:status` | `events` | `id = {id}` | `UPDATE` | Event detail, My games |
 
-All subscriptions require a valid JWT. RLS gates which users can subscribe to which channels.
+All subscriptions require a valid JWT. RLS gates which users can subscribe to which channels, so waitlisted identities remain private while the event-detail aggregates continue to expose only waitlist count and the current viewer's own position.
 
 ---
 

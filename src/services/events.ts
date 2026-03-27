@@ -1,6 +1,5 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
-
 import { useAuthStore } from '../store/auth-store';
+import { requirePublicEnvValue } from '../utils/env';
 import { retryOnceAfterUnauthorized, throwIfSupabaseError } from '../utils/supabase';
 import type {
   CreateEventErrorCode,
@@ -10,6 +9,12 @@ import type {
   EventDetail,
   EventFeedFilters,
   EventFeedItem,
+  EventMembershipStatus,
+  JoinEventInput,
+  JoinEventResponse,
+  LeaveEventInput,
+  LeaveEventResponse,
+  MyGamesUpcomingItem,
   SportSummary,
   UserSportProfile,
 } from '../types/events';
@@ -65,8 +70,14 @@ type EventFeedRow = {
   created_at: string;
 };
 
-type OrganizerNameRow = {
-  last_name: string | null;
+type EventDetailRow = EventFeedRow & {
+  organizer_last_name: string | null;
+  viewer_membership_status: EventMembershipStatus | null;
+  viewer_waitlist_position: number | null;
+};
+
+type MyGamesUpcomingRow = EventFeedRow & {
+  viewer_membership_status: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
 
 type EventPlayerRow = {
@@ -114,6 +125,9 @@ export class EdgeFunctionError extends Error {
     this.status = status;
   }
 }
+
+const eventsFunctionUrl = `${requirePublicEnvValue('supabaseUrl')}/functions/v1/events`;
+const supabaseAnonKey = requirePublicEnvValue('supabaseAnonKey');
 
 function mapSportRow(row: SportRow): SportSummary {
   return {
@@ -179,7 +193,10 @@ function resolveProfileRelation(profile: EventPlayerRow['profile']) {
   return profile;
 }
 
-async function callEventsFunction<TResponse>(body: Record<string, unknown>): Promise<TResponse> {
+async function callEventsRoute<TResponse>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<TResponse> {
   return retryOnceAfterUnauthorized(
     async () => {
       const accessToken = useAuthStore.getState().accessToken;
@@ -188,50 +205,46 @@ async function callEventsFunction<TResponse>(body: Record<string, unknown>): Pro
         throw new EdgeFunctionError('Missing authenticated session.', 'UNAUTHORIZED', 401);
       }
 
-      const result = await supabase.functions.invoke<{
-        data: TResponse;
-      }>('events', {
-        body,
+      const response = await fetch(`${eventsFunctionUrl}${path}`, {
+        method: 'POST',
         headers: {
+          apikey: supabaseAnonKey,
           Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify(body),
       });
 
-      if (result.error) {
-        if (result.error instanceof FunctionsHttpError) {
-          const response = result.error.context;
-          let parsedBody: EdgeFunctionFailure | { data: TResponse } | null = null;
+      let parsedBody: EdgeFunctionFailure | { data: TResponse } | null = null;
 
-          try {
-            parsedBody = (await response.json()) as EdgeFunctionFailure | { data: TResponse };
-          } catch {
-            parsedBody = null;
-          }
-
-          const failure = readEdgeFunctionFailure(parsedBody);
-
-          if (response.status === 401) {
-            throw {
-              status: 401,
-              message: failure?.message ?? result.error.message,
-            };
-          }
-
-          throw new EdgeFunctionError(
-            failure?.message ?? result.error.message,
-            failure?.code ?? null,
-            response.status,
-          );
-        }
-
-        throw new EdgeFunctionError(result.error.message, null, 500);
+      try {
+        parsedBody = (await response.json()) as EdgeFunctionFailure | { data: TResponse };
+      } catch {
+        parsedBody = null;
       }
 
-      if (!result.data?.data) {
+      if (!response.ok) {
+        const failure = readEdgeFunctionFailure(parsedBody);
+
+        if (response.status === 401) {
+          throw {
+            status: 401,
+            message: failure?.message ?? 'Unauthorized.',
+          };
+        }
+
+        throw new EdgeFunctionError(
+          failure?.message ?? 'The server returned an unexpected response.',
+          failure?.code ?? null,
+          response.status,
+        );
+      }
+
+      if (!parsedBody || !('data' in parsedBody) || !parsedBody.data) {
         throw new EdgeFunctionError('The server returned an unexpected response.', null, 500);
       }
 
-      return result.data.data;
+      return parsedBody.data;
     },
     async () => {
       const refreshedSession = await refreshSupabaseSession();
@@ -337,7 +350,7 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
     supabase
       .from('event_detail_view')
       .select(
-        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, created_at',
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_last_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, viewer_membership_status, viewer_waitlist_position, created_at',
       )
       .eq('id', eventId)
       .single(),
@@ -349,25 +362,32 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
     throw new Error('Missing event detail row.');
   }
 
-  const mappedDetail = mapEventFeedRow(detailResult.data as EventFeedRow);
-
-  if (!mappedDetail.organizerId) {
-    return {
-      ...mappedDetail,
-      organizerLastName: null,
-    };
-  }
-
-  const organizerResult = await retrySupabaseOperationOnce(() =>
-    supabase.from('profiles').select('last_name').eq('id', mappedDetail.organizerId).maybeSingle(),
-  );
-
-  throwIfSupabaseError(organizerResult.error, 'Unable to load the organizer profile.');
+  const detailRow = detailResult.data as EventDetailRow;
+  const mappedDetail = mapEventFeedRow(detailRow);
 
   return {
     ...mappedDetail,
-    organizerLastName: (organizerResult.data as OrganizerNameRow | null)?.last_name ?? null,
+    organizerLastName: detailRow.organizer_last_name,
+    viewerMembershipStatus: detailRow.viewer_membership_status,
+    viewerWaitlistPosition: detailRow.viewer_waitlist_position,
   };
+}
+
+export async function fetchMyUpcomingGames(): Promise<MyGamesUpcomingItem[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('my_games_upcoming_view')
+      .select(
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, viewer_membership_status, created_at',
+      ),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load upcoming games.');
+
+  return ((result.data ?? []) as MyGamesUpcomingRow[]).map((row) => ({
+    ...mapEventFeedRow(row),
+    viewerMembershipStatus: row.viewer_membership_status,
+  }));
 }
 
 export async function fetchConfirmedEventPlayers(input: {
@@ -425,7 +445,7 @@ export async function fetchConfirmedEventPlayers(input: {
 }
 
 export async function createEvent(input: CreateEventInput): Promise<CreateEventResponse> {
-  return callEventsFunction<CreateEventResponse>({
+  return callEventsRoute<CreateEventResponse>('', {
     sport_id: input.sportId,
     venue_id: input.venueId,
     starts_at: input.startsAt,
@@ -436,4 +456,14 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
     skill_max: input.skillMax,
     description: input.description ?? null,
   });
+}
+
+export async function joinEvent(input: JoinEventInput): Promise<JoinEventResponse> {
+  return callEventsRoute<JoinEventResponse>(`/${input.eventId}/join`, {
+    skill_level: input.skillLevel ?? null,
+  });
+}
+
+export async function leaveEvent(input: LeaveEventInput): Promise<LeaveEventResponse> {
+  return callEventsRoute<LeaveEventResponse>(`/${input.eventId}/leave`, {});
 }
