@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
@@ -8,18 +8,25 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
+import {
+  canOrganizerCancelEvent,
+  canOrganizerEditEvent,
+  canOrganizerRemovePlayers,
+} from './event-eligibility';
 import { AvatarPhoto, InfoPill, SportBadge } from './EventPrimitives';
 import { SkillLevelModal } from './SkillLevelModal';
 import { DetailRow, ScreenCard, ScreenShell } from '../../components/ScreenShell';
 import { buildEventWebUrl } from '../../navigation/deep-links';
 import type { RootStackParamList } from '../../navigation/types';
 import {
+  cancelEvent,
   EdgeFunctionError,
   fetchConfirmedEventPlayers,
   fetchEventDetail,
   fetchOwnSportProfiles,
   joinEvent,
   leaveEvent,
+  removePlayer,
 } from '../../services/events';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/auth-store';
@@ -216,6 +223,20 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
         tone: 'info',
       };
     }
+
+    if (error.code === 'EVENT_NOT_CANCELLABLE') {
+      return {
+        messageKey: 'events.cancel.errors.unavailable',
+        tone: 'info',
+      };
+    }
+
+    if (error.code === 'FORBIDDEN') {
+      return {
+        messageKey: 'events.organizerTools.errors.forbidden',
+        tone: 'info',
+      };
+    }
   }
 
   return {
@@ -260,6 +281,18 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     staleTime: 300_000,
   });
 
+  const invalidateEventRelatedQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['events', 'detail', eventId] }),
+      queryClient.invalidateQueries({
+        queryKey: ['events', 'detail', eventId, 'confirmed-players'],
+      }),
+      queryClient.invalidateQueries({ queryKey: ['events', 'feed'] }),
+      queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
+      queryClient.invalidateQueries({ queryKey: ['user-sports', userId] }),
+    ]);
+  }, [eventId, queryClient, userId]);
+
   useEffect(() => {
     if (!userId) {
       return;
@@ -268,17 +301,6 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     let active = true;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let channel = supabase.channel(`event:${eventId}:players`);
-
-    const invalidateEventQueries = () => {
-      void Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['events', 'detail', eventId] }),
-        queryClient.invalidateQueries({
-          queryKey: ['events', 'detail', eventId, 'confirmed-players'],
-        }),
-        queryClient.invalidateQueries({ queryKey: ['events', 'feed'] }),
-        queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
-      ]);
-    };
 
     const connect = () => {
       channel = supabase
@@ -291,7 +313,9 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             table: 'event_players',
             filter: `event_id=eq.${eventId}`,
           },
-          invalidateEventQueries,
+          () => {
+            void invalidateEventRelatedQueries();
+          },
         )
         .on(
           'postgres_changes',
@@ -301,7 +325,9 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             table: 'events',
             filter: `id=eq.${eventId}`,
           },
-          invalidateEventQueries,
+          () => {
+            void invalidateEventRelatedQueries();
+          },
         );
 
       channel.subscribe((status) => {
@@ -336,7 +362,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
 
       void supabase.removeChannel(channel);
     };
-  }, [eventId, queryClient, userId]);
+  }, [eventId, invalidateEventRelatedQueries, queryClient, userId]);
 
   const joinMutation = useMutation({
     mutationFn: joinEvent,
@@ -521,6 +547,46 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     },
   });
 
+  const removePlayerMutation = useMutation({
+    mutationFn: removePlayer,
+    onSuccess: async (_result, variables) => {
+      queryClient.setQueryData<EventConfirmedPlayer[]>(
+        ['events', 'detail', eventId, 'confirmed-players'],
+        (current) => current?.filter((player) => player.userId !== variables.targetUserId) ?? [],
+      );
+      setNotice({
+        messageKey: 'events.removePlayer.success',
+        tone: 'info',
+      });
+      await invalidateEventRelatedQueries();
+    },
+    onError: (error) => {
+      setNotice(mapJoinLeaveErrorToNotice(error));
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: cancelEvent,
+    onSuccess: async (result) => {
+      queryClient.setQueryData<EventDetail>(['events', 'detail', eventId], (current) =>
+        current
+          ? {
+              ...current,
+              status: result.status,
+            }
+          : current,
+      );
+      setNotice({
+        messageKey: 'events.cancel.success',
+        tone: 'info',
+      });
+      await invalidateEventRelatedQueries();
+    },
+    onError: (error) => {
+      setNotice(mapJoinLeaveErrorToNotice(error));
+    },
+  });
+
   function currentSportSkillLevel(): number | null {
     if (!eventQuery.data || !ownSportProfilesQuery.data) {
       return null;
@@ -636,6 +702,67 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     leaveMutation.mutate({ eventId });
   }
 
+  function handleEditPress() {
+    if (!eventQuery.data || !canOrganizerEditEvent(eventQuery.data)) {
+      setNotice({
+        messageKey: 'events.edit.errors.unavailable',
+        tone: 'info',
+      });
+      return;
+    }
+
+    navigation.navigate('EditEvent', { eventId });
+  }
+
+  function handleCancelPress() {
+    setNotice(null);
+    Alert.alert(t('events.cancel.confirmTitle'), t('events.cancel.confirmBody'), [
+      {
+        text: t('events.common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('events.cancel.confirmAction'),
+        style: 'destructive',
+        onPress: () => {
+          cancelMutation.mutate({ eventId });
+        },
+      },
+    ]);
+  }
+
+  function handleRemovePlayerPress(targetUserId: string, playerName: string) {
+    if (!eventQuery.data || !canOrganizerRemovePlayers(eventQuery.data)) {
+      setNotice({
+        messageKey: 'events.leave.errors.unavailable',
+        tone: 'info',
+      });
+      return;
+    }
+
+    setNotice(null);
+    Alert.alert(
+      t('events.removePlayer.confirmTitle'),
+      t('events.removePlayer.confirmBody', { player: playerName }),
+      [
+        {
+          text: t('events.common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('events.removePlayer.confirmAction'),
+          style: 'destructive',
+          onPress: () => {
+            removePlayerMutation.mutate({
+              eventId,
+              targetUserId,
+            });
+          },
+        },
+      ],
+    );
+  }
+
   if (eventQuery.isPending) {
     return (
       <ScreenShell
@@ -681,6 +808,11 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   const joinOrLeaveBusy = joinMutation.isPending || leaveMutation.isPending;
   const viewerMembershipStatus = event.viewerMembershipStatus;
   const currentSkillLevel = currentSportSkillLevel();
+  const canCancelEvent = canOrganizerCancelEvent(event);
+  const canEditEvent = canOrganizerEditEvent(event);
+  const canRemovePlayers = canOrganizerRemovePlayers(event);
+  const canManageEvent = canCancelEvent;
+  const removePlayerTargetUserId = removePlayerMutation.variables?.targetUserId ?? null;
   const isJoinableWindow =
     (event.status === 'active' || event.status === 'full') &&
     new Date(event.startsAt).getTime() > Date.now();
@@ -710,7 +842,15 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     disabled: joinOrLeaveBusy || !isJoinableWindow,
   };
 
-  if (!isJoinableWindow) {
+  if (event.status === 'cancelled') {
+    stateTitle = t('events.detail.state.cancelledTitle');
+    stateBody = t('events.detail.state.cancelledBody');
+    primaryAction = null;
+  } else if (event.status === 'finished') {
+    stateTitle = t('events.detail.state.finishedTitle');
+    stateBody = t('events.detail.state.finishedBody');
+    primaryAction = null;
+  } else if (!isJoinableWindow) {
     stateTitle = t('events.detail.state.closedTitle');
     stateBody = t('events.detail.state.closedBody');
     primaryAction = null;
@@ -802,6 +942,29 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
           ) : null}
         </ScreenCard>
 
+        {canManageEvent ? (
+          <ScreenCard title={t('events.organizerTools.title')}>
+            <Text style={styles.bodyText}>{t('events.organizerTools.body')}</Text>
+            {canEditEvent ? (
+              <ActionButton
+                disabled={cancelMutation.isPending || removePlayerMutation.isPending}
+                label={t('events.organizerTools.editAction')}
+                onPress={handleEditPress}
+              />
+            ) : null}
+            <ActionButton
+              disabled={cancelMutation.isPending || removePlayerMutation.isPending}
+              label={
+                cancelMutation.isPending
+                  ? t('events.cancel.pending')
+                  : t('events.organizerTools.cancelAction')
+              }
+              onPress={handleCancelPress}
+              variant="secondary"
+            />
+          </ScreenCard>
+        ) : null}
+
         <ScreenCard title={t('events.detail.whenWhereTitle')}>
           <DetailRow
             label={t('events.detail.dateTimeLabel')}
@@ -872,26 +1035,43 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                   t('events.common.organizerFallback');
 
                 return (
-                  <Pressable
-                    key={player.userId}
-                    onPress={() =>
-                      navigation.navigate('PlayerProfile', { playerId: player.userId })
-                    }
-                    style={styles.playerCard}
-                  >
-                    <AvatarPhoto label={playerName} uri={player.photoUrl} />
-                    <View style={styles.playerCopy}>
-                      <Text style={styles.playerName}>{playerName}</Text>
-                      <Text style={styles.playerMeta}>
-                        {player.skillLevel
-                          ? t(`events.skillLevel.label.${player.skillLevel}`)
-                          : t('events.detail.skillUnknown')}
-                      </Text>
-                    </View>
-                    {player.skillLevel ? (
-                      <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
+                  <View key={player.userId} style={styles.playerCard}>
+                    <Pressable
+                      onPress={() =>
+                        navigation.navigate('PlayerProfile', { playerId: player.userId })
+                      }
+                      style={styles.playerIdentityPressable}
+                    >
+                      <AvatarPhoto label={playerName} uri={player.photoUrl} />
+                      <View style={styles.playerCopy}>
+                        <Text style={styles.playerName}>{playerName}</Text>
+                        <Text style={styles.playerMeta}>
+                          {player.skillLevel
+                            ? t(`events.skillLevel.label.${player.skillLevel}`)
+                            : t('events.detail.skillUnknown')}
+                        </Text>
+                      </View>
+                      {player.skillLevel ? (
+                        <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
+                      ) : null}
+                    </Pressable>
+                    {canRemovePlayers && player.userId !== event.organizerId ? (
+                      <ActionButton
+                        disabled={
+                          removePlayerMutation.isPending &&
+                          removePlayerTargetUserId === player.userId
+                        }
+                        label={
+                          removePlayerMutation.isPending &&
+                          removePlayerTargetUserId === player.userId
+                            ? t('events.removePlayer.pending')
+                            : t('events.removePlayer.action')
+                        }
+                        onPress={() => handleRemovePlayerPress(player.userId, playerName)}
+                        variant="secondary"
+                      />
                     ) : null}
-                  </Pressable>
+                  </View>
                 );
               })}
             </View>
@@ -980,14 +1160,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   playerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#eadfce',
     backgroundColor: '#fffdf9',
     padding: 14,
+  },
+  playerIdentityPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   playerCopy: {
     flex: 1,

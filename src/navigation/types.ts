@@ -26,6 +26,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   EventDetail: { eventId: string };
+  EditEvent: { eventId: string };
   Chat: { eventId: string };
   PlayerProfile: { playerId: string };
   PostAvailability: undefined;

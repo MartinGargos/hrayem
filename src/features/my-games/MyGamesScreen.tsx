@@ -105,7 +105,9 @@ export function MyGamesScreen() {
       renderItem={({ item }) => (
         <View style={styles.itemWrap}>
           <Text style={styles.roleLabel}>
-            {t(`events.membership.${item.viewerMembershipStatus}`)}
+            {item.viewerMembershipStatus === 'organizer'
+              ? t('shell.myGames.role.organizing')
+              : t('shell.myGames.role.playing')}
           </Text>
           <EventSummaryCard
             event={item}

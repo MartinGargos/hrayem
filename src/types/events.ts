@@ -101,6 +101,18 @@ export type CreateEventInput = {
   description?: string | null;
 };
 
+export type UpdateEventInput = {
+  eventId: string;
+  venueId?: string;
+  startsAt?: string;
+  endsAt?: string;
+  reservationType?: ReservationType;
+  playerCountTotal?: number;
+  skillMin?: number;
+  skillMax?: number;
+  description?: string | null;
+};
+
 export type CreateEventResponse = {
   id: string;
   sport_id: string;
@@ -122,12 +134,22 @@ export type CreateEventResponse = {
   updated_at: string;
 };
 
+export type UpdateEventResponse = CreateEventResponse;
+
+export type CancelEventInput = {
+  eventId: string;
+};
+
+export type CancelEventResponse = CreateEventResponse;
+
 export type CreateEventErrorCode =
   | 'SKILL_LEVEL_REQUIRED'
   | 'VENUE_NOT_FOUND'
   | 'EVENT_NOT_FOUND'
   | 'EVENT_NOT_JOINABLE'
   | 'EVENT_NOT_LEAVABLE'
+  | 'EVENT_NOT_CANCELLABLE'
+  | 'EVENT_NOT_EDITABLE'
   | 'EVENT_ALREADY_STARTED'
   | 'ALREADY_JOINED'
   | 'ORGANIZER_CANNOT_JOIN'
@@ -135,6 +157,7 @@ export type CreateEventErrorCode =
   | 'PLAYER_NOT_IN_EVENT'
   | 'FORBIDDEN'
   | 'INVALID_SKILL_LEVEL'
+  | 'PLAYER_COUNT_TOO_LOW'
   | 'UNAUTHORIZED'
   | 'VALIDATION_ERROR'
   | 'INVALID_JSON'
@@ -158,6 +181,11 @@ export type LeaveEventInput = {
   eventId: string;
 };
 
+export type RemovePlayerInput = {
+  eventId: string;
+  targetUserId: string;
+};
+
 export type LeaveEventResponse = {
   event_id: string;
   membership_status: null;
@@ -167,3 +195,5 @@ export type LeaveEventResponse = {
   waitlist_count: number;
   promoted_user_id: string | null;
 };
+
+export type RemovePlayerResponse = LeaveEventResponse;

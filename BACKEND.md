@@ -646,6 +646,8 @@ Logic:
 6. If organizer removed the player: notify removed player
 7. Log to `notification_log`
 
+Organizer-facing UI may call `POST /v1/events/:id/remove-player` with a required `target_user_id`; it reuses the same transaction and promotion rules as `leave-event`, but it never defaults the target to the caller.
+
 ---
 
 ### 5.4 `POST /v1/events/:id/cancel` — `cancel-event`

@@ -19,7 +19,7 @@ import {
   SettingsScreen,
   SkillLevelScreen,
 } from '../features/shell/StubScreens';
-import { CreateEventScreen } from '../features/events/CreateEventScreen';
+import { CreateEventScreen, EditEventScreen } from '../features/events/CreateEventScreen';
 import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
 import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
@@ -286,6 +286,13 @@ export function AppNavigator() {
           name="EventDetail"
           options={{
             title: t('navigation.titles.eventDetail'),
+          }}
+        />
+        <RootStack.Screen
+          component={EditEventScreen}
+          name="EditEvent"
+          options={{
+            title: t('navigation.titles.editEvent'),
           }}
         />
         <RootStack.Screen

@@ -15,11 +15,12 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
+import type { NavigationProp, RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { ActionButton, ChoiceChips, FormTextField, NoticeBanner } from '../auth/AuthPrimitives';
+import { canOrganizerEditEvent } from './event-eligibility';
 import { AvatarPhoto, SportChoiceChip, StepperField } from './EventPrimitives';
 import { NativePickerField } from './NativePickerField';
 import { SkillLevelModal } from './SkillLevelModal';
@@ -27,7 +28,9 @@ import {
   fetchActiveSports,
   createEvent,
   EdgeFunctionError,
+  fetchEventDetail,
   fetchOwnSportProfiles,
+  updateEvent,
   upsertOwnSportProfile,
 } from '../../services/events';
 import { createVenue, fetchVenueMatches } from '../../services/venues';
@@ -37,9 +40,16 @@ import { useUserStore } from '../../store/user-store';
 import type { RootStackParamList } from '../../navigation/types';
 import { formatEventDate, formatEventTime } from '../../utils/dates';
 import type { AppNotice } from '../../types/app';
-import type { CreateEventInput, ReservationType, VenueSummary } from '../../types/events';
+import type {
+  CreateEventInput,
+  ReservationType,
+  UpdateEventInput,
+  VenueSummary,
+} from '../../types/events';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
+type EditEventRoute = RouteProp<RootStackParamList, 'EditEvent'>;
+type EventFormMode = 'create' | 'edit';
 
 const skillLevelValues = [1, 2, 3, 4] as const;
 
@@ -126,7 +136,7 @@ function translateFieldError(
   return message ? t(message) : null;
 }
 
-function mapEventErrorToNotice(error: unknown): AppNotice {
+function mapEventErrorToNotice(error: unknown, mode: EventFormMode): AppNotice {
   if (error instanceof EdgeFunctionError) {
     if (error.code === 'SKILL_LEVEL_REQUIRED') {
       return {
@@ -144,8 +154,30 @@ function mapEventErrorToNotice(error: unknown): AppNotice {
 
     if (error.code === 'VALIDATION_ERROR') {
       return {
-        messageKey: 'events.create.errors.validation',
+        messageKey:
+          mode === 'edit' ? 'events.edit.errors.validation' : 'events.create.errors.validation',
         tone: 'error',
+      };
+    }
+
+    if (error.code === 'PLAYER_COUNT_TOO_LOW') {
+      return {
+        messageKey: 'events.edit.errors.playerCountTooLow',
+        tone: 'error',
+      };
+    }
+
+    if (error.code === 'EVENT_NOT_EDITABLE') {
+      return {
+        messageKey: 'events.edit.errors.unavailable',
+        tone: 'info',
+      };
+    }
+
+    if (error.code === 'EVENT_NOT_CANCELLABLE') {
+      return {
+        messageKey: 'events.cancel.errors.unavailable',
+        tone: 'info',
       };
     }
   }
@@ -156,7 +188,7 @@ function mapEventErrorToNotice(error: unknown): AppNotice {
   };
 }
 
-export function CreateEventScreen() {
+function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: string }) {
   const navigation = useNavigation<RootNavigation>();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -164,6 +196,7 @@ export function CreateEventScreen() {
   const selectedCity = useUserStore((state) => state.selectedCity);
   const language = useUserStore((state) => state.language);
   const profile = useUserStore((state) => state.profile);
+  const isEditMode = mode === 'edit';
   const setAuthNotice = useUIStore((state) => state.setAuthNotice);
   const notice = useUIStore((state) => state.authNotice);
   const clearAuthNotice = useUIStore((state) => state.clearAuthNotice);
@@ -175,6 +208,7 @@ export function CreateEventScreen() {
   const [pendingEventInput, setPendingEventInput] = useState<CreateEventInput | null>(null);
   const [pendingSportId, setPendingSportId] = useState<string | null>(null);
   const [selectedSkillLevel, setSelectedSkillLevel] = useState<number | null>(null);
+  const [prefilledEventId, setPrefilledEventId] = useState<string | null>(null);
 
   const eventForm = useForm<CreateEventValues>({
     resolver: zodResolver(createEventSchema(t)),
@@ -216,10 +250,17 @@ export function CreateEventScreen() {
     staleTime: 86_400_000,
   });
 
+  const editingEventQuery = useQuery({
+    queryKey: ['events', 'detail', eventId, 'edit-form'],
+    queryFn: () => fetchEventDetail(eventId ?? ''),
+    enabled: isEditMode && Boolean(eventId),
+    staleTime: 10_000,
+  });
+
   const ownSportProfilesQuery = useQuery({
     queryKey: ['user-sports', userId],
     queryFn: () => fetchOwnSportProfiles(userId ?? ''),
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && !isEditMode,
     staleTime: 300_000,
   });
 
@@ -229,6 +270,39 @@ export function CreateEventScreen() {
     enabled: Boolean(selectedCity),
     staleTime: 30_000,
   });
+
+  useEffect(() => {
+    if (!isEditMode || !editingEventQuery.data || editingEventQuery.data.id === prefilledEventId) {
+      return;
+    }
+
+    const event = editingEventQuery.data;
+    const startsAtDate = new Date(event.startsAt);
+    const endsAtDate = new Date(event.endsAt);
+
+    eventForm.reset({
+      sportId: event.sportId,
+      reservationType: event.reservationType,
+      eventDate: startsAtDate,
+      startTime: startsAtDate,
+      endTime: endsAtDate,
+      venueId: event.venueId,
+      playerCountTotal: event.playerCountTotal,
+      skillMin: event.skillMin,
+      skillMax: event.skillMax,
+      description: event.description ?? '',
+    });
+    setSelectedVenue({
+      id: event.venueId,
+      name: event.venueName,
+      city: event.city,
+      address: event.venueAddress,
+      createdBy: event.organizerId,
+      isVerified: false,
+    });
+    setVenueSearchInput(event.venueName);
+    setPrefilledEventId(event.id);
+  }, [editingEventQuery.data, eventForm, isEditMode, prefilledEventId]);
 
   const createVenueMutation = useMutation({
     mutationFn: createVenue,
@@ -249,8 +323,29 @@ export function CreateEventScreen() {
     mutationFn: createEvent,
     onSuccess: async (createdEvent) => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await queryClient.invalidateQueries({ queryKey: ['events', 'feed'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['events', 'feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
+      ]);
       navigation.navigate('EventDetail', { eventId: createdEvent.id });
+    },
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: updateEvent,
+    onSuccess: async (updatedEvent) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['events', 'detail', updatedEvent.id] }),
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', updatedEvent.id, 'edit-form'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', updatedEvent.id, 'confirmed-players'],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
+      ]);
+      navigation.navigate('EventDetail', { eventId: updatedEvent.id });
     },
   });
 
@@ -294,13 +389,21 @@ export function CreateEventScreen() {
     try {
       await createEventMutation.mutateAsync(input);
     } catch (error) {
-      const mappedNotice = mapEventErrorToNotice(error);
+      const mappedNotice = mapEventErrorToNotice(error, mode);
 
       if (error instanceof EdgeFunctionError && error.code === 'SKILL_LEVEL_REQUIRED') {
         openSkillLevelRequirement(input);
       }
 
       setAuthNotice(mappedNotice);
+    }
+  }
+
+  async function submitUpdateEvent(input: UpdateEventInput) {
+    try {
+      await updateEventMutation.mutateAsync(input);
+    } catch (error) {
+      setAuthNotice(mapEventErrorToNotice(error, mode));
     }
   }
 
@@ -322,6 +425,47 @@ export function CreateEventScreen() {
       description: values.description?.trim() ? values.description.trim() : null,
     } satisfies CreateEventInput;
 
+    if (isEditMode) {
+      const editableEvent = editingEventQuery.data;
+
+      if (!eventId || !editableEvent) {
+        setAuthNotice({
+          messageKey: 'events.edit.errors.unavailable',
+          tone: 'info',
+        });
+        return;
+      }
+
+      if (!canOrganizerEditEvent(editableEvent)) {
+        setAuthNotice({
+          messageKey: 'events.edit.errors.unavailable',
+          tone: 'info',
+        });
+        return;
+      }
+
+      if (values.playerCountTotal < editableEvent.spotsTaken) {
+        setAuthNotice({
+          messageKey: 'events.edit.errors.playerCountTooLow',
+          tone: 'error',
+        });
+        return;
+      }
+
+      await submitUpdateEvent({
+        eventId,
+        venueId: eventInput.venueId,
+        startsAt: eventInput.startsAt,
+        endsAt: eventInput.endsAt,
+        reservationType: eventInput.reservationType,
+        playerCountTotal: eventInput.playerCountTotal,
+        skillMin: eventInput.skillMin,
+        skillMax: eventInput.skillMax,
+        description: eventInput.description ?? null,
+      });
+      return;
+    }
+
     if (ownSportProfilesQuery.data) {
       const hasSportProfile = ownSportProfilesQuery.data.some(
         (profileRow) => profileRow.sportId === eventInput.sportId,
@@ -337,6 +481,11 @@ export function CreateEventScreen() {
   }
 
   async function handleConfirmSkillLevel() {
+    if (isEditMode) {
+      setIsSkillModalVisible(false);
+      return;
+    }
+
     if (!pendingSportId || !pendingEventInput || !userId || !selectedSkillLevel) {
       setIsSkillModalVisible(false);
       return;
@@ -366,6 +515,94 @@ export function CreateEventScreen() {
   );
   const skillModalSport = (sportsQuery.data ?? []).find((sport) => sport.id === pendingSportId);
   const descriptionLength = eventForm.watch('description')?.length ?? 0;
+  const isSubmitting = createEventMutation.isPending || updateEventMutation.isPending;
+  const heroTitle = isEditMode ? t('events.edit.title') : t('shell.createEvent.title');
+  const heroSubtitle = isEditMode ? t('events.edit.subtitle') : t('shell.createEvent.subtitle');
+  const submitLabel = isEditMode ? t('events.edit.submit') : t('events.create.submit');
+
+  if (isEditMode && editingEventQuery.isPending) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>{heroTitle}</Text>
+            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{t('events.edit.loadingTitle')}</Text>
+            <Text style={styles.helperText}>{t('events.edit.loadingBody')}</Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  if (isEditMode && (editingEventQuery.isError || !editingEventQuery.data)) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>{heroTitle}</Text>
+            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{t('events.edit.errors.loadTitle')}</Text>
+            <Text style={styles.helperText}>{t('events.edit.errors.loadBody')}</Text>
+            <ActionButton
+              label={t('events.common.retry')}
+              onPress={async () => {
+                await editingEventQuery.refetch();
+              }}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  if (isEditMode && editingEventQuery.data && !canOrganizerEditEvent(editingEventQuery.data)) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.hero}>
+            <Text style={styles.heroTitle}>{heroTitle}</Text>
+            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{t('events.edit.errors.unavailableTitle')}</Text>
+            <Text style={styles.helperText}>{t('events.edit.errors.unavailableBody')}</Text>
+            <ActionButton
+              label={t('events.detail.backToEvent')}
+              onPress={() =>
+                navigation.navigate('EventDetail', {
+                  eventId: editingEventQuery.data.id,
+                })
+              }
+              variant="secondary"
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -378,8 +615,8 @@ export function CreateEventScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>{t('shell.createEvent.title')}</Text>
-          <Text style={styles.heroSubtitle}>{t('shell.createEvent.subtitle')}</Text>
+          <Text style={styles.heroTitle}>{heroTitle}</Text>
+          <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
         </View>
 
         <View style={styles.card}>
@@ -387,34 +624,47 @@ export function CreateEventScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('events.create.sections.sport')}</Text>
-            <Controller
-              control={eventForm.control}
-              name="sportId"
-              render={({ field, fieldState }) => (
-                <>
-                  <View style={styles.sportChipWrap}>
-                    {(sportsQuery.data ?? []).map((sport) => {
-                      const selected = field.value === sport.id;
+            {isEditMode ? (
+              <View style={styles.selectedVenueCard}>
+                <Text style={styles.selectedVenueName}>
+                  {selectedSport
+                    ? language === 'cs'
+                      ? selectedSport.nameCs
+                      : selectedSport.nameEn
+                    : t('events.create.previewSportFallback')}
+                </Text>
+                <Text style={styles.selectedVenueMeta}>{t('events.edit.sportLocked')}</Text>
+              </View>
+            ) : (
+              <Controller
+                control={eventForm.control}
+                name="sportId"
+                render={({ field, fieldState }) => (
+                  <>
+                    <View style={styles.sportChipWrap}>
+                      {(sportsQuery.data ?? []).map((sport) => {
+                        const selected = field.value === sport.id;
 
-                      return (
-                        <SportChoiceChip
-                          key={sport.id}
-                          onPress={() => field.onChange(sport.id)}
-                          selected={selected}
-                          sport={sport}
-                          language={language}
-                        />
-                      );
-                    })}
-                  </View>
-                  {fieldState.error?.message ? (
-                    <Text style={styles.errorText}>
-                      {translateFieldError(t, fieldState.error.message)}
-                    </Text>
-                  ) : null}
-                </>
-              )}
-            />
+                        return (
+                          <SportChoiceChip
+                            key={sport.id}
+                            onPress={() => field.onChange(sport.id)}
+                            selected={selected}
+                            sport={sport}
+                            language={language}
+                          />
+                        );
+                      })}
+                    </View>
+                    {fieldState.error?.message ? (
+                      <Text style={styles.errorText}>
+                        {translateFieldError(t, fieldState.error.message)}
+                      </Text>
+                    ) : null}
+                  </>
+                )}
+              />
+            )}
           </View>
 
           <View style={styles.section}>
@@ -711,8 +961,8 @@ export function CreateEventScreen() {
           </View>
 
           <ActionButton
-            disabled={!eventForm.formState.isValid || createEventMutation.isPending}
-            label={t('events.create.submit')}
+            disabled={!eventForm.formState.isValid || isSubmitting}
+            label={submitLabel}
             onPress={eventForm.handleSubmit(handleEventSubmit)}
           />
         </View>
@@ -729,6 +979,14 @@ export function CreateEventScreen() {
       />
     </KeyboardAvoidingView>
   );
+}
+
+export function CreateEventScreen() {
+  return <EventFormScreen mode="create" />;
+}
+
+export function EditEventScreen({ route }: { route: EditEventRoute }) {
+  return <EventFormScreen eventId={route.params.eventId} mode="edit" />;
 }
 
 const styles = StyleSheet.create({

@@ -192,6 +192,7 @@
     "titles": {
       "home": "Domů",
       "createEvent": "Vytvořit hru",
+      "editEvent": "Upravit hru",
       "myGames": "Moje hry",
       "profile": "Profil",
       "eventDetail": "Detail hry",
@@ -277,6 +278,10 @@
       "tabs": {
         "upcoming": "Nadcházející",
         "past": "Minulé"
+      },
+      "role": {
+        "organizing": "Organizuji",
+        "playing": "Hraji"
       },
       "upcomingTitle": "Nadcházející hry",
       "upcomingPlaceholder": "Tato sekce bude zobrazovat hry, které organizujete nebo jste se k nim přidali, jakmile se doplní tok dat událostí.",
@@ -383,17 +388,22 @@
       "skillUnknown": "Skill zatím není nastavený",
       "shareAction": "Sdílet hru",
       "shareMessage": "{{sport}} ve venue {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}",
+      "backToEvent": "Zpět na detail hry",
       "state": {
         "joinTitle": "Připraveno k joinu",
         "joinBody": "Tlačítkem níže si vezmete potvrzené místo, pokud je ještě volné.",
         "joinWaitlistBody": "Tato hra je právě plná. Noví hráči půjdou na čekačku ve strict FIFO pořadí.",
         "organizerTitle": "Tuto hru organizujete",
-        "organizerBody": "Organizátor zůstává potvrzený automaticky a v dalších milestones bude event spravovat z detailu.",
+        "organizerBody": "Organizátor zůstává potvrzený automaticky a tuto hru může spravovat přímo odsud.",
         "organizerLabel": "Organizátor",
         "confirmedTitle": "Jste potvrzený",
         "confirmedBody": "Jste ve hře. Když se vám plány změní ještě před startem, odejděte tady a čekačka se automaticky posune.",
         "waitlistedTitle": "Jste na čekačce (#{{position}})",
         "waitlistedBody": "Když někdo z potvrzených hráčů odejde, první hráč z čekačky se automaticky povýší.",
+        "cancelledTitle": "Tato hra byla zrušená",
+        "cancelledBody": "Organizátor tuto hru zrušil. Přidávání, odcházení i organizační akce jsou teď uzavřené.",
+        "finishedTitle": "Tato hra už skončila",
+        "finishedBody": "Tato hra už skončila, takže organizační akce ani přidání už nejsou dostupné.",
         "closedTitle": "Tato hra už není otevřená",
         "closedBody": "Join i leave jsou dostupné jen dokud je hra ještě nadcházející a aktivní."
       }
@@ -471,6 +481,21 @@
         "futureStart": "Hra musí začínat v budoucnu."
       }
     },
+    "edit": {
+      "title": "Upravit hru",
+      "subtitle": "Upravte místo, čas, kapacitu a poznámky k této hře ještě před začátkem.",
+      "submit": "Uložit změny",
+      "loadingTitle": "Načítám detail hry",
+      "loadingBody": "Právě doplňujeme aktuální hodnoty hry do formuláře.",
+      "sportLocked": "Sport po vytvoření zůstává zamčený, aby statistiky hráčů i historie hry zůstaly konzistentní.",
+      "errors": {
+        "validation": "Aktualizované údaje o hře ještě potřebují zkontrolovat, než je půjde uložit.",
+        "playerCountTooLow": "Celkový počet hráčů nemůžete snížit pod počet už potvrzených hráčů v této hře.",
+        "unavailable": "Tuto hru už není možné z aplikace upravit.",
+        "unavailableTitle": "Úprava není dostupná",
+        "unavailableBody": "Nadcházející aktivní hru může upravit jen organizátor."
+      }
+    },
     "venue": {
       "noAddress": "Adresa není uvedená",
       "noMatch": "Ve vašem městě zatím nebyla nalezena žádná odpovídající venue.",
@@ -517,6 +542,33 @@
       "errors": {
         "saveFailed": "Vaši výkonnost se nepodařilo uložit. Zkuste to prosím znovu."
       }
+    },
+    "organizerTools": {
+      "title": "Nástroje organizátora",
+      "body": "Udržujte hru aktuální, případně odeberte hráče nebo hru před začátkem zrušte.",
+      "editAction": "Upravit hru",
+      "cancelAction": "Zrušit hru",
+      "errors": {
+        "forbidden": "Tyto ovládací prvky hry může použít jen organizátor."
+      }
+    },
+    "cancel": {
+      "pending": "Ruším...",
+      "success": "Tato hra byla zrušená.",
+      "confirmTitle": "Zrušit tuto hru?",
+      "confirmBody": "Potvrzení i čekající hráči dostanou hned oznámení a chat bude jen pro čtení.",
+      "confirmAction": "Zrušit hru",
+      "errors": {
+        "unavailable": "Tuto hru už není možné z aplikace zrušit."
+      }
+    },
+    "removePlayer": {
+      "action": "Odebrat hráče",
+      "pending": "Odebírám...",
+      "success": "Hráč byl z této hry odebraný.",
+      "confirmTitle": "Odebrat hráče?",
+      "confirmBody": "{{player}} bude z této hry odebraný. Pokud je někdo na čekačce, první hráč se automaticky povýší.",
+      "confirmAction": "Odebrat"
     }
   }
 }

@@ -192,6 +192,7 @@
     "titles": {
       "home": "Home",
       "createEvent": "Create event",
+      "editEvent": "Edit event",
       "myGames": "My games",
       "profile": "Profile",
       "eventDetail": "Event detail",
@@ -277,6 +278,10 @@
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
+      },
+      "role": {
+        "organizing": "Organizing",
+        "playing": "Playing"
       },
       "upcomingTitle": "Upcoming games",
       "upcomingPlaceholder": "This section will list games you organize or joined once the event data flow is implemented.",
@@ -383,17 +388,22 @@
       "skillUnknown": "Skill not set yet",
       "shareAction": "Share event",
       "shareMessage": "{{sport}} at {{venue}} on {{date}} — join me on Hrayem! {{url}}",
+      "backToEvent": "Back to event",
       "state": {
         "joinTitle": "Ready to join",
         "joinBody": "Tap below to claim a confirmed spot if one is still open.",
         "joinWaitlistBody": "This game is currently full. New joins will go onto the waitlist in FIFO order.",
         "organizerTitle": "You're organizing this game",
-        "organizerBody": "Organizers stay confirmed automatically and manage this event from the detail screen in later milestones.",
+        "organizerBody": "Organizers stay confirmed automatically and can manage this game from here.",
         "organizerLabel": "Organizer",
         "confirmedTitle": "You're confirmed",
         "confirmedBody": "You're in. If your plans change before the game starts, leave here and the waitlist will promote automatically.",
         "waitlistedTitle": "You're waitlisted (#{{position}})",
         "waitlistedBody": "If a confirmed player leaves, the first waitlisted player is promoted automatically.",
+        "cancelledTitle": "This game was cancelled",
+        "cancelledBody": "The organizer cancelled this game. Join, leave, and organizer actions are now closed.",
+        "finishedTitle": "This game has finished",
+        "finishedBody": "This game already ended, so organizer and join actions are no longer available.",
         "closedTitle": "This game is no longer open",
         "closedBody": "Join and leave actions are only available while the game is still upcoming and active."
       }
@@ -471,6 +481,21 @@
         "futureStart": "The game must start in the future."
       }
     },
+    "edit": {
+      "title": "Edit event",
+      "subtitle": "Adjust the venue, schedule, player count, and notes for this game before it starts.",
+      "submit": "Save changes",
+      "loadingTitle": "Loading event details",
+      "loadingBody": "We're filling the current event values into the form now.",
+      "sportLocked": "Sport stays locked after creation so player stats and event history remain consistent.",
+      "errors": {
+        "validation": "The updated event details need another look before they can be saved.",
+        "playerCountTooLow": "You can't reduce the total player count below the number of confirmed players already in the game.",
+        "unavailable": "This event can no longer be edited from the app.",
+        "unavailableTitle": "Editing is unavailable",
+        "unavailableBody": "Only the organizer can edit an upcoming active game."
+      }
+    },
     "venue": {
       "noAddress": "Address not provided",
       "noMatch": "No matching venue was found in your city yet.",
@@ -517,6 +542,33 @@
       "errors": {
         "saveFailed": "Your skill level could not be saved. Please try again."
       }
+    },
+    "organizerTools": {
+      "title": "Organizer tools",
+      "body": "Keep the game accurate, remove a player if needed, or cancel the event before it starts.",
+      "editAction": "Edit event",
+      "cancelAction": "Cancel event",
+      "errors": {
+        "forbidden": "Only the organizer can use these event controls."
+      }
+    },
+    "cancel": {
+      "pending": "Cancelling...",
+      "success": "This game was cancelled.",
+      "confirmTitle": "Cancel this game?",
+      "confirmBody": "Confirmed and waitlisted players will be notified right away, and the chat will become read-only.",
+      "confirmAction": "Cancel game",
+      "errors": {
+        "unavailable": "This game can no longer be cancelled from the app."
+      }
+    },
+    "removePlayer": {
+      "action": "Remove player",
+      "pending": "Removing...",
+      "success": "The player was removed from this game.",
+      "confirmTitle": "Remove player?",
+      "confirmBody": "{{player}} will be removed from this game. If someone is on the waitlist, the first player will be promoted automatically.",
+      "confirmAction": "Remove"
     }
   }
 }

@@ -2,6 +2,8 @@ import { useAuthStore } from '../store/auth-store';
 import { requirePublicEnvValue } from '../utils/env';
 import { retryOnceAfterUnauthorized, throwIfSupabaseError } from '../utils/supabase';
 import type {
+  CancelEventInput,
+  CancelEventResponse,
   CreateEventErrorCode,
   CreateEventInput,
   CreateEventResponse,
@@ -15,7 +17,11 @@ import type {
   LeaveEventInput,
   LeaveEventResponse,
   MyGamesUpcomingItem,
+  RemovePlayerInput,
+  RemovePlayerResponse,
   SportSummary,
+  UpdateEventInput,
+  UpdateEventResponse,
   UserSportProfile,
 } from '../types/events';
 import { refreshSupabaseSession, retrySupabaseOperationOnce, supabase } from './supabase';
@@ -196,6 +202,9 @@ function resolveProfileRelation(profile: EventPlayerRow['profile']) {
 async function callEventsRoute<TResponse>(
   path: string,
   body: Record<string, unknown>,
+  options?: {
+    method?: 'POST' | 'PATCH';
+  },
 ): Promise<TResponse> {
   return retryOnceAfterUnauthorized(
     async () => {
@@ -206,7 +215,7 @@ async function callEventsRoute<TResponse>(
       }
 
       const response = await fetch(`${eventsFunctionUrl}${path}`, {
-        method: 'POST',
+        method: options?.method ?? 'POST',
         headers: {
           apikey: supabaseAnonKey,
           Authorization: `Bearer ${accessToken}`,
@@ -458,6 +467,25 @@ export async function createEvent(input: CreateEventInput): Promise<CreateEventR
   });
 }
 
+export async function updateEvent(input: UpdateEventInput): Promise<UpdateEventResponse> {
+  return callEventsRoute<UpdateEventResponse>(
+    `/${input.eventId}`,
+    {
+      venue_id: input.venueId,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt,
+      reservation_type: input.reservationType,
+      player_count_total: input.playerCountTotal,
+      skill_min: input.skillMin,
+      skill_max: input.skillMax,
+      description: input.description,
+    },
+    {
+      method: 'PATCH',
+    },
+  );
+}
+
 export async function joinEvent(input: JoinEventInput): Promise<JoinEventResponse> {
   return callEventsRoute<JoinEventResponse>(`/${input.eventId}/join`, {
     skill_level: input.skillLevel ?? null,
@@ -466,4 +494,14 @@ export async function joinEvent(input: JoinEventInput): Promise<JoinEventRespons
 
 export async function leaveEvent(input: LeaveEventInput): Promise<LeaveEventResponse> {
   return callEventsRoute<LeaveEventResponse>(`/${input.eventId}/leave`, {});
+}
+
+export async function cancelEvent(input: CancelEventInput): Promise<CancelEventResponse> {
+  return callEventsRoute<CancelEventResponse>(`/${input.eventId}/cancel`, {});
+}
+
+export async function removePlayer(input: RemovePlayerInput): Promise<RemovePlayerResponse> {
+  return callEventsRoute<RemovePlayerResponse>(`/${input.eventId}/remove-player`, {
+    target_user_id: input.targetUserId,
+  });
 }

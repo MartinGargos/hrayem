@@ -69,3 +69,56 @@ Tighten `event_players` read access so only confirmed rows and the viewer's own 
 ### Open questions / risks
 - The broad milestone docs still include Add to calendar, but that is a larger native-permission feature and is only worth touching here if it stays tiny and low-risk after the privacy fix.
 - Realtime proof may still be environment-limited even if the underlying privacy model is corrected, so the likely outcome is stronger DB proof plus honest runtime proof limits.
+
+## Milestone 5 Accepted Known Debt
+
+### Problem
+Milestone 5 is accepted, but three non-blocking gaps need to stay visible before public launch planning drifts away from them.
+
+### Approach
+Log the accepted debt explicitly here so Milestone 6 can proceed without silently reopening it or pretending those parts are already done.
+
+### Steps
+1. Keep Add to calendar visible as unfinished Milestone 5 scope.
+2. Keep the missing waitlisted-player notification branch visible as backend follow-up debt.
+3. Keep the weaker-than-implementation Realtime proof visible until a better runtime/device proof path is available.
+
+### Open questions / risks
+- Add to calendar is still missing.
+- The waitlisted-player notification branch is still missing.
+- Realtime proof is still weaker than the implementation.
+
+## Milestone 6
+
+### Problem
+Milestone 6 needs organizer-only edit, cancel, and remove-player controls to work end to end without breaking the accepted Milestone 5 join/waitlist/privacy behavior.
+
+### Approach
+Add the minimal server write paths for edit and cancel, reuse the existing leave/remove-player foundation where it already matches the organizer contract, and extend the current event detail and My Games client flows with organizer-only controls plus targeted cache updates.
+
+### Steps
+1. Add the Milestone 6 backend path: SQL for edit/cancel, Edge Function routes for edit/cancel/remove-player, and any minimal query/view adjustments needed to keep detail/feed/my-games accurate after organizer mutations.
+2. Extend Event Detail with organizer-only controls, an edit form seeded from current event data, and remove-player/cancel actions that preserve the waitlist privacy model.
+3. Tighten My Games role copy if needed, add a verifier for organizer edit/cancel/remove-player flows, then validate/apply/deploy and prove as much of the milestone as the current environment allows.
+
+### Open questions / risks
+- Milestone 5 accepted debt stays visible but out of scope here unless it directly blocks organizer controls.
+- Waitlisted identities must remain hidden even while organizer remove-player controls are added, so the UI may only be able to expose removal for confirmed players without widening product scope.
+- Cancelled/upcoming visibility in My Games should follow the current milestone contract rather than inventing a new cancelled-events list.
+
+## Milestone 6 Fix Pass
+
+### Problem
+The organizer Edit affordance is still shown when the backend already considers the event uneditable, which creates a dead-end flow for started events that remain `active` or `full`.
+
+### Approach
+Keep the backend contract unchanged and add one small shared client eligibility rule so Event Detail, the Edit screen gate, and stale-submit handling all agree on when organizer editing is actually allowed.
+
+### Steps
+1. Add a tiny shared event-edit eligibility helper based on organizer status, `active/full`, and `starts_at > now()`.
+2. Use that helper to hide the Edit action on Event Detail while leaving Cancel available where the backend still allows it.
+3. Reuse the same helper in the Edit screen gate and submit path, then rerun validation and prove the shared eligibility behavior as far as the current environment allows.
+
+### Open questions / risks
+- Waitlisted-player removal UI still stays out of scope unless it can be exposed without violating the accepted waitlist privacy contract.
+- This pass can prove the shared eligibility logic and backend behavior, but not full real-device organizer UX.
