@@ -453,6 +453,38 @@
         "closedBody": "Join and leave actions are only available while the game is still upcoming and active."
       }
     },
+    "chat": {
+      "openAction": "Open chat",
+      "loadingTitle": "Loading chat",
+      "errorTitle": "We couldn't open this chat",
+      "errorBody": "Please try again. If the event link is old or your access changed, the chat may no longer be available.",
+      "forbiddenTitle": "Chat is unavailable",
+      "forbiddenBody": "Only the organizer and confirmed players can open this event chat.",
+      "finishedBanner": "Chat closes in {{remaining}}.",
+      "cancelledBanner": "This event was cancelled. Chat is read-only.",
+      "readOnlyFinished": "Chat is now read-only.",
+      "messagesErrorTitle": "We couldn't load the latest messages",
+      "messagesErrorBody": "Please try again. If the problem keeps happening, check your connection and reopen the chat once you're back online.",
+      "emptyTitle": "No messages yet",
+      "emptyBody": "Say hi to the group once you're ready.",
+      "deletedParticipant": "Deleted player",
+      "deletedBody": "This message was removed.",
+      "inputLabel": "Message",
+      "inputPlaceholder": "Write a message",
+      "inputHelper": "Confirmed players and the organizer can message here.",
+      "sendAction": "Send",
+      "sendPending": "Sending...",
+      "validation": {
+        "bodyRequired": "Write a message before sending it.",
+        "bodyLength": "Messages must stay between 1 and 1000 characters."
+      },
+      "errors": {
+        "closed": "This chat is read-only now.",
+        "forbidden": "Only the organizer and confirmed players can access this chat.",
+        "validation": "Your message needs another look before it can be sent.",
+        "generic": "We couldn't send that message right now. Please try again."
+      }
+    },
     "membership": {
       "organizer": "Organizer",
       "confirmed": "Confirmed"

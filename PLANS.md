@@ -157,3 +157,55 @@ Add one small shared client helper for lifecycle-sensitive screens, use focused 
 ### Open questions / risks
 - This pass should not touch chat or other Milestone 8 behavior; the fix stays on lifecycle-sensitive read paths only.
 - Runtime proof for visible-screen lifecycle refresh is still limited by the current CLI environment, so validation will rely on static correctness plus existing app export/build checks.
+
+## Milestone 8
+
+### Problem
+Milestone 8 needs a real event chat screen, message write path, access controls, and Realtime refresh behavior without reopening accepted debt from Milestones 2 through 7 or drifting into Milestone 9 notification-preference scope.
+
+### Approach
+Reuse the current event detail and Supabase foundation: add a typed chat read/write layer on top of the existing `chat_messages` table and `events` Edge Function, replace the shell chat stub with a real screen, and keep lifecycle correctness through event-detail gating plus focused Realtime reconnect/refetch behavior.
+
+### Steps
+1. Add the Milestone 8 backend path: `POST /v1/events/:id/messages`, typed error handling, and any minimal notification-log handling needed for chat writes.
+2. Replace the Chat stub with a real screen that loads event detail + message history, enforces organizer/confirmed access, renders the standard chat UI, and reconnects/refetches cleanly on foreground or channel failure.
+3. Wire chat entry points and lifecycle gating from Event Detail, rerun validation, and prove as much of the message flow, access control, and Realtime behavior as the current environment allows.
+
+### Open questions / risks
+- Existing Milestone 5 accepted debt stays visible but out of scope unless it directly blocks chat correctness: Add to calendar is still missing, the waitlisted-player notification branch is still missing, and Realtime proof is still weaker than the implementation.
+- Existing Milestone 7 accepted debt stays visible but out of scope unless it directly blocks chat behavior: lifecycle refresh is now polling-based and natural cron wall-clock proof is still weaker than the implementation.
+- RARE EDGE CASE: exact chat-close boundary behavior can briefly differ between device time and database `now()`, so any last-seconds mismatch should be logged rather than overbuilt unless it affects stored data, privacy, auth/session integrity, or account ownership.
+
+## Milestone 8 Fix Pass
+
+### Problem
+Chat foreground recovery currently treats `CHANNEL_ERROR` and `TIMED_OUT` as unhealthy, but not `CLOSED`, so backgrounded chat sessions can miss reconnecting even after the app returns to the foreground.
+
+### Approach
+Add one tiny shared chat-channel-health helper, reuse it in both the live Realtime subscription callback and the AppState foreground handler, and keep the rest of the chat access/lifecycle contract unchanged.
+
+### Steps
+1. Add a small chat Realtime helper that marks `CHANNEL_ERROR`, `TIMED_OUT`, and `CLOSED` as reconnect-needed states.
+2. Reuse that helper in `ChatScreen` for channel-status handling and foreground recovery while still refetching missed messages.
+3. Re-run validation and prove the reconnect-needed rule with a small helper check in the current environment.
+
+### Open questions / risks
+- This pass should stay client-only and must not widen Milestone 8 into Milestone 9 notification or rate-limiting work.
+- Real authenticated Realtime proof is still environment-limited here, so the strongest proof will still be static correctness plus existing build/export and verifier checks.
+
+## Milestone 8 Final Fix Pass
+
+### Problem
+Foreground chat recovery is still too conditional because it only reconnects when the last stored channel status looks unhealthy, even though the repo contract says active subscriptions should recover after background/foreground transitions when websockets may die silently.
+
+### Approach
+Keep the existing per-event Realtime architecture, but make the focused chat screen rebuild its live subscription on every foreground activation, then refetch missed state, while preserving the separate unhealthy-status backoff path for in-session failures.
+
+### Steps
+1. Extend the tiny chat Realtime helper with a pure foreground-recovery rule for the focused visible chat screen.
+2. Update `ChatScreen` so foreground always triggers a clean reconnect for the active chat channel before the usual catch-up refetch.
+3. Re-run validation and prove the helper semantics in the current environment, while keeping the existing live Milestone 8 verifier honest about Realtime proof limits.
+
+### Open questions / risks
+- This pass should not change chat access control, lifecycle gating, or notification behavior; it only tightens subscription recovery semantics.
+- Real mobile websocket proof is still environment-limited here, so the proof will remain helper-level plus existing server-side verifier coverage rather than a full two-device Realtime demo.

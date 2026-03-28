@@ -4,6 +4,7 @@ import { retryOnceAfterUnauthorized, throwIfSupabaseError } from '../utils/supab
 import type {
   CancelEventInput,
   CancelEventResponse,
+  ChatMessage,
   CreateEventErrorCode,
   CreateEventInput,
   CreateEventResponse,
@@ -26,6 +27,8 @@ import type {
   ReportNoShowResponse,
   RemovePlayerInput,
   RemovePlayerResponse,
+  SendChatMessageInput,
+  SendChatMessageResponse,
   SportSummary,
   UpdateEventInput,
   UpdateEventResponse,
@@ -105,6 +108,27 @@ type EventPlayerRow = {
   user_id: string | null;
   joined_at: string;
   profile:
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        photo_url: string | null;
+      }
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        photo_url: string | null;
+      }[]
+    | null;
+};
+
+type ChatMessageRow = {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  body: string;
+  sent_at: string;
+  is_deleted: boolean;
+  author:
     | {
         first_name: string | null;
         last_name: string | null;
@@ -268,6 +292,30 @@ function resolveProfileRelation(profile: EventPlayerRow['profile']) {
   }
 
   return profile;
+}
+
+function resolveChatAuthorRelation(author: ChatMessageRow['author']) {
+  if (Array.isArray(author)) {
+    return author[0] ?? null;
+  }
+
+  return author;
+}
+
+function mapChatMessageRow(row: ChatMessageRow): ChatMessage {
+  const author = resolveChatAuthorRelation(row.author);
+
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    userId: row.user_id,
+    body: row.body,
+    sentAt: row.sent_at,
+    isDeleted: row.is_deleted,
+    authorFirstName: author?.first_name ?? null,
+    authorLastName: author?.last_name ?? null,
+    authorPhotoUrl: author?.photo_url ?? null,
+  };
 }
 
 function mapPlayerSportStatRow(row: PlayerSportStatRow): PlayerSportStat {
@@ -691,6 +739,22 @@ export async function fetchVisibleProfile(playerId: string): Promise<VisibleProf
   return result.data as VisibleProfileRow;
 }
 
+export async function fetchEventChatMessages(eventId: string): Promise<ChatMessage[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('chat_messages')
+      .select(
+        'id, event_id, user_id, body, sent_at, is_deleted, author:profiles!chat_messages_user_id_fkey(first_name, last_name, photo_url)',
+      )
+      .eq('event_id', eventId)
+      .order('sent_at', { ascending: false }),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load chat messages.');
+
+  return ((result.data ?? []) as ChatMessageRow[]).map(mapChatMessageRow);
+}
+
 export async function createEvent(input: CreateEventInput): Promise<CreateEventResponse> {
   return callEventsRoute<CreateEventResponse>('', {
     sport_id: input.sportId,
@@ -754,4 +818,14 @@ export async function giveThumbsUp(input: GiveThumbsUpInput): Promise<GiveThumbs
   return callEventsRoute<GiveThumbsUpResponse>(`/${input.eventId}/thumbs-up`, {
     to_user_id: input.toUserId,
   });
+}
+
+export async function sendEventMessage(
+  input: SendChatMessageInput,
+): Promise<SendChatMessageResponse> {
+  const response = await callEventsRoute<ChatMessageRow>(`/${input.eventId}/messages`, {
+    body: input.body,
+  });
+
+  return mapChatMessageRow(response);
 }

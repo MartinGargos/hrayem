@@ -453,6 +453,38 @@
         "closedBody": "Join i leave jsou dostupné jen dokud je hra ještě nadcházející a aktivní."
       }
     },
+    "chat": {
+      "openAction": "Otevřít chat",
+      "loadingTitle": "Načítám chat",
+      "errorTitle": "Nepodařilo se otevřít chat",
+      "errorBody": "Zkuste to prosím znovu. Pokud je odkaz na hru starý nebo se změnil váš přístup, chat už nemusí být dostupný.",
+      "forbiddenTitle": "Chat není dostupný",
+      "forbiddenBody": "Chat této hry může otevřít jen organizátor a potvrzení hráči.",
+      "finishedBanner": "Chat se uzavře za {{remaining}}.",
+      "cancelledBanner": "Tato hra byla zrušená. Chat je jen pro čtení.",
+      "readOnlyFinished": "Chat je teď jen pro čtení.",
+      "messagesErrorTitle": "Nepodařilo se načíst poslední zprávy",
+      "messagesErrorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online chat znovu otevřete.",
+      "emptyTitle": "Zatím žádné zprávy",
+      "emptyBody": "Až budete připravení, pozdravte skupinu jako první.",
+      "deletedParticipant": "Smazaný hráč",
+      "deletedBody": "Tato zpráva byla odstraněna.",
+      "inputLabel": "Zpráva",
+      "inputPlaceholder": "Napište zprávu",
+      "inputHelper": "Psát sem mohou potvrzení hráči a organizátor.",
+      "sendAction": "Odeslat",
+      "sendPending": "Odesílám...",
+      "validation": {
+        "bodyRequired": "Než zprávu odešlete, napište ji.",
+        "bodyLength": "Zprávy musí mít 1 až 1000 znaků."
+      },
+      "errors": {
+        "closed": "Tento chat je už jen pro čtení.",
+        "forbidden": "Do tohoto chatu má přístup jen organizátor a potvrzení hráči.",
+        "validation": "Vaše zpráva potřebuje ještě upravit, než ji půjde odeslat.",
+        "generic": "Tuto zprávu se teď nepodařilo odeslat. Zkuste to prosím znovu."
+      }
+    },
     "membership": {
       "organizer": "Organizátor",
       "confirmed": "Potvrzený"

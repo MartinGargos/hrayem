@@ -12,11 +12,11 @@ import { useTranslation } from 'react-i18next';
 import {
   AccountDeletionScreen,
   AddVenueScreen,
-  ChatScreen,
   PostAvailabilityScreen,
   SettingsScreen,
   SkillLevelScreen,
 } from '../features/shell/StubScreens';
+import { ChatScreen } from '../features/chat/ChatScreen';
 import { CreateEventScreen, EditEventScreen } from '../features/events/CreateEventScreen';
 import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';

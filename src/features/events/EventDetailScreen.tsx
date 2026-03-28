@@ -863,6 +863,10 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     leaveMutation.mutate({ eventId });
   }
 
+  function handleOpenChatPress() {
+    navigation.navigate('Chat', { eventId });
+  }
+
   function handleEditPress() {
     if (!eventQuery.data || !canOrganizerEditEvent(eventQuery.data)) {
       setNotice({
@@ -1010,6 +1014,8 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   const canEditEvent = canOrganizerEditEvent(event);
   const canRemovePlayers = canOrganizerRemovePlayers(event);
   const canManageEvent = canCancelEvent;
+  const canOpenChat =
+    event.viewerMembershipStatus === 'organizer' || event.viewerMembershipStatus === 'confirmed';
   const removePlayerTargetUserId = removePlayerMutation.variables?.targetUserId ?? null;
   const reportNoShowTargetUserId = reportNoShowMutation.variables?.reportedUserId ?? null;
   const thumbsUpTargetUserId = thumbsUpMutation.variables?.toUserId ?? null;
@@ -1170,6 +1176,13 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
               label={primaryAction.label}
               onPress={primaryAction.onPress}
               variant={primaryAction.variant}
+            />
+          ) : null}
+          {canOpenChat ? (
+            <ActionButton
+              label={t('events.chat.openAction')}
+              onPress={handleOpenChatPress}
+              variant="secondary"
             />
           ) : null}
         </ScreenCard>

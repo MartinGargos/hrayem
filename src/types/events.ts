@@ -97,6 +97,18 @@ export type MyGamesPastItem = EventFeedItem & {
   viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
 
+export type ChatMessage = {
+  id: string;
+  eventId: string;
+  userId: string | null;
+  body: string;
+  sentAt: string;
+  isDeleted: boolean;
+  authorFirstName: string | null;
+  authorLastName: string | null;
+  authorPhotoUrl: string | null;
+};
+
 export type PlayerSportStat = {
   userId: string;
   firstName: string | null;
@@ -229,6 +241,7 @@ export type CreateEventErrorCode =
   | 'SKILL_LEVEL_REQUIRED'
   | 'VENUE_NOT_FOUND'
   | 'EVENT_NOT_FOUND'
+  | 'CHAT_CLOSED'
   | 'EVENT_NOT_JOINABLE'
   | 'EVENT_NOT_LEAVABLE'
   | 'EVENT_NOT_CANCELLABLE'
@@ -273,6 +286,11 @@ export type RemovePlayerInput = {
   targetUserId: string;
 };
 
+export type SendChatMessageInput = {
+  eventId: string;
+  body: string;
+};
+
 export type LeaveEventResponse = {
   event_id: string;
   membership_status: null;
@@ -284,3 +302,5 @@ export type LeaveEventResponse = {
 };
 
 export type RemovePlayerResponse = LeaveEventResponse;
+
+export type SendChatMessageResponse = ChatMessage;

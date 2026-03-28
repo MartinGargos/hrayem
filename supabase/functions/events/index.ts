@@ -39,6 +39,10 @@ type GiveThumbsUpPayload = {
   to_user_id: string;
 };
 
+type SendMessagePayload = {
+  body: string;
+};
+
 type ApiErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -47,6 +51,7 @@ type ApiErrorCode =
   | 'VALIDATION_ERROR'
   | 'VENUE_NOT_FOUND'
   | 'EVENT_NOT_FOUND'
+  | 'CHAT_CLOSED'
   | 'EVENT_NOT_JOINABLE'
   | 'EVENT_NOT_LEAVABLE'
   | 'EVENT_NOT_CANCELLABLE'
@@ -73,7 +78,52 @@ type EventsRoute =
   | { kind: 'cancel'; eventId: string }
   | { kind: 'removePlayer'; eventId: string }
   | { kind: 'noShow'; eventId: string }
-  | { kind: 'thumbsUp'; eventId: string };
+  | { kind: 'thumbsUp'; eventId: string }
+  | { kind: 'messages'; eventId: string };
+
+type ChatEventRow = {
+  id: string;
+  organizer_id: string | null;
+  status: 'active' | 'full' | 'finished' | 'cancelled';
+  chat_closed_at: string | null;
+};
+
+type ChatMessageRow = {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  body: string;
+  sent_at: string;
+  is_deleted: boolean;
+  author:
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        photo_url: string | null;
+      }
+    | {
+        first_name: string | null;
+        last_name: string | null;
+        photo_url: string | null;
+      }[]
+    | null;
+};
+
+type NotificationPreferenceRow = {
+  user_id: string;
+  is_enabled: boolean;
+};
+
+type DeviceTokenRow = {
+  user_id: string | null;
+  token: string;
+};
+
+type ExpoPushTicket = {
+  status: 'ok' | 'error';
+  message?: string;
+  details?: unknown;
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -182,6 +232,13 @@ function parseEventsRoute(requestUrl: string): EventsRoute {
   if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'thumbs-up') {
     return {
       kind: 'thumbsUp',
+      eventId: tail[0]!,
+    };
+  }
+
+  if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'messages') {
+    return {
+      kind: 'messages',
       eventId: tail[0]!,
     };
   }
@@ -467,6 +524,23 @@ function validateGiveThumbsUpPayload(value: unknown): GiveThumbsUpPayload {
   };
 }
 
+function validateSendMessagePayload(value: unknown): SendMessagePayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Body must be a JSON object.');
+  }
+
+  const payload = value as Record<string, unknown>;
+  const body = typeof payload.body === 'string' ? payload.body.trim() : '';
+
+  if (!body || body.length > 1_000) {
+    throw new Error('body must be a trimmed string between 1 and 1000 characters.');
+  }
+
+  return {
+    body,
+  };
+}
+
 function mapCreateEventError(message: string): {
   code: ApiErrorCode;
   status: number;
@@ -501,6 +575,14 @@ function mapEventMutationError(message: string): {
       code: 'EVENT_NOT_FOUND',
       status: 404,
       message: 'This event could not be found.',
+    };
+  }
+
+  if (normalizedMessage.includes('CHAT_CLOSED')) {
+    return {
+      code: 'CHAT_CLOSED',
+      status: 409,
+      message: 'This chat is read-only now.',
     };
   }
 
@@ -685,6 +767,193 @@ function createSupabaseClients(request: Request) {
     authClient,
     adminClient,
   };
+}
+
+function resolveChatAuthorRelation(author: ChatMessageRow['author']) {
+  if (Array.isArray(author)) {
+    return author[0] ?? null;
+  }
+
+  return author;
+}
+
+function getDisplayName(input: { firstName: string | null; lastName: string | null }): string {
+  const combinedName = [input.firstName, input.lastName].filter(Boolean).join(' ').trim();
+
+  return combinedName || 'Hrayem';
+}
+
+async function sendChatNotifications(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  input: {
+    eventId: string;
+    senderUserId: string;
+    senderName: string;
+    messageBody: string;
+    recipientUserIds: string[];
+  },
+) {
+  if (!input.recipientUserIds.length) {
+    return;
+  }
+
+  const [preferencesResult, tokensResult] = await Promise.all([
+    adminClient
+      .from('notification_preferences')
+      .select('user_id, is_enabled')
+      .eq('type', 'chat_message')
+      .in('user_id', input.recipientUserIds),
+    adminClient
+      .from('device_tokens')
+      .select('user_id, token')
+      .in('user_id', input.recipientUserIds),
+  ]);
+
+  if (preferencesResult.error || tokensResult.error) {
+    throw new Error(
+      preferencesResult.error?.message ??
+        tokensResult.error?.message ??
+        'Unable to load chat notification recipients.',
+    );
+  }
+
+  const disabledUserIds = new Set(
+    ((preferencesResult.data ?? []) as NotificationPreferenceRow[])
+      .filter((row) => row.is_enabled === false)
+      .map((row) => row.user_id),
+  );
+  const enabledRecipientIds = input.recipientUserIds.filter(
+    (userId) => !disabledUserIds.has(userId),
+  );
+
+  if (!enabledRecipientIds.length) {
+    return;
+  }
+
+  const tokensByUserId = new Map<string, string[]>();
+
+  for (const row of (tokensResult.data ?? []) as DeviceTokenRow[]) {
+    if (!row.user_id || disabledUserIds.has(row.user_id)) {
+      continue;
+    }
+
+    const existingTokens = tokensByUserId.get(row.user_id) ?? [];
+    tokensByUserId.set(row.user_id, [...existingTokens, row.token]);
+  }
+
+  const notificationPayloadByUserId = new Map<
+    string,
+    {
+      eventId: string;
+      route: 'chat';
+      type: 'chat_message';
+      senderUserId: string;
+      senderName: string;
+      bodyPreview: string;
+    }
+  >();
+
+  for (const recipientUserId of enabledRecipientIds) {
+    notificationPayloadByUserId.set(recipientUserId, {
+      eventId: input.eventId,
+      route: 'chat',
+      type: 'chat_message',
+      senderUserId: input.senderUserId,
+      senderName: input.senderName,
+      bodyPreview: input.messageBody,
+    });
+  }
+
+  const pushMessages: Array<{
+    to: string;
+    title: string;
+    body: string;
+    data: {
+      eventId: string;
+      route: 'chat';
+      type: 'chat_message';
+    };
+  }> = [];
+  const pushRecipients: string[] = [];
+
+  for (const recipientUserId of enabledRecipientIds) {
+    const tokens = tokensByUserId.get(recipientUserId) ?? [];
+
+    for (const token of tokens) {
+      pushMessages.push({
+        to: token,
+        title: input.senderName,
+        body: input.messageBody,
+        data: {
+          eventId: input.eventId,
+          route: 'chat',
+          type: 'chat_message',
+        },
+      });
+      pushRecipients.push(recipientUserId);
+    }
+  }
+
+  const deliveryStatusByUserId = new Map<string, 'sent' | 'failed'>();
+
+  for (const recipientUserId of enabledRecipientIds) {
+    deliveryStatusByUserId.set(
+      recipientUserId,
+      (tokensByUserId.get(recipientUserId) ?? []).length ? 'failed' : 'failed',
+    );
+  }
+
+  if (pushMessages.length) {
+    try {
+      const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pushMessages),
+      });
+
+      const expoJson = (await expoResponse.json().catch(() => null)) as {
+        data?: ExpoPushTicket[];
+      } | null;
+      const tickets = Array.isArray(expoJson?.data) ? expoJson.data : [];
+
+      if (expoResponse.ok && tickets.length === pushMessages.length) {
+        tickets.forEach((ticket, index) => {
+          const recipientUserId = pushRecipients[index];
+
+          if (!recipientUserId) {
+            return;
+          }
+
+          if (ticket.status === 'ok') {
+            deliveryStatusByUserId.set(recipientUserId, 'sent');
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send chat push notifications.', error);
+    }
+  }
+
+  const rows = enabledRecipientIds.map((recipientUserId) => ({
+    user_id: recipientUserId,
+    event_id: input.eventId,
+    type: 'chat_message',
+    status: deliveryStatusByUserId.get(recipientUserId) ?? 'failed',
+    payload: notificationPayloadByUserId.get(recipientUserId),
+  }));
+
+  if (!rows.length) {
+    return;
+  }
+
+  const logResult = await adminClient.from('notification_log').insert(rows);
+
+  if (logResult.error) {
+    throw new Error(logResult.error.message);
+  }
 }
 
 async function requireAuthenticatedUser(request: Request) {
@@ -1083,6 +1352,136 @@ async function handleThumbsUpRoute(request: Request, eventId: string): Promise<R
   });
 }
 
+async function handleMessagesRoute(request: Request, eventId: string): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  let payload: SendMessagePayload;
+
+  try {
+    payload = validateSendMessagePayload(await readJsonBody(request));
+  } catch (error) {
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+  }
+
+  const eventResult = await authResult.adminClient
+    .from('events')
+    .select('id, organizer_id, status, chat_closed_at')
+    .eq('id', eventId)
+    .maybeSingle();
+
+  if (eventResult.error) {
+    return errorResponse('INTERNAL_ERROR', eventResult.error.message, 500);
+  }
+
+  if (!eventResult.data) {
+    return errorResponse('EVENT_NOT_FOUND', 'This event could not be found.', 404);
+  }
+
+  const event = eventResult.data as ChatEventRow;
+  const isOrganizer = event.organizer_id === authResult.user.id;
+
+  if (event.status === 'cancelled') {
+    return errorResponse('CHAT_CLOSED', 'This event was cancelled and chat is read-only.', 409);
+  }
+
+  if (event.chat_closed_at && new Date(event.chat_closed_at).getTime() <= Date.now()) {
+    return errorResponse('CHAT_CLOSED', 'This chat is read-only now.', 409);
+  }
+
+  let isConfirmedPlayer = false;
+
+  if (!isOrganizer) {
+    const membershipResult = await authResult.adminClient
+      .from('event_players')
+      .select('user_id')
+      .eq('event_id', eventId)
+      .eq('user_id', authResult.user.id)
+      .eq('status', 'confirmed')
+      .maybeSingle();
+
+    if (membershipResult.error) {
+      return errorResponse('INTERNAL_ERROR', membershipResult.error.message, 500);
+    }
+
+    isConfirmedPlayer = Boolean(membershipResult.data);
+  }
+
+  if (!isOrganizer && !isConfirmedPlayer) {
+    return errorResponse('FORBIDDEN', 'Only confirmed players can access event chat.', 403);
+  }
+
+  const insertResult = await authResult.adminClient
+    .from('chat_messages')
+    .insert({
+      event_id: eventId,
+      user_id: authResult.user.id,
+      body: payload.body,
+    })
+    .select(
+      'id, event_id, user_id, body, sent_at, is_deleted, author:profiles!chat_messages_user_id_fkey(first_name, last_name, photo_url)',
+    )
+    .single();
+
+  if (insertResult.error) {
+    return errorResponse('INTERNAL_ERROR', insertResult.error.message, 500);
+  }
+
+  if (!insertResult.data) {
+    return errorResponse('INTERNAL_ERROR', 'The server did not return the inserted message.', 500);
+  }
+
+  const insertedMessage = insertResult.data as ChatMessageRow;
+  const messageAuthor = resolveChatAuthorRelation(insertedMessage.author);
+  const senderName = getDisplayName({
+    firstName: messageAuthor?.first_name ?? null,
+    lastName: messageAuthor?.last_name ?? null,
+  });
+
+  const recipientsResult = await authResult.adminClient
+    .from('event_players')
+    .select('user_id')
+    .eq('event_id', eventId)
+    .eq('status', 'confirmed');
+
+  if (!recipientsResult.error) {
+    const recipientIds = new Set<string>();
+
+    for (const row of (recipientsResult.data ?? []) as Array<{ user_id: string | null }>) {
+      if (row.user_id && row.user_id !== authResult.user.id) {
+        recipientIds.add(row.user_id);
+      }
+    }
+
+    if (event.organizer_id && event.organizer_id !== authResult.user.id) {
+      recipientIds.add(event.organizer_id);
+    }
+
+    if (recipientIds.size) {
+      try {
+        await sendChatNotifications(authResult.adminClient, {
+          eventId,
+          senderUserId: authResult.user.id,
+          senderName,
+          messageBody: payload.body,
+          recipientUserIds: [...recipientIds],
+        });
+      } catch (error) {
+        console.error('Chat notification fan-out failed.', error);
+      }
+    }
+  }
+
+  return jsonResponse({
+    data: insertResult.data,
+  });
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', {
@@ -1154,6 +1553,14 @@ Deno.serve(async (request) => {
       }
 
       return await handleThumbsUpRoute(request, route.eventId);
+    }
+
+    if (route.kind === 'messages') {
+      if (request.method !== 'POST') {
+        return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);
+      }
+
+      return await handleMessagesRoute(request, route.eventId);
     }
 
     if (request.method !== 'POST') {
