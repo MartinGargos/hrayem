@@ -13,9 +13,7 @@ import {
   AccountDeletionScreen,
   AddVenueScreen,
   ChatScreen,
-  PlayerProfileScreen,
   PostAvailabilityScreen,
-  ProfileScreen,
   SettingsScreen,
   SkillLevelScreen,
 } from '../features/shell/StubScreens';
@@ -23,6 +21,7 @@ import { CreateEventScreen, EditEventScreen } from '../features/events/CreateEve
 import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
 import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
+import { PlayerProfileScreen, ProfileScreen } from '../features/profile/ProfileScreen';
 import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
 import { getPendingDeepLinkReplayAction } from './pending-deep-link';

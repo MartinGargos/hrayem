@@ -274,7 +274,7 @@
     },
     "myGames": {
       "title": "Moje hry",
-      "subtitle": "Sledujte hry, které organizujete nebo jste v nich potvrzení. Záložka Past zůstává vyhrazená pro pozdější post-game práci.",
+      "subtitle": "Sledujte hry, které organizujete nebo hrajete, a po dokončení se k nim vraťte kvůli no-show hlášení a post-game feedbacku.",
       "tabs": {
         "upcoming": "Nadcházející",
         "past": "Minulé"
@@ -292,12 +292,21 @@
       "openCreate": "Vytvořit hru",
       "pastTitle": "Minulé hry",
       "pastPlaceholder": "Tato sekce později nabídne hlášení no-show a thumbs-up prompty pro dokončené hry.",
+      "pastActionsTitle": "Akce po hře",
+      "pastErrorTitle": "Nepodařilo se načíst vaše minulé hry",
+      "pastErrorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online znovu otevřete záložku Minulé.",
+      "pastEmptyTitle": "Zatím žádné dokončené hry",
+      "pastEmptyBody": "Jakmile některá z vašich her skončí, přesune se sem pro následné akce po hře.",
+      "reportNoShowBody": "Organizátor může ještě {{remaining}} nahlásit no-show.",
+      "reportNoShowAction": "Zkontrolovat no-show",
+      "thumbsUpBody": "Post-game feedback můžete ještě odeslat {{remaining}}.",
+      "thumbsUpEmpty": "Nezbývají žádní potvrzení hráči, kterým by šel dát feedback.",
       "openEvent": "Otevřít stub detailu hry",
       "openChat": "Otevřít stub chatu"
     },
     "profile": {
       "title": "Profil",
-      "subtitle": "Tab profilu má teď finální místo v shellu, zatímco editovatelné statistiky a connections přijdou později.",
+      "subtitle": "Sledujte své sportovní statistiky, upravujte si skill level a zobrazte si hráče, se kterými byste si rádi zahráli znovu.",
       "stubTitle": "Souhrn profilu",
       "nameLabel": "Jméno",
       "languageLabel": "Jazyk",
@@ -329,6 +338,38 @@
       "subtitle": "Tato route rezervuje tok zveřejnění dostupnosti z tabu Dostupní hráči.",
       "stubTitle": "Stub dostupnosti",
       "placeholder": "Skutečný formulář pro sport, rozsah dat a časovou preferenci přijde v Milestone 6."
+    }
+  },
+  "profile": {
+    "summaryTitle": "Souhrn profilu",
+    "statsTitle": "Vaše sportovní statistiky",
+    "statsEmpty": "Dokončete více her nebo přidejte další sporty a statistiky se zobrazí tady.",
+    "connectionsTitle": "Spojení pro další hru",
+    "connectionsEmpty": "Vzájemné thumbs up se tady začnou zobrazovat po dokončených hrách.",
+    "playAgainBadge": "Zahrál bych si znovu",
+    "skillEditHint": "Klepnutím upravíte svou úroveň pro tento sport.",
+    "skillModalSubtitle": "Upravte svou aktuální úroveň pro tento sport, aby další hry pracovaly se správným očekáváním.",
+    "skillUpdated": "Vaše úroveň byla aktualizována.",
+    "skillUpdateFailed": "Vaši úroveň se nepodařilo aktualizovat. Zkuste to prosím znovu.",
+    "errors": {
+      "stats": "Sportovní statistiky se teď nepodařilo načíst.",
+      "connections": "Spojení pro další hru se teď nepodařilo načíst."
+    },
+    "stats": {
+      "gamesAndHours": "{{games}} her · {{hours}} h",
+      "noShows": "{{count}} no-show",
+      "thumbsHidden": "Procento thumbs up se odemkne až po alespoň 3 dokončených hrách.",
+      "thumbsValue": "{{percentage}} % thumbs up"
+    }
+  },
+  "playerProfile": {
+    "subtitle": "Zobrazte si viditelné sportovní statistiky tohoto hráče a společné signály pro další hru.",
+    "summaryTitle": "Souhrn hráče",
+    "statsTitle": "Sportovní statistiky",
+    "empty": "Tento hráč zatím nemá žádné viditelné sportovní statistiky.",
+    "errors": {
+      "summary": "Souhrn profilu tohoto hráče se teď nepodařilo načíst.",
+      "stats": "Sportovní statistiky tohoto hráče se teď nepodařilo načíst."
     }
   },
   "events": {
@@ -382,6 +423,10 @@
       "noDescription": "K této hře nebyla přidaná žádná doplňující poznámka.",
       "organizerTitle": "Organizátor",
       "organizerStats": "{{games}} odehraných her · {{noShows}} no-show",
+      "playerStats": "{{games}} her · {{noShows}} no-show",
+      "thumbsUpPercentage": "{{percentage}} % thumbs up",
+      "thumbsUpPercentageHidden": "Procento thumbs up se odemkne až po alespoň 3 dokončených hrách.",
+      "playAgainBadge": "Zahrál bych si znovu",
       "openOrganizerProfile": "Otevřít profil organizátora",
       "confirmedPlayersTitle": "Potvrzení hráči",
       "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
@@ -569,6 +614,38 @@
       "confirmTitle": "Odebrat hráče?",
       "confirmBody": "{{player}} bude z této hry odebraný. Pokud je někdo na čekačce, první hráč se automaticky povýší.",
       "confirmAction": "Odebrat"
+    },
+    "noShow": {
+      "title": "Hlášení no-show",
+      "body": "Potvrzeného hráče můžete ještě {{remaining}} nahlásit jako no-show.",
+      "action": "Nahlásit no-show",
+      "pending": "Hlašuji...",
+      "confirmTitle": "Nahlásit no-show?",
+      "confirmBody": "{{player}} dostane za tuto dokončenou hru no-show do svého sportovního profilu.",
+      "confirmAction": "Nahlásit",
+      "noneLeft": "Nezbývají žádní potvrzení hráči, které by šlo tady nahlásit.",
+      "minimumPlayersBody": "No-show hlášení se odemkne jen tehdy, když v této hře byli alespoň dva potvrzení hráči mimo organizátora.",
+      "organizerOnly": "Během post-game okna může no-show hlásit pouze organizátor.",
+      "closedBody": "Okno pro no-show hlášení pro tuto hru už skončilo.",
+      "success": "No-show bylo zaznamenáno.",
+      "errors": {
+        "unavailable": "No-show hlášení už pro tuto hru není dostupné.",
+        "alreadyReported": "Tento hráč už byl pro tuto hru jako no-show nahlášen."
+      }
+    },
+    "thumbsUp": {
+      "title": "S kým byste si zahráli znovu?",
+      "body": "Post-game feedback můžete ještě odeslat {{remaining}}.",
+      "action": "Poslat thumbs up",
+      "pending": "Ukládám...",
+      "done": "Odesláno",
+      "empty": "Nezbývají žádní potvrzení hráči, kterým by šel dát feedback.",
+      "closedBody": "Okno pro post-game feedback pro tuto hru už skončilo.",
+      "success": "Vaše thumbs up bylo zaznamenáno.",
+      "errors": {
+        "unavailable": "Post-game feedback už pro tuto hru není dostupný.",
+        "alreadyGiven": "Tomuto hráči už jste v této hře thumbs up poslali."
+      }
     }
   }
 }

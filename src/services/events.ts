@@ -12,11 +12,18 @@ import type {
   EventFeedFilters,
   EventFeedItem,
   EventMembershipStatus,
+  GiveThumbsUpInput,
+  GiveThumbsUpResponse,
   JoinEventInput,
   JoinEventResponse,
   LeaveEventInput,
   LeaveEventResponse,
+  MyGamesPastItem,
   MyGamesUpcomingItem,
+  PlayAgainConnection,
+  PlayerSportStat,
+  ReportNoShowInput,
+  ReportNoShowResponse,
   RemovePlayerInput,
   RemovePlayerResponse,
   SportSummary,
@@ -78,11 +85,19 @@ type EventFeedRow = {
 
 type EventDetailRow = EventFeedRow & {
   organizer_last_name: string | null;
+  no_show_window_end: string | null;
+  chat_closed_at: string | null;
   viewer_membership_status: EventMembershipStatus | null;
   viewer_waitlist_position: number | null;
 };
 
 type MyGamesUpcomingRow = EventFeedRow & {
+  viewer_membership_status: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
+};
+
+type MyGamesPastRow = EventFeedRow & {
+  no_show_window_end: string | null;
+  chat_closed_at: string | null;
   viewer_membership_status: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
 
@@ -101,6 +116,62 @@ type EventPlayerRow = {
         photo_url: string | null;
       }[]
     | null;
+};
+
+type PlayerSportStatRow = {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  photo_url: string | null;
+  city: string | null;
+  sport_id: string;
+  sport_slug: string;
+  sport_name_cs: string;
+  sport_name_en: string;
+  sport_icon: string;
+  sport_color: string;
+  skill_level: number;
+  games_played: number;
+  hours_played: number | string;
+  no_shows: number;
+  thumbs_up_games: number;
+  thumbs_up_percentage: number | null;
+  is_play_again_connection: boolean;
+};
+
+type PlayAgainConnectionRow = {
+  connection_user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  photo_url: string | null;
+  city: string | null;
+  sport_id: string;
+  sport_slug: string;
+  sport_name_cs: string;
+  sport_name_en: string;
+  sport_icon: string;
+  sport_color: string;
+  skill_level: number;
+  games_played: number;
+  hours_played: number | string;
+  no_shows: number;
+  thumbs_up_percentage: number | null;
+};
+
+type VisibleProfileRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  photo_url: string | null;
+  city: string | null;
+};
+
+type PostGameThumbRow = {
+  to_user: string | null;
+};
+
+type NoShowReportRow = {
+  reported_user: string | null;
 };
 
 type EdgeFunctionFailure = {
@@ -197,6 +268,50 @@ function resolveProfileRelation(profile: EventPlayerRow['profile']) {
   }
 
   return profile;
+}
+
+function mapPlayerSportStatRow(row: PlayerSportStatRow): PlayerSportStat {
+  return {
+    userId: row.user_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    photoUrl: row.photo_url,
+    city: row.city,
+    sportId: row.sport_id,
+    sportSlug: row.sport_slug,
+    sportNameCs: row.sport_name_cs,
+    sportNameEn: row.sport_name_en,
+    sportIcon: row.sport_icon,
+    sportColor: row.sport_color,
+    skillLevel: row.skill_level,
+    gamesPlayed: row.games_played,
+    hoursPlayed: Number(row.hours_played),
+    noShows: row.no_shows,
+    thumbsUpGames: row.thumbs_up_games,
+    thumbsUpPercentage: row.thumbs_up_percentage === null ? null : Number(row.thumbs_up_percentage),
+    isPlayAgainConnection: row.is_play_again_connection,
+  };
+}
+
+function mapPlayAgainConnectionRow(row: PlayAgainConnectionRow): PlayAgainConnection {
+  return {
+    connectionUserId: row.connection_user_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    photoUrl: row.photo_url,
+    city: row.city,
+    sportId: row.sport_id,
+    sportSlug: row.sport_slug,
+    sportNameCs: row.sport_name_cs,
+    sportNameEn: row.sport_name_en,
+    sportIcon: row.sport_icon,
+    sportColor: row.sport_color,
+    skillLevel: row.skill_level,
+    gamesPlayed: row.games_played,
+    hoursPlayed: Number(row.hours_played),
+    noShows: row.no_shows,
+    thumbsUpPercentage: row.thumbs_up_percentage === null ? null : Number(row.thumbs_up_percentage),
+  };
 }
 
 async function callEventsRoute<TResponse>(
@@ -359,7 +474,7 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
     supabase
       .from('event_detail_view')
       .select(
-        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_last_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, viewer_membership_status, viewer_waitlist_position, created_at',
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_last_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, no_show_window_end, chat_closed_at, viewer_membership_status, viewer_waitlist_position, created_at',
       )
       .eq('id', eventId)
       .single(),
@@ -377,6 +492,8 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
   return {
     ...mappedDetail,
     organizerLastName: detailRow.organizer_last_name,
+    noShowWindowEnd: detailRow.no_show_window_end,
+    chatClosedAt: detailRow.chat_closed_at,
     viewerMembershipStatus: detailRow.viewer_membership_status,
     viewerWaitlistPosition: detailRow.viewer_waitlist_position,
   };
@@ -399,9 +516,29 @@ export async function fetchMyUpcomingGames(): Promise<MyGamesUpcomingItem[]> {
   }));
 }
 
+export async function fetchMyPastGames(): Promise<MyGamesPastItem[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('my_games_past_view')
+      .select(
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, no_show_window_end, chat_closed_at, viewer_membership_status, created_at',
+      ),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load past games.');
+
+  return ((result.data ?? []) as MyGamesPastRow[]).map((row) => ({
+    ...mapEventFeedRow(row),
+    noShowWindowEnd: row.no_show_window_end,
+    chatClosedAt: row.chat_closed_at,
+    viewerMembershipStatus: row.viewer_membership_status,
+  }));
+}
+
 export async function fetchConfirmedEventPlayers(input: {
   eventId: string;
   sportId: string;
+  viewerUserId?: string | null;
 }): Promise<EventConfirmedPlayer[]> {
   const playersResult = await retrySupabaseOperationOnce(() =>
     supabase
@@ -422,35 +559,136 @@ export async function fetchConfirmedEventPlayers(input: {
     .filter((value): value is string => typeof value === 'string');
 
   const playerSkillsByUserId = new Map<string, number>();
+  const playerStatsByUserId = new Map<string, PlayerSportStat>();
+  const alreadyThumbedUpUserIds = new Set<string>();
+  const alreadyReportedNoShowUserIds = new Set<string>();
 
   if (playerIds.length) {
     const skillsResult = await retrySupabaseOperationOnce(() =>
       supabase
-        .from('user_sports')
-        .select('user_id, skill_level')
+        .from('player_profile_sport_stats_view')
+        .select(
+          'user_id, first_name, last_name, photo_url, city, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, skill_level, games_played, hours_played, no_shows, thumbs_up_games, thumbs_up_percentage, is_play_again_connection',
+        )
         .eq('sport_id', input.sportId)
         .in('user_id', playerIds),
     );
 
-    throwIfSupabaseError(skillsResult.error, 'Unable to load player skill levels.');
+    throwIfSupabaseError(skillsResult.error, 'Unable to load player sport stats.');
 
-    for (const row of (skillsResult.data ?? []) as { user_id: string; skill_level: number }[]) {
+    for (const row of (skillsResult.data ?? []) as PlayerSportStatRow[]) {
+      const mappedRow = mapPlayerSportStatRow(row);
+      playerStatsByUserId.set(mappedRow.userId, mappedRow);
       playerSkillsByUserId.set(row.user_id, row.skill_level);
+    }
+
+    if (input.viewerUserId) {
+      const [thumbsResult, noShowResult] = await Promise.all([
+        retrySupabaseOperationOnce(() =>
+          supabase
+            .from('post_game_thumbs')
+            .select('to_user')
+            .eq('event_id', input.eventId)
+            .eq('from_user', input.viewerUserId)
+            .in('to_user', playerIds),
+        ),
+        retrySupabaseOperationOnce(() =>
+          supabase
+            .from('no_show_reports')
+            .select('reported_user')
+            .eq('event_id', input.eventId)
+            .in('reported_user', playerIds),
+        ),
+      ]);
+
+      throwIfSupabaseError(thumbsResult.error, 'Unable to load post-game thumbs state.');
+      throwIfSupabaseError(noShowResult.error, 'Unable to load no-show report state.');
+
+      for (const row of (thumbsResult.data ?? []) as PostGameThumbRow[]) {
+        if (row.to_user) {
+          alreadyThumbedUpUserIds.add(row.to_user);
+        }
+      }
+
+      for (const row of (noShowResult.data ?? []) as NoShowReportRow[]) {
+        if (row.reported_user) {
+          alreadyReportedNoShowUserIds.add(row.reported_user);
+        }
+      }
     }
   }
 
   return playerRows.map((row) => {
     const profile = resolveProfileRelation(row.profile);
+    const playerId = row.user_id ?? `deleted-${row.joined_at}`;
+    const stats = row.user_id ? playerStatsByUserId.get(row.user_id) : null;
 
     return {
-      userId: row.user_id ?? `deleted-${row.joined_at}`,
+      userId: playerId,
       firstName: profile?.first_name ?? null,
       lastName: profile?.last_name ?? null,
       photoUrl: profile?.photo_url ?? null,
       skillLevel: row.user_id ? (playerSkillsByUserId.get(row.user_id) ?? null) : null,
+      gamesPlayed: stats?.gamesPlayed ?? 0,
+      hoursPlayed: stats?.hoursPlayed ?? 0,
+      noShows: stats?.noShows ?? 0,
+      thumbsUpPercentage: stats?.thumbsUpPercentage ?? null,
+      isPlayAgainConnection: stats?.isPlayAgainConnection ?? false,
+      alreadyThumbedUpByViewer: row.user_id ? alreadyThumbedUpUserIds.has(row.user_id) : false,
+      alreadyReportedNoShow: row.user_id ? alreadyReportedNoShowUserIds.has(row.user_id) : false,
       joinedAt: row.joined_at,
     };
   });
+}
+
+export async function fetchPlayerSportStats(userId: string): Promise<PlayerSportStat[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('player_profile_sport_stats_view')
+      .select(
+        'user_id, first_name, last_name, photo_url, city, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, skill_level, games_played, hours_played, no_shows, thumbs_up_games, thumbs_up_percentage, is_play_again_connection',
+      )
+      .eq('user_id', userId)
+      .order('sport_name_en', { ascending: true }),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load player sport stats.');
+
+  return ((result.data ?? []) as PlayerSportStatRow[]).map(mapPlayerSportStatRow);
+}
+
+export async function fetchPlayAgainConnections(): Promise<PlayAgainConnection[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('play_again_connections_view')
+      .select(
+        'connection_user_id, first_name, last_name, photo_url, city, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, skill_level, games_played, hours_played, no_shows, thumbs_up_percentage',
+      )
+      .order('sport_name_en', { ascending: true })
+      .order('first_name', { ascending: true }),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load play-again connections.');
+
+  return ((result.data ?? []) as PlayAgainConnectionRow[]).map(mapPlayAgainConnectionRow);
+}
+
+export async function fetchVisibleProfile(playerId: string): Promise<VisibleProfileRow> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('profiles')
+      .select('id, first_name, last_name, photo_url, city')
+      .eq('id', playerId)
+      .single(),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load the player profile.');
+
+  if (!result.data) {
+    throw new Error('Missing player profile.');
+  }
+
+  return result.data as VisibleProfileRow;
 }
 
 export async function createEvent(input: CreateEventInput): Promise<CreateEventResponse> {
@@ -503,5 +741,17 @@ export async function cancelEvent(input: CancelEventInput): Promise<CancelEventR
 export async function removePlayer(input: RemovePlayerInput): Promise<RemovePlayerResponse> {
   return callEventsRoute<RemovePlayerResponse>(`/${input.eventId}/remove-player`, {
     target_user_id: input.targetUserId,
+  });
+}
+
+export async function reportNoShow(input: ReportNoShowInput): Promise<ReportNoShowResponse> {
+  return callEventsRoute<ReportNoShowResponse>(`/${input.eventId}/no-show`, {
+    reported_user_id: input.reportedUserId,
+  });
+}
+
+export async function giveThumbsUp(input: GiveThumbsUpInput): Promise<GiveThumbsUpResponse> {
+  return callEventsRoute<GiveThumbsUpResponse>(`/${input.eventId}/thumbs-up`, {
+    to_user_id: input.toUserId,
   });
 }

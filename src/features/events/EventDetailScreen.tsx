@@ -12,6 +12,7 @@ import {
   canOrganizerCancelEvent,
   canOrganizerEditEvent,
   canOrganizerRemovePlayers,
+  hasEnoughConfirmedPlayersForNoShow,
 } from './event-eligibility';
 import { AvatarPhoto, InfoPill, SportBadge } from './EventPrimitives';
 import { SkillLevelModal } from './SkillLevelModal';
@@ -24,8 +25,10 @@ import {
   fetchConfirmedEventPlayers,
   fetchEventDetail,
   fetchOwnSportProfiles,
+  giveThumbsUp,
   joinEvent,
   leaveEvent,
+  reportNoShow,
   removePlayer,
 } from '../../services/events';
 import { supabase } from '../../services/supabase';
@@ -39,7 +42,7 @@ import type {
   JoinEventResponse,
   LeaveEventResponse,
 } from '../../types/events';
-import { formatEventDate, formatEventTime } from '../../utils/dates';
+import { formatEventDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type EventDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
@@ -151,6 +154,13 @@ function upsertCurrentUserAsConfirmedPlayer(
     lastName: input.lastName,
     photoUrl: input.photoUrl,
     skillLevel: input.skillLevel,
+    gamesPlayed: 0,
+    hoursPlayed: 0,
+    noShows: 0,
+    thumbsUpPercentage: null,
+    isPlayAgainConnection: false,
+    alreadyThumbedUpByViewer: false,
+    alreadyReportedNoShow: false,
     joinedAt: new Date().toISOString(),
   };
 
@@ -237,6 +247,34 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
         tone: 'info',
       };
     }
+
+    if (error.code === 'NO_SHOW_NOT_ALLOWED') {
+      return {
+        messageKey: 'events.noShow.errors.unavailable',
+        tone: 'info',
+      };
+    }
+
+    if (error.code === 'ALREADY_REPORTED') {
+      return {
+        messageKey: 'events.noShow.errors.alreadyReported',
+        tone: 'info',
+      };
+    }
+
+    if (error.code === 'THUMBS_UP_NOT_ALLOWED') {
+      return {
+        messageKey: 'events.thumbsUp.errors.unavailable',
+        tone: 'info',
+      };
+    }
+
+    if (error.code === 'ALREADY_THUMBED_UP') {
+      return {
+        messageKey: 'events.thumbsUp.errors.alreadyGiven',
+        tone: 'info',
+      };
+    }
   }
 
   return {
@@ -269,6 +307,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
       fetchConfirmedEventPlayers({
         eventId,
         sportId: eventQuery.data?.sportId ?? '',
+        viewerUserId: userId,
       }),
     enabled: Boolean(eventQuery.data?.sportId),
     staleTime: 10_000,
@@ -565,6 +604,128 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     },
   });
 
+  const reportNoShowMutation = useMutation({
+    mutationFn: reportNoShow,
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({
+        queryKey: ['events', 'detail', eventId, 'confirmed-players'],
+      });
+
+      const previousPlayers = queryClient.getQueryData<EventConfirmedPlayer[]>([
+        'events',
+        'detail',
+        eventId,
+        'confirmed-players',
+      ]);
+
+      queryClient.setQueryData<EventConfirmedPlayer[]>(
+        ['events', 'detail', eventId, 'confirmed-players'],
+        (current) =>
+          current?.map((player) =>
+            player.userId === input.reportedUserId
+              ? {
+                  ...player,
+                  alreadyReportedNoShow: true,
+                  noShows: player.noShows + 1,
+                }
+              : player,
+          ) ?? [],
+      );
+
+      return {
+        previousPlayers,
+      };
+    },
+    onError: (error, _input, context) => {
+      if (context?.previousPlayers) {
+        queryClient.setQueryData(
+          ['events', 'detail', eventId, 'confirmed-players'],
+          context.previousPlayers,
+        );
+      }
+
+      setNotice(mapJoinLeaveErrorToNotice(error));
+    },
+    onSuccess: async (_result, variables) => {
+      setNotice({
+        messageKey: 'events.noShow.success',
+        tone: 'info',
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', eventId, 'confirmed-players'],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-sports'] }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'detail', eventId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['profile', 'player', variables.reportedUserId],
+        }),
+      ]);
+    },
+  });
+
+  const thumbsUpMutation = useMutation({
+    mutationFn: giveThumbsUp,
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({
+        queryKey: ['events', 'detail', eventId, 'confirmed-players'],
+      });
+
+      const previousPlayers = queryClient.getQueryData<EventConfirmedPlayer[]>([
+        'events',
+        'detail',
+        eventId,
+        'confirmed-players',
+      ]);
+
+      queryClient.setQueryData<EventConfirmedPlayer[]>(
+        ['events', 'detail', eventId, 'confirmed-players'],
+        (current) =>
+          current?.map((player) =>
+            player.userId === input.toUserId
+              ? {
+                  ...player,
+                  alreadyThumbedUpByViewer: true,
+                }
+              : player,
+          ) ?? [],
+      );
+
+      return {
+        previousPlayers,
+      };
+    },
+    onError: (error, _input, context) => {
+      if (context?.previousPlayers) {
+        queryClient.setQueryData(
+          ['events', 'detail', eventId, 'confirmed-players'],
+          context.previousPlayers,
+        );
+      }
+
+      setNotice(mapJoinLeaveErrorToNotice(error));
+    },
+    onSuccess: async (_result, variables) => {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setNotice({
+        messageKey: 'events.thumbsUp.success',
+        tone: 'success',
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['events', 'detail', eventId, 'confirmed-players'],
+        }),
+        queryClient.invalidateQueries({ queryKey: ['events', 'my-games'] }),
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['profile', 'player', variables.toUserId],
+        }),
+      ]);
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: cancelEvent,
     onSuccess: async (result) => {
@@ -763,6 +924,42 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     );
   }
 
+  function handleReportNoShowPress(targetUserId: string, playerName: string) {
+    if (!eventQuery.data) {
+      return;
+    }
+
+    setNotice(null);
+    Alert.alert(
+      t('events.noShow.confirmTitle'),
+      t('events.noShow.confirmBody', { player: playerName }),
+      [
+        {
+          text: t('events.common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('events.noShow.confirmAction'),
+          style: 'destructive',
+          onPress: () => {
+            reportNoShowMutation.mutate({
+              eventId,
+              reportedUserId: targetUserId,
+            });
+          },
+        },
+      ],
+    );
+  }
+
+  function handleThumbsUpPress(targetUserId: string) {
+    setNotice(null);
+    thumbsUpMutation.mutate({
+      eventId,
+      toUserId: targetUserId,
+    });
+  }
+
   if (eventQuery.isPending) {
     return (
       <ScreenShell
@@ -801,6 +998,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     .join(' ');
   const resolvedOrganizerName = organizerName || t('events.common.organizerFallback');
   const confirmedPlayers = playersQuery.data ?? [];
+  const organizerPlayer = confirmedPlayers.find((player) => player.userId === event.organizerId);
   const canOpenOrganizerProfile = Boolean(
     event.organizerId &&
     (event.organizerFirstName || event.organizerLastName || event.organizerPhotoUrl),
@@ -813,9 +1011,43 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   const canRemovePlayers = canOrganizerRemovePlayers(event);
   const canManageEvent = canCancelEvent;
   const removePlayerTargetUserId = removePlayerMutation.variables?.targetUserId ?? null;
+  const reportNoShowTargetUserId = reportNoShowMutation.variables?.reportedUserId ?? null;
+  const thumbsUpTargetUserId = thumbsUpMutation.variables?.toUserId ?? null;
   const isJoinableWindow =
     (event.status === 'active' || event.status === 'full') &&
     new Date(event.startsAt).getTime() > Date.now();
+  const isNoShowWindowOpen =
+    event.status === 'finished' &&
+    Boolean(event.noShowWindowEnd) &&
+    new Date(event.noShowWindowEnd ?? '').getTime() > Date.now();
+  const isThumbsUpWindowOpen =
+    event.status === 'finished' &&
+    Boolean(event.chatClosedAt) &&
+    new Date(event.chatClosedAt ?? '').getTime() > Date.now();
+  const hasEnoughPlayersForNoShow = hasEnoughConfirmedPlayersForNoShow(
+    confirmedPlayers,
+    event.organizerId,
+  );
+  const isNoShowEligibilityLoading =
+    event.viewerMembershipStatus === 'organizer' && isNoShowWindowOpen && playersQuery.isPending;
+  const canReportNoShows =
+    event.viewerMembershipStatus === 'organizer' &&
+    isNoShowWindowOpen &&
+    !playersQuery.isPending &&
+    hasEnoughPlayersForNoShow;
+  const canGiveThumbsUp =
+    isThumbsUpWindowOpen &&
+    Boolean(userId) &&
+    (event.viewerMembershipStatus === 'organizer' || event.viewerMembershipStatus === 'confirmed');
+  const thumbsPromptPlayers = confirmedPlayers.filter(
+    (player) => player.userId !== userId && !player.userId.startsWith('deleted-'),
+  );
+  const noShowReportPlayers = confirmedPlayers.filter(
+    (player) =>
+      player.userId !== event.organizerId &&
+      !player.userId.startsWith('deleted-') &&
+      !player.alreadyReportedNoShow,
+  );
   const skillModalSport = {
     id: event.sportId,
     slug: event.sportSlug,
@@ -1011,8 +1243,20 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                   noShows: event.organizerNoShows,
                 })}
               </Text>
+              {organizerPlayer && organizerPlayer.thumbsUpPercentage !== null ? (
+                <Text style={styles.helperText}>
+                  {t('events.detail.thumbsUpPercentage', {
+                    percentage: organizerPlayer.thumbsUpPercentage,
+                  })}
+                </Text>
+              ) : (
+                <Text style={styles.helperText}>{t('events.detail.thumbsUpPercentageHidden')}</Text>
+              )}
             </View>
           </View>
+          {organizerPlayer?.isPlayAgainConnection ? (
+            <InfoPill accentColor="#183153">{t('events.detail.playAgainBadge')}</InfoPill>
+          ) : null}
           {canOpenOrganizerProfile ? (
             <ActionButton
               label={t('events.detail.openOrganizerProfile')}
@@ -1050,10 +1294,30 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                             ? t(`events.skillLevel.label.${player.skillLevel}`)
                             : t('events.detail.skillUnknown')}
                         </Text>
+                        <Text style={styles.playerMeta}>
+                          {t('events.detail.playerStats', {
+                            games: player.gamesPlayed,
+                            noShows: player.noShows,
+                          })}
+                        </Text>
+                        {player.thumbsUpPercentage !== null ? (
+                          <Text style={styles.playerMeta}>
+                            {t('events.detail.thumbsUpPercentage', {
+                              percentage: player.thumbsUpPercentage,
+                            })}
+                          </Text>
+                        ) : null}
                       </View>
-                      {player.skillLevel ? (
-                        <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
-                      ) : null}
+                      <View style={styles.playerPills}>
+                        {player.skillLevel ? (
+                          <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
+                        ) : null}
+                        {player.isPlayAgainConnection ? (
+                          <InfoPill accentColor="#183153">
+                            {t('events.detail.playAgainBadge')}
+                          </InfoPill>
+                        ) : null}
+                      </View>
                     </Pressable>
                     {canRemovePlayers && player.userId !== event.organizerId ? (
                       <ActionButton
@@ -1079,6 +1343,133 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             <Text style={styles.bodyText}>{t('events.detail.confirmedPlayersEmpty')}</Text>
           )}
         </ScreenCard>
+
+        {event.status === 'finished' ? (
+          <ScreenCard title={t('events.noShow.title')}>
+            {canReportNoShows ? (
+              <>
+                <Text style={styles.bodyText}>
+                  {t('events.noShow.body', {
+                    remaining: formatRelativeTime(event.noShowWindowEnd ?? '', language),
+                  })}
+                </Text>
+                {noShowReportPlayers.length ? (
+                  <View style={styles.playerList}>
+                    {noShowReportPlayers.map((player) => {
+                      const playerName =
+                        [player.firstName, player.lastName].filter(Boolean).join(' ') ||
+                        t('events.common.organizerFallback');
+
+                      return (
+                        <View key={`no-show-${player.userId}`} style={styles.playerCard}>
+                          <View style={styles.playerIdentityPressable}>
+                            <AvatarPhoto label={playerName} uri={player.photoUrl} />
+                            <View style={styles.playerCopy}>
+                              <Text style={styles.playerName}>{playerName}</Text>
+                              <Text style={styles.playerMeta}>
+                                {t('events.detail.playerStats', {
+                                  games: player.gamesPlayed,
+                                  noShows: player.noShows,
+                                })}
+                              </Text>
+                            </View>
+                          </View>
+                          <ActionButton
+                            disabled={
+                              reportNoShowMutation.isPending &&
+                              reportNoShowTargetUserId === player.userId
+                            }
+                            label={
+                              reportNoShowMutation.isPending &&
+                              reportNoShowTargetUserId === player.userId
+                                ? t('events.noShow.pending')
+                                : t('events.noShow.action')
+                            }
+                            onPress={() => handleReportNoShowPress(player.userId, playerName)}
+                            variant="secondary"
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.helperText}>{t('events.noShow.noneLeft')}</Text>
+                )}
+              </>
+            ) : isNoShowEligibilityLoading ? (
+              <View style={styles.centeredBlock}>
+                <ActivityIndicator color="#183153" />
+              </View>
+            ) : (
+              <Text style={styles.bodyText}>
+                {event.viewerMembershipStatus !== 'organizer'
+                  ? t('events.noShow.organizerOnly')
+                  : isNoShowWindowOpen && !hasEnoughPlayersForNoShow
+                    ? t('events.noShow.minimumPlayersBody')
+                    : t('events.noShow.closedBody')}
+              </Text>
+            )}
+          </ScreenCard>
+        ) : null}
+
+        {event.status === 'finished' ? (
+          <ScreenCard title={t('events.thumbsUp.title')}>
+            {canGiveThumbsUp ? (
+              <>
+                <Text style={styles.bodyText}>
+                  {t('events.thumbsUp.body', {
+                    remaining: formatRelativeTime(event.chatClosedAt ?? '', language),
+                  })}
+                </Text>
+                {thumbsPromptPlayers.length ? (
+                  <View style={styles.playerList}>
+                    {thumbsPromptPlayers.map((player) => {
+                      const playerName =
+                        [player.firstName, player.lastName].filter(Boolean).join(' ') ||
+                        t('events.common.organizerFallback');
+
+                      return (
+                        <View key={`thumbs-${player.userId}`} style={styles.playerCard}>
+                          <View style={styles.playerIdentityPressable}>
+                            <AvatarPhoto label={playerName} uri={player.photoUrl} />
+                            <View style={styles.playerCopy}>
+                              <Text style={styles.playerName}>{playerName}</Text>
+                              <Text style={styles.playerMeta}>
+                                {player.skillLevel
+                                  ? t(`events.skillLevel.label.${player.skillLevel}`)
+                                  : t('events.detail.skillUnknown')}
+                              </Text>
+                            </View>
+                          </View>
+                          <ActionButton
+                            disabled={
+                              player.alreadyThumbedUpByViewer ||
+                              (thumbsUpMutation.isPending && thumbsUpTargetUserId === player.userId)
+                            }
+                            label={
+                              player.alreadyThumbedUpByViewer
+                                ? t('events.thumbsUp.done')
+                                : thumbsUpMutation.isPending &&
+                                    thumbsUpTargetUserId === player.userId
+                                  ? t('events.thumbsUp.pending')
+                                  : t('events.thumbsUp.action')
+                            }
+                            onPress={() => handleThumbsUpPress(player.userId)}
+                            variant={player.alreadyThumbedUpByViewer ? 'secondary' : 'primary'}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.helperText}>{t('events.thumbsUp.empty')}</Text>
+                )}
+              </>
+            ) : (
+              <Text style={styles.bodyText}>{t('events.thumbsUp.closedBody')}</Text>
+            )}
+          </ScreenCard>
+        ) : null}
       </ScreenShell>
 
       <SkillLevelModal
@@ -1171,6 +1562,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  playerPills: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
   playerCopy: {
     flex: 1,

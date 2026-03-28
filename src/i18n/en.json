@@ -274,7 +274,7 @@
     },
     "myGames": {
       "title": "My games",
-      "subtitle": "Track the games you organize or already confirmed for, while Past stays reserved for later post-game work.",
+      "subtitle": "Track the games you organize or play, and revisit finished games for no-show reporting and post-game feedback.",
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
@@ -292,12 +292,21 @@
       "openCreate": "Create a game",
       "pastTitle": "Past games",
       "pastPlaceholder": "This section will later host no-show reporting and thumbs-up prompts for completed events.",
+      "pastActionsTitle": "Post-game actions",
+      "pastErrorTitle": "We couldn't load your past games",
+      "pastErrorBody": "Please try again. If the problem keeps happening, check your connection and reopen Past once you're back online.",
+      "pastEmptyTitle": "No finished games yet",
+      "pastEmptyBody": "Once one of your games finishes, it will move here for post-game follow-up.",
+      "reportNoShowBody": "The organizer can still report a no-show for {{remaining}}.",
+      "reportNoShowAction": "Review no-shows",
+      "thumbsUpBody": "You can still send post-game feedback for {{remaining}}.",
+      "thumbsUpEmpty": "No remaining confirmed players need feedback here.",
       "openEvent": "Open event detail stub",
       "openChat": "Open chat stub"
     },
     "profile": {
       "title": "Profile",
-      "subtitle": "Your profile tab now has its final place in the shell, while editable stats and connections arrive later.",
+      "subtitle": "Track your sport stats, update your skill levels, and review players you'd gladly play with again.",
       "stubTitle": "Profile summary",
       "nameLabel": "Name",
       "languageLabel": "Language",
@@ -329,6 +338,38 @@
       "subtitle": "This route reserves the availability posting flow from the Available players tab.",
       "stubTitle": "Post availability stub",
       "placeholder": "The real form for sport, date range, and time preference arrives in Milestone 6."
+    }
+  },
+  "profile": {
+    "summaryTitle": "Profile summary",
+    "statsTitle": "Your sport stats",
+    "statsEmpty": "Add or finish more games to build your sport stats here.",
+    "connectionsTitle": "Play again connections",
+    "connectionsEmpty": "Mutual thumbs up will start surfacing here after finished games.",
+    "playAgainBadge": "Play again",
+    "skillEditHint": "Tap to update your level for this sport.",
+    "skillModalSubtitle": "Update your current level for this sport so future games use the right expectations.",
+    "skillUpdated": "Your skill level was updated.",
+    "skillUpdateFailed": "Your skill level could not be updated. Please try again.",
+    "errors": {
+      "stats": "We couldn't load your sport stats right now.",
+      "connections": "We couldn't load your play-again connections right now."
+    },
+    "stats": {
+      "gamesAndHours": "{{games}} games · {{hours}} h",
+      "noShows": "{{count}} no-shows",
+      "thumbsHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
+      "thumbsValue": "{{percentage}}% thumbs up"
+    }
+  },
+  "playerProfile": {
+    "subtitle": "Review this player's visible sport stats and shared play-again signals.",
+    "summaryTitle": "Player summary",
+    "statsTitle": "Sport stats",
+    "empty": "This player has no visible sport stats yet.",
+    "errors": {
+      "summary": "We couldn't load this player's profile summary right now.",
+      "stats": "We couldn't load this player's sport stats right now."
     }
   },
   "events": {
@@ -382,6 +423,10 @@
       "noDescription": "No extra notes were added for this game.",
       "organizerTitle": "Organizer",
       "organizerStats": "{{games}} games played · {{noShows}} no-shows",
+      "playerStats": "{{games}} games · {{noShows}} no-shows",
+      "thumbsUpPercentage": "{{percentage}}% thumbs up",
+      "thumbsUpPercentageHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
+      "playAgainBadge": "Play again",
       "openOrganizerProfile": "Open organizer profile",
       "confirmedPlayersTitle": "Confirmed players",
       "confirmedPlayersEmpty": "No confirmed players are visible yet beyond the organizer.",
@@ -569,6 +614,38 @@
       "confirmTitle": "Remove player?",
       "confirmBody": "{{player}} will be removed from this game. If someone is on the waitlist, the first player will be promoted automatically.",
       "confirmAction": "Remove"
+    },
+    "noShow": {
+      "title": "No-show reporting",
+      "body": "You can still report a confirmed player as a no-show for {{remaining}}.",
+      "action": "Report no-show",
+      "pending": "Reporting...",
+      "confirmTitle": "Report no-show?",
+      "confirmBody": "{{player}} will receive a no-show on their sport profile for this finished game.",
+      "confirmAction": "Report",
+      "noneLeft": "No remaining confirmed players can be reported here.",
+      "minimumPlayersBody": "No-show reporting only unlocks when at least two confirmed non-organizer players were in this game.",
+      "organizerOnly": "Only the organizer can report no-shows during the post-game window.",
+      "closedBody": "The no-show window for this game is already closed.",
+      "success": "The no-show report was recorded.",
+      "errors": {
+        "unavailable": "No-show reporting is no longer available for this game.",
+        "alreadyReported": "This player was already reported as a no-show for this game."
+      }
+    },
+    "thumbsUp": {
+      "title": "Who would you play with again?",
+      "body": "You can still send post-game feedback for {{remaining}}.",
+      "action": "Give thumbs up",
+      "pending": "Saving...",
+      "done": "Sent",
+      "empty": "No remaining confirmed players need feedback here.",
+      "closedBody": "The post-game feedback window for this game is already closed.",
+      "success": "Your thumbs up was recorded.",
+      "errors": {
+        "unavailable": "Post-game feedback is no longer available for this game.",
+        "alreadyGiven": "You've already sent thumbs up for this player in this game."
+      }
     }
   }
 }

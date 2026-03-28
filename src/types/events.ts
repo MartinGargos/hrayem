@@ -69,17 +69,72 @@ export type EventConfirmedPlayer = {
   lastName: string | null;
   photoUrl: string | null;
   skillLevel: number | null;
+  gamesPlayed: number;
+  hoursPlayed: number;
+  noShows: number;
+  thumbsUpPercentage: number | null;
+  isPlayAgainConnection: boolean;
+  alreadyThumbedUpByViewer: boolean;
+  alreadyReportedNoShow: boolean;
   joinedAt: string;
 };
 
 export type EventDetail = EventFeedItem & {
   organizerLastName: string | null;
+  noShowWindowEnd: string | null;
+  chatClosedAt: string | null;
   viewerMembershipStatus: EventMembershipStatus | null;
   viewerWaitlistPosition: number | null;
 };
 
 export type MyGamesUpcomingItem = EventFeedItem & {
   viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
+};
+
+export type MyGamesPastItem = EventFeedItem & {
+  noShowWindowEnd: string | null;
+  chatClosedAt: string | null;
+  viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
+};
+
+export type PlayerSportStat = {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  photoUrl: string | null;
+  city: string | null;
+  sportId: string;
+  sportSlug: string;
+  sportNameCs: string;
+  sportNameEn: string;
+  sportIcon: string;
+  sportColor: string;
+  skillLevel: number;
+  gamesPlayed: number;
+  hoursPlayed: number;
+  noShows: number;
+  thumbsUpGames: number;
+  thumbsUpPercentage: number | null;
+  isPlayAgainConnection: boolean;
+};
+
+export type PlayAgainConnection = {
+  connectionUserId: string;
+  firstName: string | null;
+  lastName: string | null;
+  photoUrl: string | null;
+  city: string | null;
+  sportId: string;
+  sportSlug: string;
+  sportNameCs: string;
+  sportNameEn: string;
+  sportIcon: string;
+  sportColor: string;
+  skillLevel: number;
+  gamesPlayed: number;
+  hoursPlayed: number;
+  noShows: number;
+  thumbsUpPercentage: number | null;
 };
 
 export type EventFeedFilters = {
@@ -142,6 +197,34 @@ export type CancelEventInput = {
 
 export type CancelEventResponse = CreateEventResponse;
 
+export type ReportNoShowInput = {
+  eventId: string;
+  reportedUserId: string;
+};
+
+export type ReportNoShowResponse = {
+  id: string;
+  event_id: string;
+  reported_user: string | null;
+  reported_by: string | null;
+  sport_id: string;
+  created_at: string;
+};
+
+export type GiveThumbsUpInput = {
+  eventId: string;
+  toUserId: string;
+};
+
+export type GiveThumbsUpResponse = {
+  id: string;
+  event_id: string;
+  from_user: string | null;
+  to_user: string | null;
+  sport_id: string;
+  created_at: string;
+};
+
 export type CreateEventErrorCode =
   | 'SKILL_LEVEL_REQUIRED'
   | 'VENUE_NOT_FOUND'
@@ -156,6 +239,10 @@ export type CreateEventErrorCode =
   | 'ORGANIZER_CANNOT_LEAVE'
   | 'PLAYER_NOT_IN_EVENT'
   | 'FORBIDDEN'
+  | 'NO_SHOW_NOT_ALLOWED'
+  | 'ALREADY_REPORTED'
+  | 'THUMBS_UP_NOT_ALLOWED'
+  | 'ALREADY_THUMBED_UP'
   | 'INVALID_SKILL_LEVEL'
   | 'PLAYER_COUNT_TOO_LOW'
   | 'UNAUTHORIZED'

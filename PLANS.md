@@ -122,3 +122,38 @@ Keep the backend contract unchanged and add one small shared client eligibility 
 ### Open questions / risks
 - Waitlisted-player removal UI still stays out of scope unless it can be exposed without violating the accepted waitlist privacy contract.
 - This pass can prove the shared eligibility logic and backend behavior, but not full real-device organizer UX.
+
+## Milestone 7
+
+### Problem
+Milestone 7 needs automatic event finishing, real past-game/profile statistics surfaces, and no-show/thumbs-up post-game actions without reopening the accepted debt from Milestones 2 through 6 or drifting into Milestone 8 chat work.
+
+### Approach
+Add a small lifecycle backend layer first: one scheduled finish sweep plus minimal past/profile read surfaces and post-game mutation routes. Then replace the current My Games Past and Profile stubs with real React Query screens, and extend Event Detail only where finished-state no-show/thumbs-up/play-again visibility now belongs.
+
+### Steps
+1. Add the Milestone 7 backend path: finish-sweep SQL + cron schedule, past/profile/play-again read surfaces, and Edge Function routes for no-show and thumbs-up.
+2. Upgrade the client with real My Games Past, finished-event Event Detail prompts, and real Profile / Player Profile stats plus skill editing and play-again indicators.
+3. Add a Milestone 7 verifier, apply/deploy the backend changes, rerun validation, and separate proven behavior from environment-limited proof gaps.
+
+### Open questions / risks
+- Milestone 5 accepted debt stays visible but out of scope here unless it directly breaks post-game correctness: Add to calendar is still missing, the waitlisted-player notification branch is still missing, and Realtime proof is still weaker than the implementation.
+- Milestone 4 accepted debt stays visible but out of scope unless it directly blocks finished-state correctness: soft-deleted organizer affordances, event-detail richness drift, likely-soon venue dedupe weakness, and rare feed pagination behavior.
+- RARE EDGE CASE: any client/server timing mismatch right around lifecycle boundaries should be logged as edge debt rather than overbuilt unless it affects data integrity, privacy, auth/session integrity, or account ownership.
+
+## Milestone 7 Fix Pass
+
+### Problem
+Home and My Games can keep showing stale upcoming state after an event finishes while the app stays open, and the organizer no-show UI can still offer a dead-end action for too-small finished events.
+
+### Approach
+Add one small shared client helper for lifecycle-sensitive screens, use focused React Query polling on Home and My Games so finished events roll out of upcoming views without manual refresh, and tighten no-show UI gating with the already loaded confirmed-player data instead of changing backend rules.
+
+### Steps
+1. Extend the shared event helper with focused lifecycle refresh timing and the minimum-player check for no-show eligibility.
+2. Use the lifecycle refresh rule on Home and My Games so visible upcoming/past queries refetch while the screen stays open.
+3. Reuse the minimum-player check on Event Detail and My Games Past so the organizer does not see a dead-end no-show action when backend prerequisites are not met.
+
+### Open questions / risks
+- This pass should not touch chat or other Milestone 8 behavior; the fix stays on lifecycle-sensitive read paths only.
+- Runtime proof for visible-screen lifecycle refresh is still limited by the current CLI environment, so validation will rely on static correctness plus existing app export/build checks.

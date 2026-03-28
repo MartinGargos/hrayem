@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -8,6 +8,7 @@ import { addDays, startOfDay } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 
 import { ActionButton } from '../auth/AuthPrimitives';
+import { getLifecycleRefetchInterval } from '../events/event-eligibility';
 import { FilterChip, EventSummaryCard } from '../events/EventPrimitives';
 import { NativePickerField } from '../events/NativePickerField';
 import { ScreenCard, ScreenShell, SegmentedTabs } from '../../components/ScreenShell';
@@ -22,6 +23,7 @@ const PAGE_SIZE = 20;
 
 export function HomeFeedScreen() {
   const { t } = useTranslation();
+  const isScreenFocused = useIsFocused();
   const navigation = useNavigation<RootNavigation>();
   const selectedCity = useUserStore((state) => state.selectedCity);
   const language = useUserStore((state) => state.language);
@@ -61,6 +63,9 @@ export function HomeFeedScreen() {
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
     enabled: activeTab === 'upcoming' && Boolean(selectedCity),
+    refetchInterval:
+      activeTab === 'upcoming' ? getLifecycleRefetchInterval(isScreenFocused) : false,
+    refetchIntervalInBackground: false,
     staleTime: 30_000,
   });
 

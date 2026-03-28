@@ -31,6 +31,14 @@ type LeaveEventPayload = {
   target_user_id?: string | null;
 };
 
+type ReportNoShowPayload = {
+  reported_user_id: string;
+};
+
+type GiveThumbsUpPayload = {
+  to_user_id: string;
+};
+
 type ApiErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -49,6 +57,10 @@ type ApiErrorCode =
   | 'ORGANIZER_CANNOT_JOIN'
   | 'ORGANIZER_CANNOT_LEAVE'
   | 'PLAYER_NOT_IN_EVENT'
+  | 'NO_SHOW_NOT_ALLOWED'
+  | 'ALREADY_REPORTED'
+  | 'THUMBS_UP_NOT_ALLOWED'
+  | 'ALREADY_THUMBED_UP'
   | 'INVALID_SKILL_LEVEL'
   | 'PLAYER_COUNT_TOO_LOW'
   | 'INTERNAL_ERROR';
@@ -59,7 +71,9 @@ type EventsRoute =
   | { kind: 'join'; eventId: string }
   | { kind: 'leave'; eventId: string }
   | { kind: 'cancel'; eventId: string }
-  | { kind: 'removePlayer'; eventId: string };
+  | { kind: 'removePlayer'; eventId: string }
+  | { kind: 'noShow'; eventId: string }
+  | { kind: 'thumbsUp'; eventId: string };
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,6 +168,20 @@ function parseEventsRoute(requestUrl: string): EventsRoute {
   if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'remove-player') {
     return {
       kind: 'removePlayer',
+      eventId: tail[0]!,
+    };
+  }
+
+  if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'no-show') {
+    return {
+      kind: 'noShow',
+      eventId: tail[0]!,
+    };
+  }
+
+  if (tail.length === 2 && isUuid(tail[0] ?? '') && tail[1] === 'thumbs-up') {
+    return {
+      kind: 'thumbsUp',
       eventId: tail[0]!,
     };
   }
@@ -405,6 +433,40 @@ function validateLeavePayload(value: unknown): LeaveEventPayload {
   };
 }
 
+function validateReportNoShowPayload(value: unknown): ReportNoShowPayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Body must be a JSON object.');
+  }
+
+  const payload = value as Record<string, unknown>;
+  const reportedUserId = payload.reported_user_id;
+
+  if (typeof reportedUserId !== 'string' || !isUuid(reportedUserId)) {
+    throw new Error('reported_user_id must be a UUID.');
+  }
+
+  return {
+    reported_user_id: reportedUserId,
+  };
+}
+
+function validateGiveThumbsUpPayload(value: unknown): GiveThumbsUpPayload {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Body must be a JSON object.');
+  }
+
+  const payload = value as Record<string, unknown>;
+  const toUserId = payload.to_user_id;
+
+  if (typeof toUserId !== 'string' || !isUuid(toUserId)) {
+    throw new Error('to_user_id must be a UUID.');
+  }
+
+  return {
+    to_user_id: toUserId,
+  };
+}
+
 function mapCreateEventError(message: string): {
   code: ApiErrorCode;
   status: number;
@@ -543,6 +605,38 @@ function mapEventMutationError(message: string): {
       code: 'FORBIDDEN',
       status: 403,
       message: 'You are not allowed to perform this action.',
+    };
+  }
+
+  if (normalizedMessage.includes('NO_SHOW_NOT_ALLOWED')) {
+    return {
+      code: 'NO_SHOW_NOT_ALLOWED',
+      status: 409,
+      message: 'No-show reporting is not available for this event anymore.',
+    };
+  }
+
+  if (normalizedMessage.includes('ALREADY_REPORTED')) {
+    return {
+      code: 'ALREADY_REPORTED',
+      status: 409,
+      message: 'This player was already reported as a no-show for this event.',
+    };
+  }
+
+  if (normalizedMessage.includes('THUMBS_UP_NOT_ALLOWED')) {
+    return {
+      code: 'THUMBS_UP_NOT_ALLOWED',
+      status: 409,
+      message: 'Thumbs up is not available for this event anymore.',
+    };
+  }
+
+  if (normalizedMessage.includes('ALREADY_THUMBED_UP')) {
+    return {
+      code: 'ALREADY_THUMBED_UP',
+      status: 409,
+      message: 'You already gave this player a thumbs up for this event.',
     };
   }
 
@@ -915,6 +1009,80 @@ async function handleRemovePlayerRoute(request: Request, eventId: string): Promi
   });
 }
 
+async function handleReportNoShowRoute(request: Request, eventId: string): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  let payload: ReportNoShowPayload;
+
+  try {
+    payload = validateReportNoShowPayload(await readJsonBody(request));
+  } catch (error) {
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+  }
+
+  const reportResult = await authResult.adminClient.rpc('report_no_show_atomic', {
+    p_event_id: eventId,
+    p_actor_user_id: authResult.user.id,
+    p_reported_user_id: payload.reported_user_id,
+  });
+
+  if (reportResult.error) {
+    const mappedError = mapEventMutationError(reportResult.error.message);
+    return errorResponse(mappedError.code, mappedError.message, mappedError.status);
+  }
+
+  if (!reportResult.data) {
+    return errorResponse('INTERNAL_ERROR', 'The server did not return the no-show report.', 500);
+  }
+
+  return jsonResponse({
+    data: reportResult.data,
+  });
+}
+
+async function handleThumbsUpRoute(request: Request, eventId: string): Promise<Response> {
+  const authResult = await requireAuthenticatedUser(request);
+
+  if (!authResult.ok) {
+    return authResult.response;
+  }
+
+  let payload: GiveThumbsUpPayload;
+
+  try {
+    payload = validateGiveThumbsUpPayload(await readJsonBody(request));
+  } catch (error) {
+    const isInvalidJson = error instanceof SyntaxError;
+    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+  }
+
+  const thumbsUpResult = await authResult.adminClient.rpc('give_thumbs_up_atomic', {
+    p_event_id: eventId,
+    p_from_user_id: authResult.user.id,
+    p_to_user_id: payload.to_user_id,
+  });
+
+  if (thumbsUpResult.error) {
+    const mappedError = mapEventMutationError(thumbsUpResult.error.message);
+    return errorResponse(mappedError.code, mappedError.message, mappedError.status);
+  }
+
+  if (!thumbsUpResult.data) {
+    return errorResponse('INTERNAL_ERROR', 'The server did not return the thumbs up record.', 500);
+  }
+
+  return jsonResponse({
+    data: thumbsUpResult.data,
+  });
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', {
@@ -970,6 +1138,22 @@ Deno.serve(async (request) => {
       }
 
       return await handleCancelRoute(request, route.eventId);
+    }
+
+    if (route.kind === 'noShow') {
+      if (request.method !== 'POST') {
+        return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);
+      }
+
+      return await handleReportNoShowRoute(request, route.eventId);
+    }
+
+    if (route.kind === 'thumbsUp') {
+      if (request.method !== 'POST') {
+        return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);
+      }
+
+      return await handleThumbsUpRoute(request, route.eventId);
     }
 
     if (request.method !== 'POST') {
