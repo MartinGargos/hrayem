@@ -5,6 +5,7 @@ import { appMetadata } from '../utils/env';
 export type EventDeepLinkTarget = {
   eventId: string;
   normalizedUrl: string;
+  screen: 'detail' | 'chat';
 };
 
 export type DeveloperSurfaceTarget = 'foundation';
@@ -31,11 +32,22 @@ export function buildEventWebUrl(eventId: string): string {
   return `https://hrayem.app/event/${eventId}`;
 }
 
+export function buildChatSchemeUrl(eventId: string): string {
+  return `${appMetadata.scheme}://event/${eventId}?screen=chat`;
+}
+
+export function buildChatWebUrl(eventId: string): string {
+  return `https://hrayem.app/event/${eventId}?screen=chat`;
+}
+
 export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
   const normalizedUrl = normalizeDeepLinkUrl(url);
   const parsedUrl = ExpoLinking.parse(normalizedUrl);
   const scheme = parsedUrl.scheme?.toLowerCase() ?? null;
   const hostname = parsedUrl.hostname?.toLowerCase() ?? null;
+  const screenParam = parsedUrl.queryParams?.screen;
+  const screen =
+    screenParam === 'chat' || parsedUrl.path?.endsWith('/chat') ? ('chat' as const) : 'detail';
   const pathSegments = (parsedUrl.path ?? '')
     .split('/')
     .map((segment) => segment.trim())
@@ -45,6 +57,7 @@ export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
     return {
       eventId: decodeURIComponent(pathSegments[0]),
       normalizedUrl,
+      screen,
     };
   }
 
@@ -52,6 +65,10 @@ export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
     return {
       eventId: decodeURIComponent(pathSegments[1]),
       normalizedUrl,
+      screen:
+        screenParam === 'chat' || pathSegments[2] === 'chat'
+          ? ('chat' as const)
+          : ('detail' as const),
     };
   }
 

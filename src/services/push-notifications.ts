@@ -5,7 +5,12 @@ import { Platform } from 'react-native';
 import { useAuthStore } from '../store/auth-store';
 import { throwIfSupabaseError } from '../utils/supabase';
 import { retrySupabaseOperationOnce, supabase } from './supabase';
-import { cachePushToken, clearCachedPushToken, readCachedPushToken } from './push-token-cache';
+import {
+  cachePushToken,
+  clearCachedPushToken,
+  readCachedPushToken,
+  readOrCreatePushTokenOwnershipKey,
+} from './push-token-cache';
 
 type StoredPushTokenRecord = string;
 
@@ -23,9 +28,10 @@ function getDevicePlatform(): 'ios' | 'android' {
   return Platform.OS === 'ios' ? 'ios' : 'android';
 }
 
-async function claimPushToken(token: string): Promise<void> {
+async function claimPushToken(token: string, ownershipKey: string): Promise<void> {
   const result = await retrySupabaseOperationOnce(() =>
     supabase.rpc('claim_device_token', {
+      push_ownership_key: ownershipKey,
       push_platform: getDevicePlatform(),
       push_token: token,
     }),
@@ -34,9 +40,10 @@ async function claimPushToken(token: string): Promise<void> {
   throwIfSupabaseError(result.error, 'Unable to register the push token.');
 }
 
-async function deletePushTokenRow(token: string): Promise<void> {
+async function deletePushTokenRow(token: string, ownershipKey: string): Promise<void> {
   const result = await retrySupabaseOperationOnce(() =>
     supabase.rpc('delete_device_token', {
+      push_ownership_key: ownershipKey,
       push_token: token,
     }),
   );
@@ -124,11 +131,12 @@ export async function registerPushTokenIfNeeded(): Promise<string | null> {
 
   const storedToken = useAuthStore.getState().pushToken;
   const previousKnownToken = storedToken ?? (await readCachedPushToken());
+  const ownershipKey = await readOrCreatePushTokenOwnershipKey();
 
-  await claimPushToken(nextToken);
+  await claimPushToken(nextToken, ownershipKey);
 
   if (previousKnownToken && previousKnownToken !== nextToken) {
-    await deletePushTokenRow(previousKnownToken);
+    await deletePushTokenRow(previousKnownToken, ownershipKey);
   }
 
   await cachePushToken(nextToken);
@@ -146,7 +154,8 @@ export async function deleteRegisteredPushToken(): Promise<StoredPushTokenRecord
     return null;
   }
 
-  await deletePushTokenRow(storedRecord);
+  const ownershipKey = await readOrCreatePushTokenOwnershipKey();
+  await deletePushTokenRow(storedRecord, ownershipKey);
   authStore.setPushToken(null);
   await clearCachedPushToken();
   return storedRecord;
@@ -159,7 +168,8 @@ export async function restoreRegisteredPushToken(
     return;
   }
 
-  await claimPushToken(storedRecord);
+  const ownershipKey = await readOrCreatePushTokenOwnershipKey();
+  await claimPushToken(storedRecord, ownershipKey);
   await cachePushToken(storedRecord);
   useAuthStore.getState().setPushToken(storedRecord);
 }

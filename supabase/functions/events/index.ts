@@ -1,5 +1,11 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+import {
+  fanOutPushNotifications,
+  type NotificationDelivery,
+} from '../_shared/notification-utils.ts';
+import { enforceSlidingWindowRateLimit } from '../_shared/rate-limit.ts';
+
 type CreateEventPayload = {
   sport_id: string;
   venue_id: string;
@@ -68,10 +74,12 @@ type ApiErrorCode =
   | 'ALREADY_THUMBED_UP'
   | 'INVALID_SKILL_LEVEL'
   | 'PLAYER_COUNT_TOO_LOW'
+  | 'RATE_LIMITED'
   | 'INTERNAL_ERROR';
 
 type EventsRoute =
   | { kind: 'create' }
+  | { kind: 'dispatchReminders' }
   | { kind: 'edit'; eventId: string }
   | { kind: 'join'; eventId: string }
   | { kind: 'leave'; eventId: string }
@@ -86,6 +94,14 @@ type ChatEventRow = {
   organizer_id: string | null;
   status: 'active' | 'full' | 'finished' | 'cancelled';
   chat_closed_at: string | null;
+};
+
+type DueReminderRow = {
+  event_id: string;
+  organizer_id: string | null;
+  sport_name_en: string;
+  venue_name: string;
+  starts_at: string;
 };
 
 type ChatMessageRow = {
@@ -109,20 +125,24 @@ type ChatMessageRow = {
     | null;
 };
 
-type NotificationPreferenceRow = {
-  user_id: string;
-  is_enabled: boolean;
+type JoinEventResult = {
+  event_id: string;
+  membership_status: 'confirmed' | 'waitlisted';
+  waitlist_position: number | null;
+  event_status: 'active' | 'full' | 'finished' | 'cancelled';
+  spots_taken: number;
+  waitlist_count: number;
+  event_became_full?: boolean;
 };
 
-type DeviceTokenRow = {
-  user_id: string | null;
-  token: string;
-};
-
-type ExpoPushTicket = {
-  status: 'ok' | 'error';
-  message?: string;
-  details?: unknown;
+type LeaveEventResult = {
+  event_id: string;
+  membership_status: null;
+  waitlist_position: null;
+  event_status: 'active' | 'full' | 'finished' | 'cancelled';
+  spots_taken: number;
+  waitlist_count: number;
+  promoted_user_id: string | null;
 };
 
 const corsHeaders = {
@@ -153,6 +173,63 @@ function errorResponse(code: ApiErrorCode, message: string, status: number): Res
   );
 }
 
+type RateLimitConfig = {
+  bucket: string;
+  limit: number;
+  windowMs: number;
+};
+
+type EventNotificationContext = {
+  eventId: string;
+  organizerId: string | null;
+  sportNameEn: string;
+  venueName: string;
+};
+
+const rateLimitConfigByRoute: Record<
+  'join' | 'leave' | 'messages' | 'noShow' | 'thumbsUp' | 'edit',
+  RateLimitConfig
+> = {
+  join: {
+    bucket: 'join-event',
+    limit: 10,
+    windowMs: 60_000,
+  },
+  leave: {
+    bucket: 'leave-event',
+    limit: 10,
+    windowMs: 60_000,
+  },
+  messages: {
+    bucket: 'send-message',
+    limit: 30,
+    windowMs: 60_000,
+  },
+  noShow: {
+    bucket: 'report-no-show',
+    limit: 20,
+    windowMs: 60_000,
+  },
+  thumbsUp: {
+    bucket: 'give-thumbs-up',
+    limit: 20,
+    windowMs: 60_000,
+  },
+  edit: {
+    bucket: 'edit-event',
+    limit: 10,
+    windowMs: 60_000,
+  },
+};
+
+function buildEventDetailUrl(eventId: string): string {
+  return `https://hrayem.app/event/${eventId}`;
+}
+
+function buildEventChatUrl(eventId: string): string {
+  return `https://hrayem.app/event/${eventId}?screen=chat`;
+}
+
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -163,6 +240,39 @@ function isReservationType(value: unknown): value is CreateEventPayload['reserva
 
 function isSkillLevel(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 4;
+}
+
+async function enforceRouteRateLimit(
+  route: keyof typeof rateLimitConfigByRoute,
+  userId: string,
+): Promise<Response | null> {
+  const config = rateLimitConfigByRoute[route];
+  const result = await enforceSlidingWindowRateLimit({
+    key: `${config.bucket}:${userId}`,
+    limit: config.limit,
+    windowMs: config.windowMs,
+  });
+
+  if (result.allowed) {
+    return null;
+  }
+
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: 'RATE_LIMITED',
+        message: 'Too many requests. Please try again later.',
+      },
+    }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Retry-After': `${result.retryAfterSeconds}`,
+      },
+    },
+  );
 }
 
 async function readJsonBody(request: Request): Promise<unknown> {
@@ -184,6 +294,17 @@ function parseEventsRoute(requestUrl: string): EventsRoute {
   if (tail.length === 0) {
     return {
       kind: 'create',
+    };
+  }
+
+  if (
+    tail.length === 3 &&
+    tail[0] === 'internal' &&
+    tail[1] === 'reminders' &&
+    tail[2] === 'dispatch'
+  ) {
+    return {
+      kind: 'dispatchReminders',
     };
   }
 
@@ -756,17 +877,26 @@ function createSupabaseClients(request: Request) {
     },
   });
 
-  const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return {
+    authClient,
+    adminClient: createAdminClient(),
+  };
+}
+
+function createAdminClient() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('Supabase environment is not configured.');
+  }
+
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
-
-  return {
-    authClient,
-    adminClient,
-  };
 }
 
 function resolveChatAuthorRelation(author: ChatMessageRow['author']) {
@@ -783,6 +913,210 @@ function getDisplayName(input: { firstName: string | null; lastName: string | nu
   return combinedName || 'Hrayem';
 }
 
+async function loadEventNotificationContext(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  eventId: string,
+): Promise<EventNotificationContext> {
+  const eventResult = await adminClient
+    .from('event_detail_view')
+    .select('id, organizer_id, sport_name_en, venue_name')
+    .eq('id', eventId)
+    .single();
+
+  if (eventResult.error || !eventResult.data) {
+    throw new Error(eventResult.error?.message ?? 'Unable to load notification event context.');
+  }
+
+  return {
+    eventId: eventResult.data.id as string,
+    organizerId: eventResult.data.organizer_id as string | null,
+    sportNameEn: eventResult.data.sport_name_en as string,
+    venueName: eventResult.data.venue_name as string,
+  };
+}
+
+async function loadDisplayNames(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  userIds: string[],
+): Promise<Map<string, string>> {
+  if (!userIds.length) {
+    return new Map();
+  }
+
+  const profileResult = await adminClient
+    .from('profiles')
+    .select('id, first_name, last_name')
+    .in('id', userIds);
+
+  if (profileResult.error) {
+    throw new Error(profileResult.error.message);
+  }
+
+  return new Map(
+    (
+      (profileResult.data ?? []) as Array<{
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+      }>
+    ).map((row) => [
+      row.id,
+      getDisplayName({
+        firstName: row.first_name,
+        lastName: row.last_name,
+      }),
+    ]),
+  );
+}
+
+async function sendJoinNotifications(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  input: {
+    eventId: string;
+    joinedUserId: string;
+    membershipStatus: 'confirmed' | 'waitlisted';
+    eventBecameFull: boolean;
+  },
+): Promise<void> {
+  const eventContext = await loadEventNotificationContext(adminClient, input.eventId);
+  const displayNames = await loadDisplayNames(adminClient, [input.joinedUserId]);
+  const joinedPlayerName = displayNames.get(input.joinedUserId) ?? 'A player';
+  const deliveries: NotificationDelivery[] = [];
+
+  if (eventContext.organizerId && eventContext.organizerId !== input.joinedUserId) {
+    deliveries.push({
+      userId: eventContext.organizerId,
+      eventId: input.eventId,
+      type: 'player_joined' as const,
+      title: 'Someone joined your event',
+      body: `${joinedPlayerName} joined ${eventContext.sportNameEn} at ${eventContext.venueName}.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+      payload: {
+        joinedUserId: input.joinedUserId,
+        membershipStatus: input.membershipStatus,
+      },
+    });
+  }
+
+  if (input.membershipStatus === 'confirmed') {
+    deliveries.push({
+      userId: input.joinedUserId,
+      eventId: input.eventId,
+      type: 'join_confirmed' as const,
+      title: "You're confirmed",
+      body: `Your spot for ${eventContext.sportNameEn} at ${eventContext.venueName} is confirmed.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+    });
+  }
+
+  if (input.eventBecameFull && eventContext.organizerId) {
+    deliveries.push({
+      userId: eventContext.organizerId,
+      eventId: input.eventId,
+      type: 'event_full' as const,
+      title: 'Event is now full',
+      body: `${eventContext.sportNameEn} at ${eventContext.venueName} is now full.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+    });
+  }
+
+  await fanOutPushNotifications(adminClient, deliveries);
+}
+
+async function sendLeaveNotifications(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  input: {
+    actorUserId: string;
+    targetUserId: string;
+    eventId: string;
+    promotedUserId: string | null;
+  },
+): Promise<void> {
+  const eventContext = await loadEventNotificationContext(adminClient, input.eventId);
+  const deliveries: NotificationDelivery[] = [];
+
+  if (input.promotedUserId) {
+    deliveries.push({
+      userId: input.promotedUserId,
+      eventId: input.eventId,
+      type: 'waitlist_promoted' as const,
+      title: "You're confirmed now",
+      body: `A spot opened for ${eventContext.sportNameEn} at ${eventContext.venueName}.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+    });
+  }
+
+  if (input.actorUserId !== input.targetUserId) {
+    deliveries.push({
+      userId: input.targetUserId,
+      eventId: input.eventId,
+      type: 'player_removed' as const,
+      title: 'You were removed from an event',
+      body: `You've been removed from ${eventContext.sportNameEn} at ${eventContext.venueName}.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+    });
+  }
+
+  await fanOutPushNotifications(adminClient, deliveries);
+}
+
+async function sendCancelNotifications(
+  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  input: {
+    actorUserId: string;
+    eventId: string;
+  },
+): Promise<void> {
+  const eventContext = await loadEventNotificationContext(adminClient, input.eventId);
+  const recipientsResult = await adminClient
+    .from('event_players')
+    .select('user_id')
+    .eq('event_id', input.eventId)
+    .in('status', ['confirmed', 'waitlisted']);
+
+  if (recipientsResult.error) {
+    throw new Error(recipientsResult.error.message);
+  }
+
+  const recipientUserIds = [
+    ...new Set(
+      ((recipientsResult.data ?? []) as Array<{ user_id: string | null }>)
+        .map((row) => row.user_id)
+        .filter((value): value is string => Boolean(value) && value !== input.actorUserId),
+    ),
+  ];
+
+  await fanOutPushNotifications(
+    adminClient,
+    recipientUserIds.map((userId) => ({
+      userId,
+      eventId: input.eventId,
+      type: 'event_cancelled' as const,
+      title: 'Event cancelled',
+      body: `${eventContext.sportNameEn} at ${eventContext.venueName} was cancelled.`,
+      url: buildEventDetailUrl(input.eventId),
+      data: {
+        route: 'event-detail',
+      },
+    })),
+  );
+}
+
 async function sendChatNotifications(
   adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
   input: {
@@ -792,168 +1126,158 @@ async function sendChatNotifications(
     messageBody: string;
     recipientUserIds: string[];
   },
-) {
-  if (!input.recipientUserIds.length) {
-    return;
-  }
-
-  const [preferencesResult, tokensResult] = await Promise.all([
-    adminClient
-      .from('notification_preferences')
-      .select('user_id, is_enabled')
-      .eq('type', 'chat_message')
-      .in('user_id', input.recipientUserIds),
-    adminClient
-      .from('device_tokens')
-      .select('user_id, token')
-      .in('user_id', input.recipientUserIds),
-  ]);
-
-  if (preferencesResult.error || tokensResult.error) {
-    throw new Error(
-      preferencesResult.error?.message ??
-        tokensResult.error?.message ??
-        'Unable to load chat notification recipients.',
-    );
-  }
-
-  const disabledUserIds = new Set(
-    ((preferencesResult.data ?? []) as NotificationPreferenceRow[])
-      .filter((row) => row.is_enabled === false)
-      .map((row) => row.user_id),
-  );
-  const enabledRecipientIds = input.recipientUserIds.filter(
-    (userId) => !disabledUserIds.has(userId),
-  );
-
-  if (!enabledRecipientIds.length) {
-    return;
-  }
-
-  const tokensByUserId = new Map<string, string[]>();
-
-  for (const row of (tokensResult.data ?? []) as DeviceTokenRow[]) {
-    if (!row.user_id || disabledUserIds.has(row.user_id)) {
-      continue;
-    }
-
-    const existingTokens = tokensByUserId.get(row.user_id) ?? [];
-    tokensByUserId.set(row.user_id, [...existingTokens, row.token]);
-  }
-
-  const notificationPayloadByUserId = new Map<
-    string,
-    {
-      eventId: string;
-      route: 'chat';
-      type: 'chat_message';
-      senderUserId: string;
-      senderName: string;
-      bodyPreview: string;
-    }
-  >();
-
-  for (const recipientUserId of enabledRecipientIds) {
-    notificationPayloadByUserId.set(recipientUserId, {
+): Promise<void> {
+  await fanOutPushNotifications(
+    adminClient,
+    input.recipientUserIds.map((recipientUserId) => ({
+      userId: recipientUserId,
       eventId: input.eventId,
-      route: 'chat',
-      type: 'chat_message',
-      senderUserId: input.senderUserId,
-      senderName: input.senderName,
-      bodyPreview: input.messageBody,
+      type: 'chat_message' as const,
+      title: input.senderName,
+      body: input.messageBody,
+      url: buildEventChatUrl(input.eventId),
+      data: {
+        route: 'chat',
+        senderUserId: input.senderUserId,
+      },
+      payload: {
+        senderName: input.senderName,
+        bodyPreview: input.messageBody,
+      },
+    })),
+  );
+}
+
+function hasValidEventReminderDispatchSecret(request: Request): boolean {
+  const expectedSecret = Deno.env.get('EVENT_REMINDER_DISPATCH_SECRET');
+
+  if (!expectedSecret) {
+    throw new Error('Event reminder dispatch secret is not configured.');
+  }
+
+  return request.headers.get('x-cron-secret') === expectedSecret;
+}
+
+async function resetReminderSentFlag(
+  adminClient: ReturnType<typeof createAdminClient>,
+  eventIds: string[],
+): Promise<void> {
+  if (!eventIds.length) {
+    return;
+  }
+
+  const resetResult = await adminClient
+    .from('events')
+    .update({
+      reminder_sent: false,
+    })
+    .in('id', eventIds);
+
+  if (resetResult.error) {
+    throw new Error(resetResult.error.message);
+  }
+}
+
+async function handleDispatchRemindersRoute(request: Request): Promise<Response> {
+  if (!hasValidEventReminderDispatchSecret(request)) {
+    return errorResponse('UNAUTHORIZED', 'A valid reminder dispatch secret is required.', 401);
+  }
+
+  const adminClient = createAdminClient();
+  const claimResult = await adminClient.rpc('claim_due_event_reminders', {
+    p_limit: 100,
+  });
+
+  if (claimResult.error) {
+    return errorResponse('INTERNAL_ERROR', claimResult.error.message, 500);
+  }
+
+  const claimedReminders = (claimResult.data ?? []) as DueReminderRow[];
+
+  if (!claimedReminders.length) {
+    return jsonResponse({
+      data: {
+        processed: 0,
+        failed: 0,
+      },
     });
   }
 
-  const pushMessages: Array<{
-    to: string;
-    title: string;
-    body: string;
-    data: {
-      eventId: string;
-      route: 'chat';
-      type: 'chat_message';
-    };
-  }> = [];
-  const pushRecipients: string[] = [];
+  const eventIds = claimedReminders.map((row) => row.event_id);
+  const participantsResult = await adminClient
+    .from('event_players')
+    .select('event_id, user_id')
+    .in('event_id', eventIds)
+    .eq('status', 'confirmed');
 
-  for (const recipientUserId of enabledRecipientIds) {
-    const tokens = tokensByUserId.get(recipientUserId) ?? [];
+  if (participantsResult.error) {
+    await resetReminderSentFlag(adminClient, eventIds);
+    return errorResponse('INTERNAL_ERROR', participantsResult.error.message, 500);
+  }
 
-    for (const token of tokens) {
-      pushMessages.push({
-        to: token,
-        title: input.senderName,
-        body: input.messageBody,
-        data: {
-          eventId: input.eventId,
-          route: 'chat',
-          type: 'chat_message',
-        },
-      });
-      pushRecipients.push(recipientUserId);
+  const recipientUserIdsByEventId = new Map<string, Set<string>>();
+
+  for (const reminder of claimedReminders) {
+    recipientUserIdsByEventId.set(reminder.event_id, new Set<string>());
+
+    if (reminder.organizer_id) {
+      recipientUserIdsByEventId.get(reminder.event_id)?.add(reminder.organizer_id);
     }
   }
 
-  const deliveryStatusByUserId = new Map<string, 'sent' | 'failed'>();
+  for (const row of (participantsResult.data ?? []) as Array<{
+    event_id: string;
+    user_id: string | null;
+  }>) {
+    if (!row.user_id) {
+      continue;
+    }
 
-  for (const recipientUserId of enabledRecipientIds) {
-    deliveryStatusByUserId.set(
-      recipientUserId,
-      (tokensByUserId.get(recipientUserId) ?? []).length ? 'failed' : 'failed',
-    );
+    const eventRecipients = recipientUserIdsByEventId.get(row.event_id);
+    eventRecipients?.add(row.user_id);
   }
 
-  if (pushMessages.length) {
+  const failedEventIds: string[] = [];
+  let processedCount = 0;
+
+  for (const reminder of claimedReminders) {
+    const recipientUserIds = [...(recipientUserIdsByEventId.get(reminder.event_id) ?? new Set())];
+
     try {
-      const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(pushMessages),
-      });
-
-      const expoJson = (await expoResponse.json().catch(() => null)) as {
-        data?: ExpoPushTicket[];
-      } | null;
-      const tickets = Array.isArray(expoJson?.data) ? expoJson.data : [];
-
-      if (expoResponse.ok && tickets.length === pushMessages.length) {
-        tickets.forEach((ticket, index) => {
-          const recipientUserId = pushRecipients[index];
-
-          if (!recipientUserId) {
-            return;
-          }
-
-          if (ticket.status === 'ok') {
-            deliveryStatusByUserId.set(recipientUserId, 'sent');
-          }
-        });
-      }
+      await fanOutPushNotifications(
+        adminClient,
+        recipientUserIds.map((userId) => ({
+          userId,
+          eventId: reminder.event_id,
+          type: 'event_reminder' as const,
+          title: 'Event reminder',
+          body: `${reminder.sport_name_en} at ${reminder.venue_name} starts in about 2 hours.`,
+          url: buildEventDetailUrl(reminder.event_id),
+          data: {
+            route: 'event-detail',
+          },
+          payload: {
+            startsAt: reminder.starts_at,
+          },
+        })),
+      );
+      processedCount += 1;
     } catch (error) {
-      console.error('Failed to send chat push notifications.', error);
+      console.error('Event reminder fan-out failed.', error);
+      failedEventIds.push(reminder.event_id);
     }
   }
 
-  const rows = enabledRecipientIds.map((recipientUserId) => ({
-    user_id: recipientUserId,
-    event_id: input.eventId,
-    type: 'chat_message',
-    status: deliveryStatusByUserId.get(recipientUserId) ?? 'failed',
-    payload: notificationPayloadByUserId.get(recipientUserId),
-  }));
-
-  if (!rows.length) {
-    return;
+  if (failedEventIds.length) {
+    await resetReminderSentFlag(adminClient, failedEventIds);
   }
 
-  const logResult = await adminClient.from('notification_log').insert(rows);
-
-  if (logResult.error) {
-    throw new Error(logResult.error.message);
-  }
+  return jsonResponse({
+    data: {
+      processed: processedCount,
+      failed: failedEventIds.length,
+    },
+  });
 }
 
 async function requireAuthenticatedUser(request: Request) {
@@ -1069,6 +1393,12 @@ async function handleJoinRoute(request: Request, eventId: string): Promise<Respo
     return authResult.response;
   }
 
+  const rateLimitResponse = await enforceRouteRateLimit('join', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   let payload: JoinEventPayload;
 
   try {
@@ -1094,8 +1424,21 @@ async function handleJoinRoute(request: Request, eventId: string): Promise<Respo
     return errorResponse('INTERNAL_ERROR', 'The server did not return join state.', 500);
   }
 
+  const joinState = joinResult.data as JoinEventResult;
+
+  try {
+    await sendJoinNotifications(authResult.adminClient, {
+      eventId,
+      joinedUserId: authResult.user.id,
+      membershipStatus: joinState.membership_status,
+      eventBecameFull: Boolean(joinState.event_became_full),
+    });
+  } catch (error) {
+    console.error('Join notification fan-out failed.', error);
+  }
+
   return jsonResponse({
-    data: joinResult.data,
+    data: joinState,
   });
 }
 
@@ -1104,6 +1447,12 @@ async function handleLeaveRoute(request: Request, eventId: string): Promise<Resp
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const rateLimitResponse = await enforceRouteRateLimit('leave', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   let payload: LeaveEventPayload;
@@ -1131,8 +1480,22 @@ async function handleLeaveRoute(request: Request, eventId: string): Promise<Resp
     return errorResponse('INTERNAL_ERROR', 'The server did not return leave state.', 500);
   }
 
+  const leaveState = leaveResult.data as LeaveEventResult;
+  const targetUserId = payload.target_user_id ?? authResult.user.id;
+
+  try {
+    await sendLeaveNotifications(authResult.adminClient, {
+      actorUserId: authResult.user.id,
+      targetUserId,
+      eventId,
+      promotedUserId: leaveState.promoted_user_id,
+    });
+  } catch (error) {
+    console.error('Leave notification fan-out failed.', error);
+  }
+
   return jsonResponse({
-    data: leaveResult.data,
+    data: leaveState,
   });
 }
 
@@ -1141,6 +1504,12 @@ async function handleEditRoute(request: Request, eventId: string): Promise<Respo
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const rateLimitResponse = await enforceRouteRateLimit('edit', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   let payload: UpdateEventPayload;
@@ -1210,6 +1579,15 @@ async function handleCancelRoute(request: Request, eventId: string): Promise<Res
     return errorResponse('INTERNAL_ERROR', 'The server did not return the cancelled event.', 500);
   }
 
+  try {
+    await sendCancelNotifications(authResult.adminClient, {
+      actorUserId: authResult.user.id,
+      eventId,
+    });
+  } catch (error) {
+    console.error('Cancel notification fan-out failed.', error);
+  }
+
   return jsonResponse({
     data: cancelledEvent,
   });
@@ -1220,6 +1598,12 @@ async function handleRemovePlayerRoute(request: Request, eventId: string): Promi
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const rateLimitResponse = await enforceRouteRateLimit('leave', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   let payload: LeaveEventPayload;
@@ -1273,8 +1657,21 @@ async function handleRemovePlayerRoute(request: Request, eventId: string): Promi
     return errorResponse('INTERNAL_ERROR', 'The server did not return remove-player state.', 500);
   }
 
+  const removeState = removeResult.data as LeaveEventResult;
+
+  try {
+    await sendLeaveNotifications(authResult.adminClient, {
+      actorUserId: authResult.user.id,
+      targetUserId: payload.target_user_id,
+      eventId,
+      promotedUserId: removeState.promoted_user_id,
+    });
+  } catch (error) {
+    console.error('Remove-player notification fan-out failed.', error);
+  }
+
   return jsonResponse({
-    data: removeResult.data,
+    data: removeState,
   });
 }
 
@@ -1283,6 +1680,12 @@ async function handleReportNoShowRoute(request: Request, eventId: string): Promi
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const rateLimitResponse = await enforceRouteRateLimit('noShow', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   let payload: ReportNoShowPayload;
@@ -1322,6 +1725,12 @@ async function handleThumbsUpRoute(request: Request, eventId: string): Promise<R
     return authResult.response;
   }
 
+  const rateLimitResponse = await enforceRouteRateLimit('thumbsUp', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   let payload: GiveThumbsUpPayload;
 
   try {
@@ -1357,6 +1766,12 @@ async function handleMessagesRoute(request: Request, eventId: string): Promise<R
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const rateLimitResponse = await enforceRouteRateLimit('messages', authResult.user.id);
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
   }
 
   let payload: SendMessagePayload;
@@ -1499,6 +1914,14 @@ Deno.serve(async (request) => {
   }
 
   try {
+    if (route.kind === 'dispatchReminders') {
+      if (request.method !== 'POST') {
+        return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);
+      }
+
+      return await handleDispatchRemindersRoute(request);
+    }
+
     if (route.kind === 'create') {
       if (request.method !== 'POST') {
         return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for this route.', 405);

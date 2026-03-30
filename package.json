@@ -19,7 +19,8 @@
     "verify:milestone5": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone5.mjs",
     "verify:milestone6": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone6.mjs",
     "verify:milestone7": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone7.mjs",
-    "verify:milestone8": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone8.mjs"
+    "verify:milestone8": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone8.mjs",
+    "verify:milestone9": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone9.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -35,6 +36,7 @@
     "date-fns-tz": "^3.2.0",
     "expo": "~55.0.8",
     "expo-constants": "~55.0.9",
+    "expo-dev-client": "~55.0.19",
     "expo-haptics": "~55.0.9",
     "expo-image": "~55.0.6",
     "expo-image-manipulator": "~55.0.11",
@@ -45,6 +47,7 @@
     "expo-notifications": "~55.0.13",
     "expo-secure-store": "~55.0.9",
     "expo-status-bar": "~55.0.4",
+    "expo-updates": "~55.0.16",
     "expo-web-browser": "~55.0.10",
     "i18next": "^25.10.8",
     "react": "19.2.0",
@@ -58,6 +61,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@sentry/cli": "^3.3.5",
     "@types/react": "~19.2.2",
     "eslint": "^9.39.1",
     "eslint-config-expo": "^55.0.0",

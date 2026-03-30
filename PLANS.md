@@ -209,3 +209,90 @@ Keep the existing per-event Realtime architecture, but make the focused chat scr
 ### Open questions / risks
 - This pass should not change chat access control, lifecycle gating, or notification behavior; it only tightens subscription recovery semantics.
 - Real mobile websocket proof is still environment-limited here, so the proof will remain helper-level plus existing server-side verifier coverage rather than a full two-device Realtime demo.
+
+## Milestone 8 Accepted Known Debt
+
+### Problem
+Milestone 8 is accepted, but three non-blocking chat follow-ups need to stay visible before Milestone 9 starts so they are not silently lost.
+
+### Approach
+Log the accepted Milestone 8 debt explicitly here and leave the implementation unchanged unless one of these items directly blocks Milestone 9 behavior.
+
+### Steps
+1. Keep the AGENTS.md vs MILESTONES.md wording drift on foreground reconnect semantics visible as documentation debt.
+2. Keep the weaker-than-implementation Realtime proof on the authenticated mobile path visible as runtime proof debt.
+3. Keep the rare chat-close boundary clock-skew mismatch visible as accepted edge-case debt.
+
+### Open questions / risks
+- AGENTS.md vs MILESTONES.md wording drift on foreground reconnect semantics remains accepted documentation debt.
+- Realtime proof is still weaker than the implementation on the actual authenticated mobile path.
+- RARE EDGE CASE: the client/server chat-close boundary can still disagree briefly because of clock skew.
+
+## Milestone 9
+
+### Problem
+Milestone 9 needs production-facing push notifications, notification preferences, shared rate limiting, and the availability system without reopening accepted debt from Milestones 2 through 8 or drifting into Milestone 10 reporting work.
+
+### Approach
+Replace the remaining Milestone 9 stubs with real settings and availability surfaces, extend the existing app shell to handle notification taps, and harden the Supabase Edge Function layer with shared push fan-out plus Upstash-backed rate limiting while reusing the current event/profile/feed foundations.
+
+### Steps
+1. Add the Milestone 9 client data layer: notification-preference reads/writes, availability CRUD/feed reads, notification tap handling, and the real Settings / Post Availability / Available Players screens.
+2. Add the Milestone 9 server path: shared push fan-out helper, Upstash sliding-window rate limiter, notification delivery for the event write routes, and any minimal SQL/view updates needed for availability and reminder notification coverage.
+3. Add a Milestone 9 verifier, apply/deploy any Supabase changes, rerun validation, and separate proven Milestone 9 behavior from device-limited push/Realtime proof gaps.
+
+### Open questions / risks
+- Milestone 8 accepted debt stays visible but out of scope unless it directly blocks Milestone 9 behavior: AGENTS.md vs MILESTONES.md reconnect wording drift remains, Realtime proof is still weaker than the implementation on the authenticated mobile path, and the rare chat-close boundary clock-skew edge case remains accepted.
+- Milestone 5 accepted debt stays visible but out of scope unless it directly blocks Milestone 9 behavior: Add to calendar is still missing and the waitlisted-player notification branch is still missing.
+- RARE EDGE CASE: any residual race in the shared Upstash sliding-window limiter should be called out explicitly rather than overbuilt unless it affects security, privacy, auth/session integrity, incorrect account ownership, or data loss.
+
+## Milestone 9 Fix Pass
+
+### Problem
+The first Milestone 9 pass still leaves three reject-level gaps: event reminders only log instead of using the shared push pipeline, rate limiting can fail open when Upstash is missing, and first-time users can post availability that silently disappears from the Available players tab if they do not yet have a `user_sports` row.
+
+### Approach
+Keep the existing Milestone 9 architecture, but make three minimal durability fixes: route reminder delivery through the shared push helper from the scheduled sweep, require active Upstash-backed rate limiting on the intended live path, and make availability feed stats resilient for users without an existing sport profile by adding the smallest fallback data path that still shows the intended player info and skill badge.
+
+### Steps
+1. Add a small server-side reminder dispatch path that reuses the shared notification fan-out helper and keeps `notification_log` tied to real push attempts and preferences.
+2. Remove the fail-open rate-limit behavior on the intended live path now that the required Upstash env is available, then prove live `429 / RATE_LIMITED`.
+3. Fix availability visibility for first-time users with the narrowest read/write adjustment that keeps cards complete enough for APP.md without inventing a larger profile-stats system, then strengthen proof for expired cleanup if it stays cheap.
+
+## Milestone 9 Final Fix Pass
+
+### Problem
+Now that push notifications are live, `device_tokens` ownership is still too weak because knowing a raw Expo token is enough to claim or delete another user's registration.
+
+### Approach
+Bind token claim/delete to a small per-install ownership key stored locally on the device, keep one effective row per token, and update the client + verifier so normal launch/logout flows still work while cross-user raw-token theft no longer does.
+
+### Steps
+1. Add the smallest DB contract change needed to store and enforce install-bound token ownership in the existing claim/delete RPCs.
+2. Update the client push-token cache and registration/cleanup flow to pass the install-bound ownership key on every claim/delete operation.
+3. Extend the Milestone 9 verifier to prove legitimate same-install claim/delete still works and a different authenticated user cannot steal or delete a token by raw value alone.
+
+### Open questions / risks
+- RARE EDGE CASE: if a device reinstall preserves the same Expo token but loses the local install key, reclaiming that exact old row may need manual cleanup or token rotation; I will keep the fix minimal unless that shows up as a real correctness blocker in the current environment.
+- The stale/direct availability write invariant stays out of scope unless it turns into a tiny safe follow-up after the ownership fix.
+
+### Open questions / risks
+- The shared Upstash sliding-window helper still has a small concurrency race by design; that remains RARE EDGE CASE debt unless it grows into a security or ownership issue.
+- Real-device notification tap proof is still likely to remain environment-limited even after the server-side reminder path is corrected.
+
+## Event Reminder Focused Re-Verification
+
+### Problem
+The latest red-team blocker says `event_reminder` is still broken, so this pass needs to re-run the live proof and, only if it still fails, isolate and fix the exact failing reminder step without reopening the rest of Milestone 9.
+
+### Approach
+Trace the live reminder path end to end, compare `finish_event_sweep()` behavior against direct internal reminder dispatch, and if the bridge is the failing step, make the smallest DB-only fix needed there.
+
+### Steps
+1. Re-run a focused live reminder probe that creates a due event reminder, runs `finish_event_sweep()`, and inspects `notification_log`, `reminder_sent`, and post-sweep claimability.
+2. If the sweep path still fails, directly invoke the internal reminder dispatch route with the same due reminder to isolate the failing step.
+3. Patch only the failing bridge step, apply it live, and rerun the same focused reminder probe plus the low-level bridge evidence.
+
+### Open questions / risks
+- If the bridge is timing out rather than logically failing, the minimal durable fix should be a timeout adjustment rather than broader reminder architecture changes.
+- Real device push receipt remains out of scope for this focused pass; the goal here is reminder-path correctness and fresh live proof.

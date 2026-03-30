@@ -180,6 +180,13 @@ function mapEventErrorToNotice(error: unknown, mode: EventFormMode): AppNotice {
         tone: 'info',
       };
     }
+
+    if (error.code === 'RATE_LIMITED') {
+      return {
+        messageKey: 'events.common.errors.rateLimited',
+        tone: 'info',
+      };
+    }
   }
 
   return {

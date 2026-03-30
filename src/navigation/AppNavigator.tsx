@@ -12,16 +12,16 @@ import { useTranslation } from 'react-i18next';
 import {
   AccountDeletionScreen,
   AddVenueScreen,
-  PostAvailabilityScreen,
-  SettingsScreen,
   SkillLevelScreen,
 } from '../features/shell/StubScreens';
+import { PostAvailabilityScreen } from '../features/availability/PostAvailabilityScreen';
 import { ChatScreen } from '../features/chat/ChatScreen';
 import { CreateEventScreen, EditEventScreen } from '../features/events/CreateEventScreen';
 import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
 import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
 import { PlayerProfileScreen, ProfileScreen } from '../features/profile/ProfileScreen';
+import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
 import { getPendingDeepLinkReplayAction } from './pending-deep-link';
@@ -237,7 +237,7 @@ export function AppNavigator() {
       return;
     }
 
-    navigationRef.navigate('EventDetail', {
+    navigationRef.navigate(target.screen === 'chat' ? 'Chat' : 'EventDetail', {
       eventId: target.eventId,
     });
 

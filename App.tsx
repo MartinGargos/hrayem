@@ -1,4 +1,5 @@
 import * as ExpoLinking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -67,6 +68,7 @@ function AppShell() {
   const bootstrapStartedRef = useRef(false);
   const pendingConsentSyncRef = useRef<string | null>(null);
   const [developerSurface, setDeveloperSurface] = useState<'foundation' | null>(null);
+  const handledNotificationResponseIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     const unsubscribe = registerSupabaseAuthListener();
@@ -143,15 +145,58 @@ function AppShell() {
       }
     }
 
+    function readNotificationDeepLinkUrl(
+      response: Notifications.NotificationResponse | null,
+    ): string | null {
+      if (!response) {
+        return null;
+      }
+
+      const identifier = response.notification.request.identifier;
+
+      if (handledNotificationResponseIdsRef.current.has(identifier)) {
+        return null;
+      }
+
+      handledNotificationResponseIdsRef.current.add(identifier);
+
+      const data = response.notification.request.content.data;
+      const urlValue = typeof data?.url === 'string' ? data.url : null;
+
+      if (urlValue) {
+        return urlValue;
+      }
+
+      const eventId = typeof data?.eventId === 'string' ? data.eventId : null;
+      const route = typeof data?.route === 'string' ? data.route : null;
+
+      if (!eventId) {
+        return null;
+      }
+
+      return route === 'chat'
+        ? `${appMetadata.scheme}://event/${eventId}?screen=chat`
+        : `${appMetadata.scheme}://event/${eventId}`;
+    }
+
     const subscription = ExpoLinking.addEventListener('url', ({ url }) => {
       void maybeHandleIncomingUrl(url);
     });
+    const notificationSubscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        void maybeHandleIncomingUrl(readNotificationDeepLinkUrl(response));
+      },
+    );
 
     void ExpoLinking.getInitialURL().then((url) => maybeHandleIncomingUrl(url));
+    void Notifications.getLastNotificationResponseAsync().then((response) =>
+      maybeHandleIncomingUrl(readNotificationDeepLinkUrl(response)),
+    );
 
     return () => {
       isActive = false;
       subscription.remove();
+      notificationSubscription.remove();
     };
   }, [setAuthNotice, setPendingDeepLink]);
 

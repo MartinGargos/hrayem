@@ -115,6 +115,13 @@ function mapChatErrorToNotice(error: unknown): AppNotice {
         tone: 'error',
       };
     }
+
+    if (error.code === 'RATE_LIMITED') {
+      return {
+        messageKey: 'events.chat.errors.rateLimited',
+        tone: 'info',
+      };
+    }
   }
 
   return {

@@ -56,6 +56,7 @@ Server-only variables reserved for Edge Functions:
 - `EXPO_PUSH_ACCESS_TOKEN`: Expo push service token
 - `UPSTASH_REDIS_REST_URL`: Upstash Redis REST endpoint
 - `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis REST token
+- `EVENT_REMINDER_DISPATCH_SECRET`: shared secret used by the scheduled reminder dispatcher
 - `ADMIN_REPORT_EMAIL`: destination for report notifications
 
 ## How to run locally
@@ -166,6 +167,16 @@ pnpm run verify:milestone4
 
 Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
 
+Milestone 9 reminder pushes also require one runtime bridge after deploy so the scheduled database sweep can call the Edge Function dispatcher securely:
+
+```bash
+pnpm dlx supabase secrets set EVENT_REMINDER_DISPATCH_SECRET=<shared-secret>
+pnpm dlx supabase db query --linked "insert into private.runtime_config (key, value) values
+  ('event_reminder_dispatch_url', '<supabase-url>/functions/v1/events/internal/reminders/dispatch'),
+  ('event_reminder_dispatch_secret', '<shared-secret>')
+on conflict (key) do update set value = excluded.value, updated_at = now();"
+```
+
 For Milestone 2 auth flows, also configure these Supabase Auth settings:
 
 - Add `hrayem://auth/callback` to the Auth redirect URL allow list.
@@ -211,7 +222,7 @@ src/
 - Network connectivity is tracked with NetInfo and surfaced through a persistent offline banner.
 - Launch routing is now gated by `app_config` (force update), `consent_log` (terms re-consent), and `profiles.profile_complete` before the authenticated user reaches the current foundation/home entry screen.
 - Milestone 3 adds the final bottom-tab shell, typed stack routing, and pending event deep-link replay after auth/profile gating completes.
-- Expo push tokens are re-registered on app launch and claimed in `device_tokens` by token value so the same physical device token moves cleanly between accounts; the app also keeps a tiny local cleanup cache until the backend row is confirmed removed.
+- Expo push tokens are re-registered on app launch with a per-install ownership key stored in `expo-secure-store`, so the same device can move a token cleanly between accounts without letting another authenticated user take over or delete that token by raw value alone; the app also keeps a tiny local cleanup cache until the backend row is confirmed removed.
 - If email confirmation delays the first authenticated session, the accepted terms/privacy versions are captured during registration and materialized into `consent_log` on the first successful sign-in before the user can proceed.
 - Sentry initializes at app startup with PII scrubbing and a smoke-test button on the Milestone 0 foundation screen.
 - i18n is available from day one with Czech and English resource files and device-language detection.

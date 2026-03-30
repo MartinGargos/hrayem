@@ -58,12 +58,13 @@ id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
 user_id     uuid REFERENCES profiles(id) ON DELETE SET NULL
 token       text NOT NULL
 platform    text NOT NULL CHECK (platform IN ('ios', 'android'))
+ownership_key text NOT NULL         -- opaque per-install ownership proof, stored only on that app install
 created_at  timestamptz NOT NULL DEFAULT now()
 updated_at  timestamptz NOT NULL DEFAULT now()
 UNIQUE (token)
 ```
 
-The Expo push token is treated as the device identity for MVP, so the same token must never stay attached to multiple users over time. The client claims token ownership through an authenticated RPC that upserts on `token`, moving the row to the current user if the account on this device changes. Deletion also happens through an authenticated token-keyed RPC so a previously cached token can be cleaned up even after account switches or permission loss.
+The Expo push token is treated as the device identity for MVP, so the same token must never stay attached to multiple users over time. The client also stores a small opaque per-install ownership key in secure local storage and sends it on every claim/delete RPC. That keeps same-device account switches working while preventing another authenticated user from stealing or deleting a token row just by knowing the raw Expo token. For migration durability, the current owner of an existing row may refresh that row onto the new ownership key on the next launch.
 
 On login/app launch: claim the device's Expo push token. On logout or permission loss: delete the row for that token.
 Push notifications fan out to all `device_tokens` rows for a given `user_id`.
@@ -509,7 +510,7 @@ All tables have RLS enabled. The `service_role` key (used only by Edge Functions
 | Table | Read | Write |
 |---|---|---|
 | `profiles` | Any authenticated user; `is_deleted = false` only | Own row only; **`is_deleted` and `profile_complete` columns are excluded** — these are server-managed |
-| `device_tokens` | Own rows only | Authenticated token-claim/delete RPCs keyed by `token`; direct row ownership stays read-only |
+| `device_tokens` | Own rows only | Authenticated install-bound claim/delete RPCs; raw token alone is not enough to reassign or delete a row |
 | `sports` | Any authenticated user (`is_active = true`) | Service role only |
 | `venues` | Any authenticated user | Insert: any authenticated user; Update/Delete: service role only |
 | `user_sports` | Any authenticated user | **Own rows, `skill_level` column only** — see policy below |
@@ -1178,10 +1179,11 @@ Expo push tokens can change silently (OS updates, app reinstalls, token rotation
 **On every app launch (not just login):**
 1. Call `Notifications.getExpoPushTokenAsync()`
 2. Compare with the token stored in Zustand
-3. Claim the token in `device_tokens` by `token` value so ownership moves cleanly if the account on this device changed
-4. Update the stored token in Zustand and keep a last-known cleanup token locally until backend cleanup succeeds
+3. Read or create the local per-install push-token ownership key from secure storage
+4. Claim the token in `device_tokens` with both the Expo token and the ownership key so same-device account switches still work without making raw-token takeover possible
+5. Update the stored token in Zustand and keep a last-known cleanup token locally until backend cleanup succeeds
 
-**On logout:** delete the token row from `device_tokens`, clear it from Zustand, and keep retryable local cleanup state only until the backend row is confirmed gone.
+**On logout:** delete the token row from `device_tokens` with the same local ownership key, clear it from Zustand, and keep retryable local cleanup state only until the backend row is confirmed gone.
 
 ### 16.6 Deep linking and event sharing
 

@@ -14,12 +14,19 @@ const config: ExpoConfig = {
     resizeMode: 'contain',
     backgroundColor: '#ffffff',
   },
+  updates: {
+    url: 'https://u.expo.dev/e62a744a-38df-48ea-b092-32b2579c3108',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'app.hrayem',
+    bundleIdentifier: 'com.martingargos.hrayem',
     buildNumber: '1',
     associatedDomains: ['applinks:hrayem.app'],
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
         'Hrayem uses your location to suggest the nearest city during profile setup and help you find nearby games.',
       NSCameraUsageDescription: 'Hrayem uses the camera so you can take a profile photo.',

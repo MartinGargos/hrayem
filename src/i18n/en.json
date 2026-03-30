@@ -310,15 +310,15 @@
       "stubTitle": "Profile summary",
       "nameLabel": "Name",
       "languageLabel": "Language",
-      "openSettings": "Open settings stub",
+      "openSettings": "Open settings",
       "openSkillLevel": "Open skill level stub"
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Settings is wired into the final shell so language, notifications, logout, and account deletion have a stable home.",
+      "subtitle": "Manage notification preferences, account actions, and core app preferences in one place.",
       "stubTitle": "Settings stub",
       "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
-      "openAccountDeletion": "Open delete account stub"
+      "openAccountDeletion": "Delete account"
     },
     "accountDeletion": {
       "title": "Delete account",
@@ -372,6 +372,93 @@
       "stats": "We couldn't load this player's sport stats right now."
     }
   },
+  "settings": {
+    "profileTitle": "App preferences",
+    "languageLabel": "Language",
+    "cityLabel": "City",
+    "notifications": {
+      "permissionTitle": "Push permission",
+      "permissionBody": "Hrayem uses push notifications for event joins, confirmations, reminders, chat, and cancellations. You can change these preferences at any time.",
+      "permissionStatusLabel": "Permission status",
+      "permissionAction": "Enable notifications",
+      "permissionReady": "Push notifications are ready on this device.",
+      "permissionUnavailable": "Notifications are still unavailable on this device right now.",
+      "permissionDenied": "Notifications are turned off for Hrayem on this device.",
+      "permissionFailed": "We couldn't update push notification permissions right now.",
+      "loadFailed": "We couldn't load your notification preferences right now.",
+      "saveFailed": "We couldn't save your notification preferences right now.",
+      "permissionStatus": {
+        "granted": "Allowed",
+        "denied": "Denied",
+        "undetermined": "Not decided yet",
+        "provisional": "Allowed quietly"
+      },
+      "preferencesTitle": "Notification preferences",
+      "types": {
+        "player_joined": "Someone joined my event",
+        "join_confirmed": "My spot is confirmed",
+        "waitlist_promoted": "I was promoted from waitlist",
+        "event_full": "Event is now full",
+        "chat_message": "New chat message",
+        "event_reminder": "Event reminder",
+        "event_cancelled": "Event was cancelled",
+        "player_removed": "I was removed from an event"
+      }
+    }
+  },
+  "availability": {
+    "title": "I'm available",
+    "subtitle": "Post the days you can play so people in your city can create the right game around you.",
+    "availablePlayersTitle": "Available players",
+    "allSports": "All sports",
+    "openFormAction": "I'm available",
+    "errorTitle": "We couldn't load available players",
+    "errorBody": "Please try again. If the problem keeps happening, check your connection and reopen this tab once you're back online.",
+    "emptyTitle": "No players available right now",
+    "emptyBody": "Be the first to post your availability for this city and date range.",
+    "yourAvailabilityTitle": "Your current availability",
+    "emptyOwn": "You haven't posted availability yet.",
+    "startDate": "From",
+    "startDatePlaceholder": "Choose a start date",
+    "endDate": "To",
+    "endDatePlaceholder": "Choose an end date",
+    "timePreference": "Preferred time",
+    "timePreferenceValues": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening",
+      "any": "Any time"
+    },
+    "note": "Optional note",
+    "notePlaceholder": "Anything others should know before they create a game around this availability?",
+    "noteCounter": "{{count}}/200 characters",
+    "submit": "Post availability",
+    "submitPending": "Posting...",
+    "saveSuccess": "Your availability is live.",
+    "saveFailed": "We couldn't save your availability right now.",
+    "skillRequired": "Choose your skill level for this sport before posting availability.",
+    "skillModalSubtitle": "We need your current level for this sport before Hrayem can show your availability to other players.",
+    "skillSaveFailed": "We couldn't save your skill level right now.",
+    "deleteSuccess": "Your availability was removed.",
+    "deleteFailed": "We couldn't delete that availability right now.",
+    "loadFailed": "We couldn't load your current availability right now.",
+    "cityRequired": "Choose your city in the profile before posting availability.",
+    "unknownSport": "Unknown sport",
+    "deleteAction": "Delete",
+    "backToHome": "Back to Home",
+    "sections": {
+      "sport": "Sport",
+      "dates": "Dates",
+      "timePreference": "Preferred time"
+    },
+    "validation": {
+      "sport": "Choose a sport.",
+      "startDate": "The first available day must be today or later.",
+      "endDate": "The end of the range must stay on or after the start date.",
+      "rangeLimit": "Availability can only be posted up to 7 days ahead.",
+      "note": "Keep the note under 200 characters."
+    }
+  },
   "events": {
     "common": {
       "organizerFallback": "Organizer",
@@ -380,7 +467,8 @@
       "pickerCancel": "Cancel",
       "pickerDone": "Done",
       "errors": {
-        "generic": "Something went wrong while handling this event. Please try again."
+        "generic": "Something went wrong while handling this event. Please try again.",
+        "rateLimited": "You're moving a bit too fast. Please wait a moment and try again."
       }
     },
     "reservationType": {
@@ -482,6 +570,7 @@
         "closed": "This chat is read-only now.",
         "forbidden": "Only the organizer and confirmed players can access this chat.",
         "validation": "Your message needs another look before it can be sent.",
+        "rateLimited": "You're sending messages too quickly. Please wait a moment.",
         "generic": "We couldn't send that message right now. Please try again."
       }
     },

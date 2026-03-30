@@ -275,6 +275,13 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
         tone: 'info',
       };
     }
+
+    if (error.code === 'RATE_LIMITED') {
+      return {
+        messageKey: 'events.common.errors.rateLimited',
+        tone: 'info',
+      };
+    }
   }
 
   return {

@@ -47,6 +47,9 @@ importers:
       expo-constants:
         specifier: ~55.0.9
         version: 55.0.9(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(typescript@5.9.3)
+      expo-dev-client:
+        specifier: ~55.0.19
+        version: 55.0.19(expo@55.0.8)(typescript@5.9.3)
       expo-haptics:
         specifier: ~55.0.9
         version: 55.0.9(expo@55.0.8)
@@ -77,6 +80,9 @@ importers:
       expo-status-bar:
         specifier: ~55.0.4
         version: 55.0.4(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+      expo-updates:
+        specifier: ~55.0.16
+        version: 55.0.16(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       expo-web-browser:
         specifier: ~55.0.10
         version: 55.0.10(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))
@@ -111,6 +117,9 @@ importers:
         specifier: ^5.0.12
         version: 5.0.12(@types/react@19.2.14)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
+      '@sentry/cli':
+        specifier: ^3.3.5
+        version: 3.3.5
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.14
@@ -1074,9 +1083,20 @@ packages:
     engines: {node: '>=10'}
     os: [darwin]
 
+  '@sentry/cli-darwin@3.3.5':
+    resolution: {integrity: sha512-E/SIY6+j2nt6Ri9nMt78sYle3LiF6uZyz4HGmvcEMU6HXjegmAayhy0J10JST+vZTzN6VixD8sUsa5UeJiOPcg==}
+    engines: {node: '>=18'}
+    os: [darwin]
+
   '@sentry/cli-linux-arm64@2.58.4':
     resolution: {integrity: sha512-0g0KwsOozkLtzN8/0+oMZoOuQ0o7W6O+hx+ydVU1bktaMGKEJLMAWxOQNjsh1TcBbNIXVOKM/I8l0ROhaAb8Ig==}
     engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [linux, freebsd, android]
+
+  '@sentry/cli-linux-arm64@3.3.5':
+    resolution: {integrity: sha512-/W7HTk2OFKD0bguTvQR1ue6pkFQWaGiqPafOSIQKyq0aGfbZhBn/Uj+IRefgMZMhJQ29xRz0y/iGRGKE+ef4Vg==}
+    engines: {node: '>=18'}
     cpu: [arm64]
     os: [linux, freebsd, android]
 
@@ -1086,9 +1106,21 @@ packages:
     cpu: [arm]
     os: [linux, freebsd, android]
 
+  '@sentry/cli-linux-arm@3.3.5':
+    resolution: {integrity: sha512-EGuEIvC2OQyar/vu+jAQEmovTMgxpoxdx5knnzL5dLhIemjEUNqwv/sXq+m/Aj+ThqCMofcTWB2TOZXsTtl0Tw==}
+    engines: {node: '>=18'}
+    cpu: [arm]
+    os: [linux, freebsd, android]
+
   '@sentry/cli-linux-i686@2.58.4':
     resolution: {integrity: sha512-NseoIQAFtkziHyjZNPTu1Gm1opeQHt7Wm1LbLrGWVIRvUOzlslO9/8i6wETUZ6TjlQxBVRgd3Q0lRBG2A8rFYA==}
     engines: {node: '>=10'}
+    cpu: [x86, ia32]
+    os: [linux, freebsd, android]
+
+  '@sentry/cli-linux-i686@3.3.5':
+    resolution: {integrity: sha512-qODMEWLEeUNp3IUlwwISB37EXSo8qgMmHQuLKfxDjpIKw+7NAFfptOloqPrHkLWK3TzFr+Nv643wIKZaYrz28Q==}
+    engines: {node: '>=18'}
     cpu: [x86, ia32]
     os: [linux, freebsd, android]
 
@@ -1098,9 +1130,21 @@ packages:
     cpu: [x64]
     os: [linux, freebsd, android]
 
+  '@sentry/cli-linux-x64@3.3.5':
+    resolution: {integrity: sha512-DCz7lQ4PySjQ1WvWOQ/uTdwauRo1D7hSHazxZ+fUAnK/epSPM9qLkjDMlD8uM5CaLoR8+ZTs7N94vV5LZs2QpA==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [linux, freebsd, android]
+
   '@sentry/cli-win32-arm64@2.58.4':
     resolution: {integrity: sha512-bqYrF43+jXdDBh0f8HIJU3tbvlOFtGyRjHB8AoRuMQv9TEDUfENZyCelhdjA+KwDKYl48R1Yasb4EHNzsoO83w==}
     engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@sentry/cli-win32-arm64@3.3.5':
+    resolution: {integrity: sha512-VMNsHiyZcP8Ft3fcK/1zoO4L66soe1eSfXg2tglFQSc/2MYA5v1Br9B1GtjBwDIc3EmdPtFZhOGLyqIzszMxJw==}
+    engines: {node: '>=18'}
     cpu: [arm64]
     os: [win32]
 
@@ -1110,15 +1154,32 @@ packages:
     cpu: [x86, ia32]
     os: [win32]
 
+  '@sentry/cli-win32-i686@3.3.5':
+    resolution: {integrity: sha512-BE6aHOIpsm4jgavsvvXNcSikAr/8NSva3rk1N3BzoOLuX+dcFxBI60K1i2VzB1vsgtivJJo9YySNCi60dBgWTg==}
+    engines: {node: '>=18'}
+    cpu: [x86, ia32]
+    os: [win32]
+
   '@sentry/cli-win32-x64@2.58.4':
     resolution: {integrity: sha512-cSzN4PjM1RsCZ4pxMjI0VI7yNCkxiJ5jmWncyiwHXGiXrV1eXYdQ3n1LhUYLZ91CafyprR0OhDcE+RVZ26Qb5w==}
     engines: {node: '>=10'}
     cpu: [x64]
     os: [win32]
 
+  '@sentry/cli-win32-x64@3.3.5':
+    resolution: {integrity: sha512-MSU+PtBuiLjEbiPFOvxk4CI3TCagwkIg9kvJ+DrI3+pBY0Sga/dOyeWKTIgb01xSVcfjdw0UkpU52VCvzTT9ew==}
+    engines: {node: '>=18'}
+    cpu: [x64]
+    os: [win32]
+
   '@sentry/cli@2.58.4':
     resolution: {integrity: sha512-ArDrpuS8JtDYEvwGleVE+FgR+qHaOp77IgdGSacz6SZy6Lv90uX0Nu4UrHCQJz8/xwIcNxSqnN22lq0dH4IqTg==}
     engines: {node: '>= 10'}
+    hasBin: true
+
+  '@sentry/cli@3.3.5':
+    resolution: {integrity: sha512-eyLHTj0rpeCsOUX+1ZU8UEWRXy6nXvTXNdhtAt1t6YXan9gSsAexZf28zVmDcYcP8WRbK0D2JMLp7NcaQCQgEA==}
+    engines: {node: '>= 18'}
     hasBin: true
 
   '@sentry/core@10.37.0':
@@ -1474,6 +1535,9 @@ packages:
   anymatch@3.1.3:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
+
+  arg@4.1.3:
+    resolution: {integrity: sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==}
 
   arg@5.0.2:
     resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
@@ -2103,9 +2167,32 @@ packages:
       expo: '*'
       react-native: '*'
 
+  expo-dev-client@55.0.19:
+    resolution: {integrity: sha512-NViuWgo1oqcKPei/M+FwwFC93cAsVhX7yT1/8pYPjMzPeZjV0DO82eur4H1ZwcmyxqSGjlae5R+MGXW88NeYEA==}
+    peerDependencies:
+      expo: '*'
+
+  expo-dev-launcher@55.0.20:
+    resolution: {integrity: sha512-vnIUk4k3ZyXSrSA7O4MVkWAIlErbSMEW8KexDGRVhEJkkAYZA2Yq5EcqJTrukvDC6/Jomx3Rpti+UfpLMIUk/g==}
+    peerDependencies:
+      expo: '*'
+
+  expo-dev-menu-interface@55.0.1:
+    resolution: {integrity: sha512-FkNtwq1q6NmYoy28pj+ZLuHmirJgc039pQbJ167MZJIaprLcMN1yy67qA7xBHK+FNJ8AN8kGCtMTPByg5UC72A==}
+    peerDependencies:
+      expo: '*'
+
+  expo-dev-menu@55.0.17:
+    resolution: {integrity: sha512-UhYYHzNEy2imyPf0CFn4+2cIypqJ8D+pNBh9LxSVJaC4c3sARcGm+n52W4JA492KKiSyRrmwcWcbCMPLNj6sKQ==}
+    peerDependencies:
+      expo: '*'
+
   expo-doctor@1.18.13:
     resolution: {integrity: sha512-1hrTtw2agFU2wMbjSxVOCvmelkh2tJjrHrprAyvvd9ZWzCoSpMeTnnt/RU2NOhsDZ1pCIf9CzyNMNKr+csiFeA==}
     hasBin: true
+
+  expo-eas-client@55.0.3:
+    resolution: {integrity: sha512-KkkjjPc4VKpLVEbOMAvWp87m1YiFEgM6fDNNk5LRynfJ4V8a287P5jlnZuRvHCFWWczTczXT9iS39r8G4VZGDQ==}
 
   expo-file-system@55.0.11:
     resolution: {integrity: sha512-KMUd6OY375J9WD79ZvjvCDZMveT7YfgiGWdi58/gfuTBsr14TRuoPk8RRQHAtc4UquzWViKcHwna9aPY7/XPpw==}
@@ -2151,6 +2238,9 @@ packages:
       react-native-web:
         optional: true
 
+  expo-json-utils@55.0.0:
+    resolution: {integrity: sha512-aupt/o5PDAb8dXDCb0JcRdkqnTLxe/F+La7jrnyd/sXlYFfRgBJLFOa1SqVFXm1E/Xam1SE/yw6eAb+DGY7Arg==}
+
   expo-keep-awake@55.0.4:
     resolution: {integrity: sha512-vwfdMtMS5Fxaon8gC0AiE70SpxTsHJ+rjeoVJl8kdfdbxczF7OIaVmfjFJ5Gfigd/WZiLqxhfZk34VAkXF4PNg==}
     peerDependencies:
@@ -2171,6 +2261,11 @@ packages:
 
   expo-location@55.1.4:
     resolution: {integrity: sha512-0QWQ4QP8I6svtGUL895Y8bvKM3nGUWNp/MdCoCQNH3uAuwvLf2TQ6ZDVD3kdlkl2wGGdw6ziHQIYDHL96OlfnA==}
+    peerDependencies:
+      expo: '*'
+
+  expo-manifests@55.0.11:
+    resolution: {integrity: sha512-3+pFun4C9F/eFMVpwZgOBrBWq5sfu7rS1uxTrcg9G7jUFatNe5W6hr+M7z7aQPDf0J1afaSudUZPawx1LLf15w==}
     peerDependencies:
       expo: '*'
 
@@ -2203,6 +2298,22 @@ packages:
   expo-status-bar@55.0.4:
     resolution: {integrity: sha512-BPDjUXKqv1F9j2YNGLRZfkBEZXIEEpqj+t81y4c+4fdSN3Pos7goIHXgcl2ozbKQLgKRZQyNZQtbUgh5UjHYUQ==}
     peerDependencies:
+      react: '*'
+      react-native: '*'
+
+  expo-structured-headers@55.0.0:
+    resolution: {integrity: sha512-udaNvuWb45/Sryq9FLC/blwgOChhznuqlTrUzVjC0T83pMdcmscKJX23lnNDW6hCec8p81Y3z1DIFwIyk0g/PQ==}
+
+  expo-updates-interface@55.1.3:
+    resolution: {integrity: sha512-UVVIiZqymQZJL+o/jh65kXOI97xdkbqBJJM0LMabaPMNLFnc6/WvOMOzmQs7SPyKb8+0PeBaFd7tj5DzF6JeQg==}
+    peerDependencies:
+      expo: '*'
+
+  expo-updates@55.0.16:
+    resolution: {integrity: sha512-DGXSdMbfuNlvkIGVVlYQxEaIQl1/Nn330oUPh8mR78squtdXbZXWLDFPrs02C9tdGzGdFbzf3OkaciKJj9dsDA==}
+    hasBin: true
+    peerDependencies:
+      expo: '*'
       react: '*'
       react-native: '*'
 
@@ -3786,6 +3897,10 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
+  undici@6.24.1:
+    resolution: {integrity: sha512-sC+b0tB1whOCzbtlx20fx3WgCXwkW627p4EA9uM+/tNNPkSS+eSEld6pAs9nDv7WbY1UUljBMYPtu9BCOrCWKA==}
+    engines: {node: '>=18.17'}
+
   unicode-canonical-property-names-ecmascript@2.0.1:
     resolution: {integrity: sha512-dA8WbNeb2a6oQzAQ55YlT5vQAWGV9WXOsi3SskE3bcCdM0P4SDd+24zS/OCacdRq5BkdsRj9q3Pg6YyQoxIGqg==}
     engines: {node: '>=4'}
@@ -5329,25 +5444,49 @@ snapshots:
   '@sentry/cli-darwin@2.58.4':
     optional: true
 
+  '@sentry/cli-darwin@3.3.5':
+    optional: true
+
   '@sentry/cli-linux-arm64@2.58.4':
+    optional: true
+
+  '@sentry/cli-linux-arm64@3.3.5':
     optional: true
 
   '@sentry/cli-linux-arm@2.58.4':
     optional: true
 
+  '@sentry/cli-linux-arm@3.3.5':
+    optional: true
+
   '@sentry/cli-linux-i686@2.58.4':
+    optional: true
+
+  '@sentry/cli-linux-i686@3.3.5':
     optional: true
 
   '@sentry/cli-linux-x64@2.58.4':
     optional: true
 
+  '@sentry/cli-linux-x64@3.3.5':
+    optional: true
+
   '@sentry/cli-win32-arm64@2.58.4':
+    optional: true
+
+  '@sentry/cli-win32-arm64@3.3.5':
     optional: true
 
   '@sentry/cli-win32-i686@2.58.4':
     optional: true
 
+  '@sentry/cli-win32-i686@3.3.5':
+    optional: true
+
   '@sentry/cli-win32-x64@2.58.4':
+    optional: true
+
+  '@sentry/cli-win32-x64@3.3.5':
     optional: true
 
   '@sentry/cli@2.58.4':
@@ -5369,6 +5508,22 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@sentry/cli@3.3.5':
+    dependencies:
+      progress: 2.0.3
+      proxy-from-env: 1.1.0
+      undici: 6.24.1
+      which: 2.0.2
+    optionalDependencies:
+      '@sentry/cli-darwin': 3.3.5
+      '@sentry/cli-linux-arm': 3.3.5
+      '@sentry/cli-linux-arm64': 3.3.5
+      '@sentry/cli-linux-i686': 3.3.5
+      '@sentry/cli-linux-x64': 3.3.5
+      '@sentry/cli-win32-arm64': 3.3.5
+      '@sentry/cli-win32-i686': 3.3.5
+      '@sentry/cli-win32-x64': 3.3.5
 
   '@sentry/core@10.37.0': {}
 
@@ -5738,6 +5893,8 @@ snapshots:
     dependencies:
       normalize-path: 3.0.0
       picomatch: 2.3.2
+
+  arg@4.1.3: {}
 
   arg@5.0.2: {}
 
@@ -6363,9 +6520,9 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 8.57.2(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1)(typescript@5.9.3)
       '@typescript-eslint/parser': 8.57.2(eslint@9.39.1)(typescript@5.9.3)
       eslint: 9.39.1
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1)
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1)
       eslint-plugin-expo: 1.0.0(eslint@9.39.1)(typescript@5.9.3)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1))(eslint@9.39.1)
       eslint-plugin-react: 7.37.5(eslint@9.39.1)
       eslint-plugin-react-hooks: 5.2.0(eslint@9.39.1)
       globals: 16.5.0
@@ -6387,7 +6544,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1):
     dependencies:
       '@nolyfill/is-core-module': 1.0.39
       debug: 4.4.3
@@ -6398,18 +6555,18 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1))(eslint@9.39.1)
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1))(eslint@9.39.1):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 8.57.2(eslint@9.39.1)(typescript@5.9.3)
       eslint: 9.39.1
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.39.1)
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -6422,7 +6579,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1))(eslint@9.39.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -6433,7 +6590,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.39.1
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.1)
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.57.2(eslint@9.39.1)(typescript@5.9.3))(eslint@9.39.1))(eslint@9.39.1))(eslint@9.39.1)
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -6576,7 +6733,40 @@ snapshots:
       - supports-color
       - typescript
 
+  expo-dev-client@55.0.19(expo@55.0.8)(typescript@5.9.3):
+    dependencies:
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-dev-launcher: 55.0.20(expo@55.0.8)(typescript@5.9.3)
+      expo-dev-menu: 55.0.17(expo@55.0.8)
+      expo-dev-menu-interface: 55.0.1(expo@55.0.8)
+      expo-manifests: 55.0.11(expo@55.0.8)(typescript@5.9.3)
+      expo-updates-interface: 55.1.3(expo@55.0.8)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
+  expo-dev-launcher@55.0.20(expo@55.0.8)(typescript@5.9.3):
+    dependencies:
+      '@expo/schema-utils': 55.0.2
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-dev-menu: 55.0.17(expo@55.0.8)
+      expo-manifests: 55.0.11(expo@55.0.8)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
+  expo-dev-menu-interface@55.0.1(expo@55.0.8):
+    dependencies:
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
+  expo-dev-menu@55.0.17(expo@55.0.8):
+    dependencies:
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-dev-menu-interface: 55.0.1(expo@55.0.8)
+
   expo-doctor@1.18.13: {}
+
+  expo-eas-client@55.0.3: {}
 
   expo-file-system@55.0.11(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)):
     dependencies:
@@ -6615,6 +6805,8 @@ snapshots:
       react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)
       sf-symbols-typescript: 2.2.0
 
+  expo-json-utils@55.0.0: {}
+
   expo-keep-awake@55.0.4(expo@55.0.8)(react@19.2.0):
     dependencies:
       expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
@@ -6641,6 +6833,15 @@ snapshots:
     dependencies:
       '@expo/image-utils': 0.8.12
       expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
+  expo-manifests@55.0.11(expo@55.0.8)(typescript@5.9.3):
+    dependencies:
+      '@expo/config': 55.0.10(typescript@5.9.3)
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-json-utils: 55.0.0
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
 
   expo-modules-autolinking@55.0.11(typescript@5.9.3):
     dependencies:
@@ -6683,6 +6884,35 @@ snapshots:
       react: 19.2.0
       react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)
       react-native-is-edge-to-edge: 1.3.1(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+
+  expo-structured-headers@55.0.0: {}
+
+  expo-updates-interface@55.1.3(expo@55.0.8):
+    dependencies:
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+
+  expo-updates@55.0.16(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3):
+    dependencies:
+      '@expo/code-signing-certificates': 0.0.6
+      '@expo/plist': 0.5.2
+      '@expo/spawn-async': 1.7.2
+      arg: 4.1.3
+      chalk: 4.1.2
+      debug: 4.4.3
+      expo: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      expo-eas-client: 55.0.3
+      expo-manifests: 55.0.11(expo@55.0.8)(typescript@5.9.3)
+      expo-structured-headers: 55.0.0
+      expo-updates-interface: 55.1.3(expo@55.0.8)
+      getenv: 2.0.0
+      glob: 13.0.6
+      ignore: 5.3.2
+      react: 19.2.0
+      react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)
+      resolve-from: 5.0.0
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
 
   expo-web-browser@55.0.10(expo@55.0.8)(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0)):
     dependencies:
@@ -8569,6 +8799,8 @@ snapshots:
       which-boxed-primitive: 1.1.1
 
   undici-types@7.18.2: {}
+
+  undici@6.24.1: {}
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 

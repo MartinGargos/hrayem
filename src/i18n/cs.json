@@ -310,15 +310,15 @@
       "stubTitle": "Souhrn profilu",
       "nameLabel": "Jméno",
       "languageLabel": "Jazyk",
-      "openSettings": "Otevřít stub nastavení",
+      "openSettings": "Otevřít nastavení",
       "openSkillLevel": "Otevřít stub výkonnosti"
     },
     "settings": {
       "title": "Nastavení",
-      "subtitle": "Nastavení je zapojené do finálního shellu, takže jazyk, notifikace, odhlášení i smazání účtu mají stabilní domov.",
+      "subtitle": "Spravujte preference notifikací, účet a základní nastavení aplikace na jednom místě.",
       "stubTitle": "Stub nastavení",
       "placeholder": "Preference notifikací a editovatelné nastavení aplikace zůstávají jako stuby, dokud nezačne jejich milestone práce.",
-      "openAccountDeletion": "Otevřít stub smazání účtu"
+      "openAccountDeletion": "Smazat účet"
     },
     "accountDeletion": {
       "title": "Smazat účet",
@@ -372,6 +372,93 @@
       "stats": "Sportovní statistiky tohoto hráče se teď nepodařilo načíst."
     }
   },
+  "settings": {
+    "profileTitle": "Preference aplikace",
+    "languageLabel": "Jazyk",
+    "cityLabel": "Město",
+    "notifications": {
+      "permissionTitle": "Push oprávnění",
+      "permissionBody": "Hrayem používá push notifikace pro přidání do hry, potvrzení místa, připomínky, chat i zrušení události. Tyto preference můžete kdykoli změnit.",
+      "permissionStatusLabel": "Stav oprávnění",
+      "permissionAction": "Povolit notifikace",
+      "permissionReady": "Push notifikace jsou na tomto zařízení připravené.",
+      "permissionUnavailable": "Notifikace teď na tomto zařízení ještě nejsou dostupné.",
+      "permissionDenied": "Notifikace jsou pro Hrayem na tomto zařízení vypnuté.",
+      "permissionFailed": "Oprávnění pro push notifikace se teď nepodařilo aktualizovat.",
+      "loadFailed": "Preference notifikací se teď nepodařilo načíst.",
+      "saveFailed": "Preference notifikací se teď nepodařilo uložit.",
+      "permissionStatus": {
+        "granted": "Povoleno",
+        "denied": "Zakázáno",
+        "undetermined": "Zatím nerozhodnuto",
+        "provisional": "Povoleno tiše"
+      },
+      "preferencesTitle": "Preference notifikací",
+      "types": {
+        "player_joined": "Někdo se přidal do mé hry",
+        "join_confirmed": "Moje místo bylo potvrzeno",
+        "waitlist_promoted": "Posunul jsem se z čekací listiny",
+        "event_full": "Událost je plná",
+        "chat_message": "Nová zpráva v chatu",
+        "event_reminder": "Připomínka hry",
+        "event_cancelled": "Událost byla zrušena",
+        "player_removed": "Byl jsem odebrán ze hry"
+      }
+    }
+  },
+  "availability": {
+    "title": "Jsem k dispozici",
+    "subtitle": "Zveřejněte dny, kdy si můžete zahrát, aby lidé ve vašem městě mohli vytvořit správnou hru kolem vás.",
+    "availablePlayersTitle": "Dostupní hráči",
+    "allSports": "Všechny sporty",
+    "openFormAction": "Jsem k dispozici",
+    "errorTitle": "Nepodařilo se načíst dostupné hráče",
+    "errorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online znovu otevřete tuto záložku.",
+    "emptyTitle": "Teď není nikdo k dispozici",
+    "emptyBody": "Buďte první, kdo zveřejní dostupnost pro toto město a datumový rozsah.",
+    "yourAvailabilityTitle": "Vaše aktuální dostupnost",
+    "emptyOwn": "Zatím jste žádnou dostupnost nezveřejnili.",
+    "startDate": "Od",
+    "startDatePlaceholder": "Vyberte počáteční datum",
+    "endDate": "Do",
+    "endDatePlaceholder": "Vyberte koncové datum",
+    "timePreference": "Preferovaný čas",
+    "timePreferenceValues": {
+      "morning": "Ráno",
+      "afternoon": "Odpoledne",
+      "evening": "Večer",
+      "any": "Kdykoli"
+    },
+    "note": "Volitelná poznámka",
+    "notePlaceholder": "Cokoli, co by ostatní měli vědět, než kolem této dostupnosti vytvoří hru?",
+    "noteCounter": "{{count}}/200 znaků",
+    "submit": "Zveřejnit dostupnost",
+    "submitPending": "Zveřejňuji...",
+    "saveSuccess": "Vaše dostupnost je zveřejněná.",
+    "saveFailed": "Dostupnost se teď nepodařilo uložit.",
+    "skillRequired": "Nejdřív zvolte svou úroveň pro tento sport, než zveřejníte dostupnost.",
+    "skillModalSubtitle": "Potřebujeme vaši aktuální úroveň pro tento sport, než Hrayem ukáže vaši dostupnost ostatním hráčům.",
+    "skillSaveFailed": "Úroveň se teď nepodařilo uložit.",
+    "deleteSuccess": "Vaše dostupnost byla odstraněna.",
+    "deleteFailed": "Tuto dostupnost se teď nepodařilo smazat.",
+    "loadFailed": "Vaši aktuální dostupnost se teď nepodařilo načíst.",
+    "cityRequired": "Nejdřív zvolte město v profilu, než zveřejníte dostupnost.",
+    "unknownSport": "Neznámý sport",
+    "deleteAction": "Smazat",
+    "backToHome": "Zpět na Domů",
+    "sections": {
+      "sport": "Sport",
+      "dates": "Data",
+      "timePreference": "Preferovaný čas"
+    },
+    "validation": {
+      "sport": "Vyberte sport.",
+      "startDate": "První dostupný den musí být dnes nebo později.",
+      "endDate": "Konec rozsahu musí být ve stejný den nebo později než začátek.",
+      "rangeLimit": "Dostupnost lze zveřejnit maximálně 7 dní dopředu.",
+      "note": "Poznámka musí zůstat do 200 znaků."
+    }
+  },
   "events": {
     "common": {
       "organizerFallback": "Organizátor",
@@ -380,7 +467,8 @@
       "pickerCancel": "Zrušit",
       "pickerDone": "Hotovo",
       "errors": {
-        "generic": "Při práci s touto hrou se něco pokazilo. Zkuste to prosím znovu."
+        "generic": "Při práci s touto hrou se něco pokazilo. Zkuste to prosím znovu.",
+        "rateLimited": "Jdete na to moc rychle. Chvíli počkejte a zkuste to znovu."
       }
     },
     "reservationType": {
@@ -482,6 +570,7 @@
         "closed": "Tento chat je už jen pro čtení.",
         "forbidden": "Do tohoto chatu má přístup jen organizátor a potvrzení hráči.",
         "validation": "Vaše zpráva potřebuje ještě upravit, než ji půjde odeslat.",
+        "rateLimited": "Posíláte zprávy příliš rychle. Chvíli počkejte.",
         "generic": "Tuto zprávu se teď nepodařilo odeslat. Zkuste to prosím znovu."
       }
     },
