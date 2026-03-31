@@ -49,6 +49,21 @@ type RegisterValues = z.infer<typeof registerSchema>;
 type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
 
+const DEV_QA_ACCOUNTS = [
+  {
+    labelKey: 'auth.login.qa.loginAsQa1',
+    email: 'qa.iphone1@example.com',
+    password: 'Hrayem-QA-2026!',
+  },
+  {
+    labelKey: 'auth.login.qa.loginAsQa2',
+    email: 'qa.iphone2@example.com',
+    password: 'Hrayem-QA-2026!',
+  },
+] as const satisfies readonly (LoginValues & {
+  labelKey: string;
+})[];
+
 function translateFieldError(
   t: (key: string) => string,
   message: string | undefined,
@@ -142,6 +157,11 @@ function LoginForm() {
     }
   }
 
+  async function handleQuickLogin(values: LoginValues) {
+    form.reset(values);
+    await handleSubmit(values);
+  }
+
   async function handleOAuth(provider: 'apple' | 'google') {
     clearAuthNotice();
     clearErrorMessage();
@@ -194,6 +214,22 @@ function LoginForm() {
           />
         )}
       />
+
+      {__DEV__ ? (
+        <View style={styles.devQuickLoginCard}>
+          <Text style={styles.devQuickLoginTitle}>{t('auth.login.qa.title')}</Text>
+          <Text style={styles.devQuickLoginBody}>{t('auth.login.qa.description')}</Text>
+          {DEV_QA_ACCOUNTS.map((account) => (
+            <ActionButton
+              key={account.email}
+              disabled={isSubmitting}
+              label={t(account.labelKey)}
+              onPress={() => handleQuickLogin(account)}
+              variant="secondary"
+            />
+          ))}
+        </View>
+      ) : null}
 
       <ActionButton
         disabled={isSubmitting}
@@ -508,6 +544,22 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 14,
     lineHeight: 20,
+    color: '#395065',
+  },
+  devQuickLoginCard: {
+    gap: 10,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: '#eef4fb',
+  },
+  devQuickLoginTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  devQuickLoginBody: {
+    fontSize: 13,
+    lineHeight: 19,
     color: '#395065',
   },
   checkboxText: {

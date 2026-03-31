@@ -32,6 +32,12 @@
       "submit": "Přihlásit se",
       "apple": "Pokračovat přes Apple",
       "google": "Pokračovat přes Google",
+      "qa": {
+        "title": "QA přihlášení jen pro vývoj",
+        "description": "Pouze pro vývojové buildy. Tato tlačítka používají reálné seedované QA účty a nikdy se nesmí objevit v preview ani produkci.",
+        "loginAsQa1": "Přihlásit jako QA 1",
+        "loginAsQa2": "Přihlásit jako QA 2"
+      },
       "noAccount": "Ještě nemáte účet?",
       "createAccount": "Registrovat se",
       "forgotPassword": "Zapomněli jste heslo?"

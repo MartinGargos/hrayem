@@ -32,6 +32,12 @@
       "submit": "Log in",
       "apple": "Continue with Apple",
       "google": "Continue with Google",
+      "qa": {
+        "title": "Dev-only QA login",
+        "description": "Development builds only. These buttons use the real seeded QA accounts and must never appear in preview or production.",
+        "loginAsQa1": "Login as QA 1",
+        "loginAsQa2": "Login as QA 2"
+      },
       "noAccount": "Don't have an account yet?",
       "createAccount": "Register",
       "forgotPassword": "Forgot password?"

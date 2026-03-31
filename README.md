@@ -79,6 +79,8 @@ pnpm run android
 
 ## How to run on a real device
 
+For local QA in a Metro-driven development build only, the auth screen includes dev-only quick-login buttons for the seeded iPhone QA accounts. They are gated behind `__DEV__` and must never appear in preview or production builds.
+
 ### iPhone runbook — Milestone 0 from WSL
 
 Use this flow when you are on Windows + WSL, you have a physical iPhone, and you do not have an Android device available right now. It matches the current `development` profile in [`eas.json`](/home/martin/hrayem/eas.json).
