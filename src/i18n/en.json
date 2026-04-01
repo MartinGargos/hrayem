@@ -48,6 +48,7 @@
       "submit": "Create account",
       "haveAccount": "Already have an account?",
       "signIn": "Log in",
+      "termsCheckbox": "Terms and privacy consent",
       "termsPrefix": "I agree to the",
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy",
@@ -131,6 +132,9 @@
     "passwordRecoveryReady": "Set a new password to finish your recovery flow.",
     "passwordUpdated": "Your password was updated.",
     "logoutPartial": "You were logged out on this device. Remote cleanup may take a moment."
+  },
+  "common": {
+    "deletedUser": "Deleted User"
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -382,6 +386,18 @@
     "profileTitle": "App preferences",
     "languageLabel": "Language",
     "cityLabel": "City",
+    "profileSaved": "Your app preferences were saved.",
+    "profileSaveFailed": "We couldn't save your app preferences right now.",
+    "profileSaveFailedNetwork": "You're offline. Reconnect and try saving your app preferences again.",
+    "saveProfileAction": "Save preferences",
+    "saveProfilePending": "Saving...",
+    "cityPickerTitle": "Choose your city",
+    "cityPlaceholder": "Choose your city",
+    "cityPickerHint": "Open the city picker",
+    "closeCityPicker": "Close city picker",
+    "validation": {
+      "city": "Choose one of the supported cities."
+    },
     "notifications": {
       "permissionTitle": "Push permission",
       "permissionBody": "Hrayem uses push notifications for event joins, confirmations, reminders, chat, and cancellations. You can change these preferences at any time.",
@@ -400,6 +416,7 @@
         "provisional": "Allowed quietly"
       },
       "preferencesTitle": "Notification preferences",
+      "toggleHint": "Toggle this notification type on or off",
       "types": {
         "player_joined": "Someone joined my event",
         "join_confirmed": "My spot is confirmed",
@@ -450,6 +467,7 @@
     "loadFailed": "We couldn't load your current availability right now.",
     "cityRequired": "Choose your city in the profile before posting availability.",
     "unknownSport": "Unknown sport",
+    "cardSummary": "{{skill}} · {{games}} games",
     "deleteAction": "Delete",
     "backToHome": "Back to Home",
     "sections": {
@@ -522,6 +540,8 @@
       "thumbsUpPercentageHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
       "playAgainBadge": "Play again",
       "openOrganizerProfile": "Open organizer profile",
+      "openEventHint": "Open {{sport}} at {{venue}}",
+      "openPlayerProfileHint": "Open this player profile",
       "confirmedPlayersTitle": "Confirmed players",
       "confirmedPlayersEmpty": "No confirmed players are visible yet beyond the organizer.",
       "skillUnknown": "Skill not set yet",
@@ -773,6 +793,68 @@
         "unavailable": "Post-game feedback is no longer available for this game.",
         "alreadyGiven": "You've already sent thumbs up for this player in this game."
       }
+    }
+  },
+  "reports": {
+    "menuTitle": "Report",
+    "reportEventAction": "Report event",
+    "reportPlayerAction": "Report player",
+    "overflowLabel": "Open report actions",
+    "title": "Submit a report",
+    "eventBody": "Tell us what went wrong with {{target}}. Reports go to the Hrayem team for manual review.",
+    "playerBody": "Tell us what went wrong with {{target}}. Reports go to the Hrayem team for manual review.",
+    "reasonLabel": "Reason",
+    "reasons": {
+      "inappropriate_content": "Inappropriate content",
+      "spam_or_fake": "Spam or fake activity",
+      "abusive_behavior": "Abusive behavior",
+      "other": "Other"
+    },
+    "detailLabel": "Additional detail",
+    "detailHint": "Add a short explanation for the Hrayem team",
+    "detailPlaceholder": "Add any context that will help us review this report.",
+    "detailPlaceholderOther": "Describe the issue in your own words.",
+    "detailCounter": "{{count}}/300 characters",
+    "closeAction": "Close",
+    "submit": "Send report",
+    "submitPending": "Sending...",
+    "success": "Thanks. Your report was sent for review.",
+    "validation": {
+      "detail": "Keep the report detail under 300 characters."
+    },
+    "errors": {
+      "duplicate": "You already reported this target.",
+      "rateLimited": "You're sending reports too quickly right now. Please wait a moment.",
+      "targetUnavailable": "This target is no longer available to report.",
+      "validation": "Please review the report details and try again.",
+      "network": "You're offline. Reconnect and try sending the report again.",
+      "generic": "We couldn't send this report right now. Please try again."
+    }
+  },
+  "accountDeletion": {
+    "title": "Delete account",
+    "subtitle": "Remove your Hrayem account and clean up the future event data tied to it.",
+    "body": "Deleting your account is permanent. Hrayem will cancel your future organized games, remove you from future joined games, and clean up the profile data that can safely be removed.",
+    "actionTitle": "Confirm account deletion",
+    "warning": "This action cannot be undone.",
+    "deleteAction": "Delete my account",
+    "pending": "Deleting account...",
+    "confirmTitle": "Delete your account?",
+    "confirmBody": "This permanently deletes your Hrayem account and cleans up your future event participation.",
+    "confirmAction": "Delete permanently",
+    "success": "Your account was deleted.",
+    "errors": {
+      "unauthorized": "Your session expired. Please log in again before deleting your account.",
+      "network": "You're offline. Reconnect and try deleting your account again.",
+      "generic": "We couldn't delete your account right now. Please try again."
+    },
+    "impacts": {
+      "organizedEvents": "Future games you organize will be cancelled and affected players will be notified.",
+      "joinedEvents": "You'll be removed from future games you joined, and waitlisted players can be promoted.",
+      "availability": "Your active availability posts will be removed.",
+      "profilePhoto": "Your uploaded profile photo will be deleted from storage.",
+      "sessions": "This device will be signed out and your push token will be cleared.",
+      "history": "Past chat, reports, no-show, and thumbs-up history stays intact with your user references anonymized."
     }
   }
 }

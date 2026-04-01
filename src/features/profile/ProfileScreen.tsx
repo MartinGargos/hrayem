@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
 import { AvatarPhoto, InfoPill } from '../events/EventPrimitives';
 import { SkillLevelModal } from '../events/SkillLevelModal';
+import { ReportSheet } from '../reports/ReportSheet';
+import { HeaderOverflowButton } from '../../components/HeaderOverflowButton';
 import { ScreenCard, ScreenShell } from '../../components/ScreenShell';
 import type { RootStackParamList } from '../../navigation/types';
 import {
@@ -21,6 +23,7 @@ import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
 import type { AppNotice } from '../../types/app';
 import type { PlayAgainConnection, PlayerSportStat, SportSummary } from '../../types/events';
+import { formatDisplayName } from '../../utils/people';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type PlayerProfileScreenProps = NativeStackScreenProps<RootStackParamList, 'PlayerProfile'>;
@@ -45,6 +48,9 @@ function SkillLevelStatCard({
 
   return (
     <Pressable
+      accessibilityHint={onPress ? t('profile.skillEditHint') : undefined}
+      accessibilityLabel={`${stat.sportNameEn} ${t(`events.skillLevel.label.${stat.skillLevel}`)}`}
+      accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={() => {
         onPress?.();
@@ -273,11 +279,14 @@ export function ProfileScreen() {
                     </Text>
                     {connections.map((connection) => {
                       const connectionName =
-                        [connection.firstName, connection.lastName].filter(Boolean).join(' ') ||
-                        t('events.common.organizerFallback');
+                        formatDisplayName(connection.firstName, connection.lastName) ||
+                        t('auth.home.defaultName');
 
                       return (
                         <Pressable
+                          accessibilityHint={t('events.detail.openPlayerProfileHint')}
+                          accessibilityLabel={connectionName}
+                          accessibilityRole="button"
                           key={`${connection.connectionUserId}-${connection.sportId}`}
                           onPress={() =>
                             navigation.navigate('PlayerProfile', {
@@ -328,7 +337,10 @@ export function ProfileScreen() {
 
 export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
   const { t } = useTranslation();
+  const navigation = useNavigation<RootNavigation>();
   const playerId = route.params.playerId;
+  const [notice, setNotice] = useState<AppNotice | null>(null);
+  const [isReportSheetVisible, setIsReportSheetVisible] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ['profile', 'player', playerId, 'summary'],
@@ -343,72 +355,121 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
   });
 
   const topLineName =
-    [profileQuery.data?.first_name, profileQuery.data?.last_name].filter(Boolean).join(' ') ||
-    t('events.common.organizerFallback');
+    formatDisplayName(profileQuery.data?.first_name, profileQuery.data?.last_name) ||
+    t('common.deletedUser');
   const hasConnection = (statsQuery.data ?? []).some((stat) => stat.isPlayAgainConnection);
 
-  return (
-    <ScreenShell
-      title={t('navigation.titles.playerProfile')}
-      subtitle={t('playerProfile.subtitle')}
-    >
-      <ScreenCard title={t('playerProfile.summaryTitle')}>
-        {profileQuery.isPending ? (
-          <View style={styles.centeredBlock}>
-            <ActivityIndicator color="#183153" />
-          </View>
-        ) : profileQuery.isError || !profileQuery.data ? (
-          <>
-            <Text style={styles.bodyText}>{t('playerProfile.errors.summary')}</Text>
-            <ActionButton
-              label={t('events.common.retry')}
-              onPress={async () => {
-                await profileQuery.refetch();
-              }}
-            />
-          </>
-        ) : (
-          <View style={styles.summaryRow}>
-            <AvatarPhoto label={topLineName} size={64} uri={profileQuery.data.photo_url} />
-            <View style={styles.summaryCopy}>
-              <Text style={styles.summaryName}>{topLineName}</Text>
-              <Text style={styles.summaryMeta}>
-                {profileQuery.data.city ?? t('shell.common.noCity')}
-              </Text>
-            </View>
-          </View>
-        )}
-        {hasConnection ? (
-          <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
-        ) : null}
-      </ScreenCard>
+  const canReportPlayer = Boolean(
+    !profileQuery.isPending && !profileQuery.isError && profileQuery.data,
+  );
 
-      <ScreenCard title={t('playerProfile.statsTitle')}>
-        {statsQuery.isPending ? (
-          <View style={styles.centeredBlock}>
-            <ActivityIndicator color="#183153" />
-          </View>
-        ) : statsQuery.isError ? (
-          <>
-            <Text style={styles.bodyText}>{t('playerProfile.errors.stats')}</Text>
-            <ActionButton
-              label={t('events.common.retry')}
-              onPress={async () => {
-                await statsQuery.refetch();
-              }}
+  const handleOpenReportMenu = useCallback(() => {
+    if (!canReportPlayer) {
+      return;
+    }
+
+    setNotice(null);
+    Alert.alert(t('reports.menuTitle'), undefined, [
+      {
+        text: t('reports.reportPlayerAction'),
+        onPress: () => setIsReportSheetVisible(true),
+      },
+      {
+        text: t('events.common.cancel'),
+        style: 'cancel',
+      },
+    ]);
+  }, [canReportPlayer, t]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canReportPlayer
+        ? () => (
+            <HeaderOverflowButton
+              accessibilityHint={t('reports.reportPlayerAction')}
+              accessibilityLabel={t('reports.overflowLabel')}
+              onPress={handleOpenReportMenu}
             />
-          </>
-        ) : statsQuery.data?.length ? (
-          <View style={styles.stack}>
-            {statsQuery.data.map((stat) => (
-              <SkillLevelStatCard key={`${stat.userId}-${stat.sportId}`} stat={stat} />
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.bodyText}>{t('playerProfile.empty')}</Text>
-        )}
-      </ScreenCard>
-    </ScreenShell>
+          )
+        : undefined,
+    });
+  }, [canReportPlayer, handleOpenReportMenu, navigation, t]);
+
+  return (
+    <>
+      <ScreenShell
+        title={t('navigation.titles.playerProfile')}
+        subtitle={t('playerProfile.subtitle')}
+      >
+        <ScreenCard title={t('playerProfile.summaryTitle')}>
+          <NoticeBanner notice={notice} resolveMessage={t} />
+          {profileQuery.isPending ? (
+            <View style={styles.centeredBlock}>
+              <ActivityIndicator color="#183153" />
+            </View>
+          ) : profileQuery.isError || !profileQuery.data ? (
+            <>
+              <Text style={styles.bodyText}>{t('playerProfile.errors.summary')}</Text>
+              <ActionButton
+                label={t('events.common.retry')}
+                onPress={async () => {
+                  await profileQuery.refetch();
+                }}
+              />
+            </>
+          ) : (
+            <View style={styles.summaryRow}>
+              <AvatarPhoto label={topLineName} size={64} uri={profileQuery.data.photo_url} />
+              <View style={styles.summaryCopy}>
+                <Text style={styles.summaryName}>{topLineName}</Text>
+                <Text style={styles.summaryMeta}>
+                  {profileQuery.data.city ?? t('shell.common.noCity')}
+                </Text>
+              </View>
+            </View>
+          )}
+          {hasConnection ? (
+            <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
+          ) : null}
+        </ScreenCard>
+
+        <ScreenCard title={t('playerProfile.statsTitle')}>
+          {statsQuery.isPending ? (
+            <View style={styles.centeredBlock}>
+              <ActivityIndicator color="#183153" />
+            </View>
+          ) : statsQuery.isError ? (
+            <>
+              <Text style={styles.bodyText}>{t('playerProfile.errors.stats')}</Text>
+              <ActionButton
+                label={t('events.common.retry')}
+                onPress={async () => {
+                  await statsQuery.refetch();
+                }}
+              />
+            </>
+          ) : statsQuery.data?.length ? (
+            <View style={styles.stack}>
+              {statsQuery.data.map((stat) => (
+                <SkillLevelStatCard key={`${stat.userId}-${stat.sportId}`} stat={stat} />
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.bodyText}>{t('playerProfile.empty')}</Text>
+          )}
+        </ScreenCard>
+      </ScreenShell>
+      <ReportSheet
+        onClose={() => setIsReportSheetVisible(false)}
+        onSubmitted={setNotice}
+        target={{
+          type: 'player',
+          playerId,
+          title: topLineName,
+        }}
+        visible={isReportSheetVisible}
+      />
+    </>
   );
 }
 

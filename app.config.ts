@@ -32,6 +32,8 @@ const config: ExpoConfig = {
       NSCameraUsageDescription: 'Hrayem uses the camera so you can take a profile photo.',
       NSPhotoLibraryUsageDescription:
         'Hrayem uses your photo library so you can choose a profile photo.',
+      NSUserNotificationsUsageDescription:
+        'Hrayem uses notifications for joins, confirmations, reminders, chat updates, and cancellations so you do not miss game changes.',
       NSCalendarsFullAccessUsageDescription:
         'Hrayem uses calendar access so you can save games to your device calendar.',
     },

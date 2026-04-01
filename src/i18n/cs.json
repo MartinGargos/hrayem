@@ -48,6 +48,7 @@
       "submit": "Vytvořit účet",
       "haveAccount": "Už máte účet?",
       "signIn": "Přihlásit se",
+      "termsCheckbox": "Souhlas s podmínkami a soukromím",
       "termsPrefix": "Souhlasím s",
       "termsLink": "Podmínkami služby",
       "privacyLink": "Zásadami ochrany soukromí",
@@ -131,6 +132,9 @@
     "passwordRecoveryReady": "Pro dokončení obnovy nastavte nové heslo.",
     "passwordUpdated": "Vaše heslo bylo aktualizováno.",
     "logoutPartial": "Na tomto zařízení jste byli odhlášeni. Vzdálený úklid může chvíli trvat."
+  },
+  "common": {
+    "deletedUser": "Smazaný uživatel"
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -382,6 +386,18 @@
     "profileTitle": "Preference aplikace",
     "languageLabel": "Jazyk",
     "cityLabel": "Město",
+    "profileSaved": "Preference aplikace byly uloženy.",
+    "profileSaveFailed": "Preference aplikace se teď nepodařilo uložit.",
+    "profileSaveFailedNetwork": "Jste offline. Připojte se znovu a pak zkuste preference aplikace uložit.",
+    "saveProfileAction": "Uložit preference",
+    "saveProfilePending": "Ukládám...",
+    "cityPickerTitle": "Vyberte město",
+    "cityPlaceholder": "Vyberte město",
+    "cityPickerHint": "Otevřít výběr města",
+    "closeCityPicker": "Zavřít výběr města",
+    "validation": {
+      "city": "Vyberte jedno z podporovaných měst."
+    },
     "notifications": {
       "permissionTitle": "Push oprávnění",
       "permissionBody": "Hrayem používá push notifikace pro přidání do hry, potvrzení místa, připomínky, chat i zrušení události. Tyto preference můžete kdykoli změnit.",
@@ -400,6 +416,7 @@
         "provisional": "Povoleno tiše"
       },
       "preferencesTitle": "Preference notifikací",
+      "toggleHint": "Zapněte nebo vypněte tento typ notifikace",
       "types": {
         "player_joined": "Někdo se přidal do mé hry",
         "join_confirmed": "Moje místo bylo potvrzeno",
@@ -450,6 +467,7 @@
     "loadFailed": "Vaši aktuální dostupnost se teď nepodařilo načíst.",
     "cityRequired": "Nejdřív zvolte město v profilu, než zveřejníte dostupnost.",
     "unknownSport": "Neznámý sport",
+    "cardSummary": "{{skill}} · {{games}} her",
     "deleteAction": "Smazat",
     "backToHome": "Zpět na Domů",
     "sections": {
@@ -522,6 +540,8 @@
       "thumbsUpPercentageHidden": "Procento thumbs up se odemkne až po alespoň 3 dokončených hrách.",
       "playAgainBadge": "Zahrál bych si znovu",
       "openOrganizerProfile": "Otevřít profil organizátora",
+      "openEventHint": "Otevřít {{sport}} ve venue {{venue}}",
+      "openPlayerProfileHint": "Otevřít profil tohoto hráče",
       "confirmedPlayersTitle": "Potvrzení hráči",
       "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
       "skillUnknown": "Skill zatím není nastavený",
@@ -773,6 +793,68 @@
         "unavailable": "Post-game feedback už pro tuto hru není dostupný.",
         "alreadyGiven": "Tomuto hráči už jste v této hře thumbs up poslali."
       }
+    }
+  },
+  "reports": {
+    "menuTitle": "Nahlásit",
+    "reportEventAction": "Nahlásit hru",
+    "reportPlayerAction": "Nahlásit hráče",
+    "overflowLabel": "Otevřít akce pro nahlášení",
+    "title": "Odeslat nahlášení",
+    "eventBody": "Napište, co je špatně na {{target}}. Nahlášení odejde týmu Hrayem k ruční kontrole.",
+    "playerBody": "Napište, co je špatně na {{target}}. Nahlášení odejde týmu Hrayem k ruční kontrole.",
+    "reasonLabel": "Důvod",
+    "reasons": {
+      "inappropriate_content": "Nevhodný obsah",
+      "spam_or_fake": "Spam nebo falešná aktivita",
+      "abusive_behavior": "Zneužívající chování",
+      "other": "Jiné"
+    },
+    "detailLabel": "Doplňující detail",
+    "detailHint": "Přidejte krátké vysvětlení pro tým Hrayem",
+    "detailPlaceholder": "Doplňte kontext, který nám pomůže nahlášení posoudit.",
+    "detailPlaceholderOther": "Popište problém vlastními slovy.",
+    "detailCounter": "{{count}}/300 znaků",
+    "closeAction": "Zavřít",
+    "submit": "Odeslat nahlášení",
+    "submitPending": "Odesílám...",
+    "success": "Děkujeme. Nahlášení bylo odesláno ke kontrole.",
+    "validation": {
+      "detail": "Detail nahlášení musí zůstat do 300 znaků."
+    },
+    "errors": {
+      "duplicate": "Tento cíl jste už nahlásili.",
+      "rateLimited": "Nahlášení odesíláte teď příliš rychle. Chvíli počkejte.",
+      "targetUnavailable": "Tento cíl už není možné nahlásit.",
+      "validation": "Zkontrolujte prosím údaje v nahlášení a zkuste to znovu.",
+      "network": "Jste offline. Připojte se znovu a pak nahlášení odešlete.",
+      "generic": "Nahlášení se teď nepodařilo odeslat. Zkuste to prosím znovu."
+    }
+  },
+  "accountDeletion": {
+    "title": "Smazat účet",
+    "subtitle": "Odstraňte svůj účet Hrayem a ukliďte budoucí data her, která jsou s ním spojená.",
+    "body": "Smazání účtu je trvalé. Hrayem zruší vaše budoucí organizované hry, odebere vás z budoucích her, do kterých jste přihlášení, a smaže profilová data, která je bezpečné odstranit.",
+    "actionTitle": "Potvrdit smazání účtu",
+    "warning": "Tuto akci není možné vrátit zpět.",
+    "deleteAction": "Smazat můj účet",
+    "pending": "Mažu účet...",
+    "confirmTitle": "Smazat účet?",
+    "confirmBody": "Tímto trvale smažete svůj účet Hrayem a uklidíte svou budoucí účast ve hrách.",
+    "confirmAction": "Smazat trvale",
+    "success": "Váš účet byl smazán.",
+    "errors": {
+      "unauthorized": "Vaše session vypršela. Před smazáním účtu se prosím znovu přihlaste.",
+      "network": "Jste offline. Připojte se znovu a pak zkuste účet smazat.",
+      "generic": "Účet se teď nepodařilo smazat. Zkuste to prosím znovu."
+    },
+    "impacts": {
+      "organizedEvents": "Budoucí hry, které organizujete, budou zrušeny a dotčení hráči dostanou notifikaci.",
+      "joinedEvents": "Budete odebráni z budoucích her, do kterých jste přihlášeni, a hráči z čekačky se mohou posunout.",
+      "availability": "Vaše aktivní příspěvky dostupnosti budou odstraněny.",
+      "profilePhoto": "Nahraná profilová fotka bude smazána ze storage.",
+      "sessions": "Toto zařízení bude odhlášeno a váš push token se vyčistí.",
+      "history": "Minulý chat, nahlášení, no-show a thumbs-up historie zůstávají zachované s anonymizovanými odkazy na uživatele."
     }
   }
 }

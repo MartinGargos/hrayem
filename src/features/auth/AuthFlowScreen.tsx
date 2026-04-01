@@ -338,6 +338,8 @@ function RegisterForm() {
         name="acceptedTerms"
         render={({ field, fieldState }) => (
           <CheckboxField
+            accessibilityHint={t('auth.register.submit')}
+            accessibilityLabel={t('auth.register.termsCheckbox')}
             checked={field.value}
             error={translateFieldError(t, fieldState.error?.message)}
             label={

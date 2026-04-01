@@ -70,10 +70,14 @@ type FormTextFieldProps = {
   onChangeText: (value: string) => void;
   error?: string | null;
   placeholder?: string;
+  accessibilityHint?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: TextInputProps['autoCapitalize'];
   autoComplete?: TextInputProps['autoComplete'];
+  multiline?: boolean;
+  maxLength?: number;
+  numberOfLines?: number;
   textContentType?: TextInputProps['textContentType'];
 };
 
@@ -83,10 +87,14 @@ export function FormTextField({
   onChangeText,
   error,
   placeholder,
+  accessibilityHint,
   secureTextEntry,
   keyboardType,
   autoCapitalize = 'none',
   autoComplete,
+  multiline = false,
+  maxLength,
+  numberOfLines,
   textContentType,
 }: FormTextFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
@@ -95,10 +103,14 @@ export function FormTextField({
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        accessibilityHint={accessibilityHint ?? placeholder ?? label}
         accessibilityLabel={label}
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         keyboardType={keyboardType}
+        maxLength={maxLength}
+        multiline={multiline}
+        numberOfLines={numberOfLines}
         onBlur={() => setIsFocused(false)}
         onChangeText={onChangeText}
         onFocus={() => setIsFocused(true)}
@@ -108,9 +120,11 @@ export function FormTextField({
         selectionColor="#183153"
         style={[
           styles.input,
+          multiline ? styles.inputMultiline : undefined,
           isFocused ? styles.inputFocused : undefined,
           error ? styles.inputError : undefined,
         ]}
+        textAlignVertical={multiline ? 'top' : 'center'}
         textContentType={textContentType}
         value={value}
       />
@@ -122,6 +136,7 @@ export function FormTextField({
 type ActionButtonProps = {
   label: string;
   onPress: () => void | Promise<void>;
+  accessibilityHint?: string;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
 };
@@ -129,11 +144,13 @@ type ActionButtonProps = {
 export function ActionButton({
   label,
   onPress,
+  accessibilityHint,
   disabled = false,
   variant = 'primary',
 }: ActionButtonProps) {
   return (
     <Pressable
+      accessibilityHint={accessibilityHint ?? label}
       accessibilityLabel={label}
       accessibilityRole="button"
       disabled={disabled}
@@ -161,12 +178,14 @@ export function ActionButton({
 
 type TextLinkProps = {
   label: string;
+  accessibilityHint?: string;
   onPress: () => void | Promise<void>;
 };
 
-export function TextLink({ label, onPress }: TextLinkProps) {
+export function TextLink({ label, accessibilityHint, onPress }: TextLinkProps) {
   return (
     <Pressable
+      accessibilityHint={accessibilityHint ?? label}
       accessibilityLabel={label}
       accessibilityRole="button"
       onPress={() => {
@@ -180,15 +199,31 @@ export function TextLink({ label, onPress }: TextLinkProps) {
 
 type CheckboxFieldProps = {
   label: ReactNode;
+  accessibilityHint?: string;
+  accessibilityLabel: string;
   checked: boolean;
   onPress: () => void;
   error?: string | null;
 };
 
-export function CheckboxField({ label, checked, onPress, error }: CheckboxFieldProps) {
+export function CheckboxField({
+  label,
+  accessibilityHint,
+  accessibilityLabel,
+  checked,
+  onPress,
+  error,
+}: CheckboxFieldProps) {
   return (
     <View style={styles.field}>
-      <Pressable accessibilityRole="checkbox" onPress={onPress} style={styles.checkboxRow}>
+      <Pressable
+        accessibilityHint={accessibilityHint ?? accessibilityLabel}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        onPress={onPress}
+        style={styles.checkboxRow}
+      >
         <View style={[styles.checkbox, checked ? styles.checkboxChecked : undefined]}>
           {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
         </View>
@@ -208,15 +243,24 @@ type SelectionFieldProps = {
   label: string;
   value: string | null;
   placeholder: string;
+  accessibilityHint?: string;
   onPress: () => void;
   error?: string | null;
 };
 
-export function SelectionField({ label, value, placeholder, onPress, error }: SelectionFieldProps) {
+export function SelectionField({
+  label,
+  value,
+  placeholder,
+  accessibilityHint,
+  onPress,
+  error,
+}: SelectionFieldProps) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <Pressable
+        accessibilityHint={accessibilityHint ?? (value || placeholder)}
         accessibilityLabel={label}
         accessibilityRole="button"
         onPress={onPress}
@@ -236,6 +280,7 @@ type ChoiceChipsProps<TValue extends string | number> = {
   options: ChoiceOption<TValue>[];
   value: TValue | null;
   onChange: (value: TValue) => void;
+  accessibilityHint?: string;
   error?: string | null;
 };
 
@@ -244,6 +289,7 @@ export function ChoiceChips<TValue extends string | number>({
   options,
   value,
   onChange,
+  accessibilityHint,
   error,
 }: ChoiceChipsProps<TValue>) {
   return (
@@ -255,6 +301,8 @@ export function ChoiceChips<TValue extends string | number>({
 
           return (
             <Pressable
+              accessibilityHint={accessibilityHint ?? option.label}
+              accessibilityLabel={`${label}: ${option.label}`}
               accessibilityRole="button"
               key={option.value}
               onPress={() => onChange(option.value)}
@@ -277,6 +325,7 @@ type PickerSheetProps<TValue extends string> = {
   options: ChoiceOption<TValue>[];
   selectedValue: TValue | null;
   onSelect: (value: TValue) => void;
+  closeAccessibilityLabel?: string;
   onClose: () => void;
   visible: boolean;
 };
@@ -286,12 +335,19 @@ export function PickerSheet<TValue extends string>({
   options,
   selectedValue,
   onSelect,
+  closeAccessibilityLabel,
   onClose,
   visible,
 }: PickerSheetProps<TValue>) {
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
-      <Pressable onPress={onClose} style={styles.sheetBackdrop}>
+      <Pressable
+        accessibilityHint={closeAccessibilityLabel ?? title}
+        accessibilityLabel={closeAccessibilityLabel ?? title}
+        accessibilityRole="button"
+        onPress={onClose}
+        style={styles.sheetBackdrop}
+      >
         <Pressable style={styles.sheetCard}>
           <Text style={styles.sheetTitle}>{title}</Text>
           {options.map((option) => {
@@ -299,6 +355,9 @@ export function PickerSheet<TValue extends string>({
 
             return (
               <Pressable
+                accessibilityHint={option.label}
+                accessibilityLabel={`${title}: ${option.label}`}
+                accessibilityRole="button"
                 key={option.value}
                 onPress={() => {
                   onSelect(option.value);
@@ -415,6 +474,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fbfdff',
     fontSize: 16,
     color: '#183153',
+  },
+  inputMultiline: {
+    minHeight: 112,
   },
   inputFocused: {
     borderColor: '#183153',

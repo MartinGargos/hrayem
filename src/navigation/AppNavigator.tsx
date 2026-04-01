@@ -7,13 +7,10 @@ import {
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
-import {
-  AccountDeletionScreen,
-  AddVenueScreen,
-  SkillLevelScreen,
-} from '../features/shell/StubScreens';
+import { AddVenueScreen, SkillLevelScreen } from '../features/shell/StubScreens';
 import { PostAvailabilityScreen } from '../features/availability/PostAvailabilityScreen';
 import { ChatScreen } from '../features/chat/ChatScreen';
 import { CreateEventScreen, EditEventScreen } from '../features/events/CreateEventScreen';
@@ -21,6 +18,7 @@ import { EventDetailScreen } from '../features/events/EventDetailScreen';
 import { HomeFeedScreen } from '../features/home/HomeFeedScreen';
 import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
 import { PlayerProfileScreen, ProfileScreen } from '../features/profile/ProfileScreen';
+import { AccountDeletionScreen } from '../features/settings/AccountDeletionScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
@@ -149,6 +147,11 @@ function MainTabNavigator() {
 
   return (
     <Tab.Navigator
+      screenListeners={{
+        tabPress: () => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        },
+      }}
       screenOptions={() => ({
         headerShown: false,
         tabBarActiveTintColor: '#183153',

@@ -1,6 +1,4 @@
-import { useAuthStore } from '../store/auth-store';
-import { requirePublicEnvValue } from '../utils/env';
-import { retryOnceAfterUnauthorized, throwIfSupabaseError } from '../utils/supabase';
+import { throwIfSupabaseError } from '../utils/supabase';
 import type {
   CancelEventInput,
   CancelEventResponse,
@@ -34,7 +32,10 @@ import type {
   UpdateEventResponse,
   UserSportProfile,
 } from '../types/events';
-import { refreshSupabaseSession, retrySupabaseOperationOnce, supabase } from './supabase';
+import { callEdgeFunctionRoute } from './edge-functions';
+import { retrySupabaseOperationOnce, supabase } from './supabase';
+
+export { EdgeFunctionError } from './edge-functions';
 
 type SportRow = {
   id: string;
@@ -198,38 +199,6 @@ type NoShowReportRow = {
   reported_user: string | null;
 };
 
-type EdgeFunctionFailure = {
-  error?: {
-    code?: CreateEventErrorCode;
-    message?: string;
-  };
-};
-
-function readEdgeFunctionFailure(
-  value: EdgeFunctionFailure | { data: unknown } | null,
-): EdgeFunctionFailure['error'] | null {
-  if (!value || !('error' in value)) {
-    return null;
-  }
-
-  return value.error ?? null;
-}
-
-export class EdgeFunctionError extends Error {
-  code: CreateEventErrorCode | null;
-  status: number;
-
-  constructor(message: string, code: CreateEventErrorCode | null, status: number) {
-    super(message);
-    this.name = 'EdgeFunctionError';
-    this.code = code;
-    this.status = status;
-  }
-}
-
-const eventsFunctionUrl = `${requirePublicEnvValue('supabaseUrl')}/functions/v1/events`;
-const supabaseAnonKey = requirePublicEnvValue('supabaseAnonKey');
-
 function mapSportRow(row: SportRow): SportSummary {
   return {
     id: row.id,
@@ -369,67 +338,7 @@ async function callEventsRoute<TResponse>(
     method?: 'POST' | 'PATCH';
   },
 ): Promise<TResponse> {
-  return retryOnceAfterUnauthorized(
-    async () => {
-      const accessToken = useAuthStore.getState().accessToken;
-
-      if (!accessToken) {
-        throw new EdgeFunctionError('Missing authenticated session.', 'UNAUTHORIZED', 401);
-      }
-
-      const response = await fetch(`${eventsFunctionUrl}${path}`, {
-        method: options?.method ?? 'POST',
-        headers: {
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-
-      let parsedBody: EdgeFunctionFailure | { data: TResponse } | null = null;
-
-      try {
-        parsedBody = (await response.json()) as EdgeFunctionFailure | { data: TResponse };
-      } catch {
-        parsedBody = null;
-      }
-
-      if (!response.ok) {
-        const failure = readEdgeFunctionFailure(parsedBody);
-
-        if (response.status === 401) {
-          throw {
-            status: 401,
-            message: failure?.message ?? 'Unauthorized.',
-          };
-        }
-
-        throw new EdgeFunctionError(
-          failure?.message ?? 'The server returned an unexpected response.',
-          failure?.code ?? null,
-          response.status,
-        );
-      }
-
-      if (!parsedBody || !('data' in parsedBody) || !parsedBody.data) {
-        throw new EdgeFunctionError('The server returned an unexpected response.', null, 500);
-      }
-
-      return parsedBody.data;
-    },
-    async () => {
-      const refreshedSession = await refreshSupabaseSession();
-
-      if (!refreshedSession) {
-        throw new EdgeFunctionError(
-          'Your session expired. Please log in again.',
-          'UNAUTHORIZED',
-          401,
-        );
-      }
-    },
-  );
+  return callEdgeFunctionRoute<TResponse, CreateEventErrorCode>('events', path, body, options);
 }
 
 export async function fetchActiveSports(): Promise<SportSummary[]> {

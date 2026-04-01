@@ -9,3 +9,9 @@ sql_paths = ["./seed.sql"]
 
 [functions.events]
 verify_jwt = false
+
+[functions.account]
+verify_jwt = false
+
+[functions.reports]
+verify_jwt = false

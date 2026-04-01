@@ -1,6 +1,6 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation, the proven Milestone 1 Supabase schema, the Milestone 2 authentication/session-resilience flow, the Milestone 3 typed navigation shell, and the Milestone 4 venue search, event creation, feed, and event-detail foundation.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation plus the implemented Milestone 1-10 MVP flows: auth/session resilience, typed navigation, venue search, events, join/waitlist, organizer tools, post-game feedback, chat, notifications, availability, reporting, and account deletion.
 
 Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
@@ -58,6 +58,8 @@ Server-only variables reserved for Edge Functions:
 - `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis REST token
 - `EVENT_REMINDER_DISPATCH_SECRET`: shared secret used by the scheduled reminder dispatcher
 - `ADMIN_REPORT_EMAIL`: destination for report notifications
+- `RESEND_API_KEY`: Resend API key for report email delivery
+- `REPORT_EMAIL_FROM`: verified sender used for report email delivery
 
 ## How to run locally
 
@@ -155,6 +157,7 @@ The repo now includes the Milestone 1 Supabase assets:
 - The authoritative allowed city set lives in the migration-seeded `private.cities` table; `src/constants/cities.ts` is the client mirror and the verification script checks they stay in sync
 - Milestone 2 adds launch-time `app_config` reads for force-update checks and an `avatars` Storage bucket migration for optional profile photos
 - Milestone 4 adds the `events` Edge Function for event creation plus `scripts/verify-milestone4.mjs` for venue search, `SKILL_LEVEL_REQUIRED`, feed pagination, and event-detail proof
+- Milestone 10 adds the `reports` and `account` Edge Functions plus `scripts/verify-milestone10.mjs` for report submission and account-deletion proof
 
 Use this workflow once `.env` contains real `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` values:
 
@@ -163,8 +166,11 @@ pnpm dlx supabase login
 pnpm dlx supabase link --project-ref <project-ref>
 pnpm dlx supabase db push
 pnpm dlx supabase functions deploy events
+pnpm dlx supabase functions deploy reports
+pnpm dlx supabase functions deploy account
 pnpm run verify:milestone1
 pnpm run verify:milestone4
+pnpm run verify:milestone10
 ```
 
 Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
@@ -184,6 +190,8 @@ For Milestone 2 auth flows, also configure these Supabase Auth settings:
 - Add `hrayem://auth/callback` to the Auth redirect URL allow list.
 - Configure the Apple and Google providers in Supabase Auth.
 - Use an EAS development build for real OAuth and push-token testing; the app now includes `expo-notifications`, `expo-location`, `expo-image-picker`, `expo-image-manipulator`, and `expo-web-browser`.
+
+For Milestone 10 report emails, also configure a verified Resend sender and set `ADMIN_REPORT_EMAIL`, `RESEND_API_KEY`, and `REPORT_EMAIL_FROM` in Supabase Edge Function secrets before you deploy or claim admin-email proof.
 
 ## Build and submit
 

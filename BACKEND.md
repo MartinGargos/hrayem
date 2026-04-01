@@ -786,6 +786,25 @@ Logic:
 
 ---
 
+### 5.11 `POST /v1/account/delete` — `delete-account`
+
+```
+Input:  none
+Auth:   JWT
+```
+
+Logic:
+1. Validate caller is authenticated
+2. Delete all `device_tokens` rows owned by the caller
+3. Cancel all future `active` / `full` events organized by the caller; notify affected players
+4. Remove the caller from future joined events; promote waitlisted players where applicable
+5. Delete all `player_availability` rows for the caller
+6. Delete `avatars/{user_id}/` from Storage
+7. Delete the caller's `auth.users` row
+8. Return a small cleanup summary payload
+
+---
+
 ## 6. Real-time Subscriptions
 
 | Channel | Table | Filter | Events | Screen |
@@ -1048,7 +1067,10 @@ SUPABASE_SERVICE_ROLE_KEY
 EXPO_PUSH_ACCESS_TOKEN      # for authenticated Expo push API requests
 UPSTASH_REDIS_REST_URL      # for rate limiting
 UPSTASH_REDIS_REST_TOKEN    # for rate limiting
+EVENT_REMINDER_DISPATCH_SECRET   # shared secret for the scheduled reminder bridge
 ADMIN_REPORT_EMAIL          # email address for report notifications
+RESEND_API_KEY              # Resend API key used for report email delivery
+REPORT_EMAIL_FROM           # verified sender used for report email delivery
 ```
 
 ---

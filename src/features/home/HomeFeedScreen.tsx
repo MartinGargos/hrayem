@@ -69,11 +69,19 @@ function AvailabilityPlayerCard({
   playAgainLabel: string;
   timePreferenceLabel: string;
 }) {
+  const { t } = useTranslation();
   const fullName = [item.firstName, item.lastName].filter(Boolean).join(' ') || fallbackName;
   const sportName = language === 'cs' ? item.sportNameCs : item.sportNameEn;
+  const translatedSkillLevel = t(`events.skillLevel.label.${item.skillLevel}`);
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.cardPressable}>
+    <Pressable
+      accessibilityHint={t('events.detail.openPlayerProfileHint')}
+      accessibilityLabel={fullName}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.cardPressable}
+    >
       <View style={[styles.availabilityCard, { borderLeftColor: item.sportColor }]}>
         <View style={styles.availabilityHeader}>
           <View style={styles.availabilityIdentity}>
@@ -103,7 +111,10 @@ function AvailabilityPlayerCard({
             .join(' · ')}
         </Text>
         <Text style={styles.availabilityMeta}>
-          {item.gamesPlayed} {language === 'cs' ? 'her' : 'games'} · {item.skillLevel}/4
+          {t('availability.cardSummary', {
+            games: item.gamesPlayed,
+            skill: translatedSkillLevel,
+          })}
         </Text>
         {item.note ? <Text style={styles.availabilityNote}>{item.note}</Text> : null}
       </View>

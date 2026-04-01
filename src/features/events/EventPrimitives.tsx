@@ -50,6 +50,8 @@ export function SportChoiceChip({ sport, language, selected, onPress }: SportCho
 
   return (
     <Pressable
+      accessibilityHint={sportName}
+      accessibilityLabel={sportName}
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.sportChoiceChip, selected ? styles.sportChoiceChipSelected : undefined]}
@@ -120,6 +122,8 @@ type FilterChipProps = {
 export function FilterChip({ label, selected, onPress }: FilterChipProps) {
   return (
     <Pressable
+      accessibilityHint={label}
+      accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.filterChip, selected ? styles.filterChipSelected : undefined]}
@@ -171,6 +175,8 @@ function StepperButton({
 }) {
   return (
     <Pressable
+      accessibilityHint={label}
+      accessibilityLabel={label}
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
@@ -216,7 +222,16 @@ export function EventSummaryCard({ event, language, onPress }: EventSummaryCardP
   const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
 
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.cardPressable}>
+    <Pressable
+      accessibilityHint={t('events.detail.openEventHint', {
+        sport: sportName,
+        venue: event.venueName,
+      })}
+      accessibilityLabel={sportName}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.cardPressable}
+    >
       <View style={[styles.eventCard, { borderLeftColor: event.sportColor }]}>
         <View style={styles.eventCardHeader}>
           <View style={styles.sportIdentity}>

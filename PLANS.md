@@ -296,3 +296,61 @@ Trace the live reminder path end to end, compare `finish_event_sweep()` behavior
 ### Open questions / risks
 - If the bridge is timing out rather than logically failing, the minimal durable fix should be a timeout adjustment rather than broader reminder architecture changes.
 - Real device push receipt remains out of scope for this focused pass; the goal here is reminder-path correctness and fresh live proof.
+
+## Milestone 9 Accepted Known Debt
+
+### Problem
+Milestone 9 is accepted, but a short list of non-blocking runtime and proof gaps still needs to stay visible before Milestone 10 starts.
+
+### Approach
+Log the accepted Milestone 9 debt explicitly here and leave the implementation unchanged unless one of these items directly blocks Milestone 10 behavior.
+
+### Steps
+1. Keep the missing real-device push receipt and push tap-through proof visible as accepted proof debt.
+2. Keep the missing natural hosted-cron proof visible as accepted operational proof debt.
+3. Keep the client-only availability invariant for stale/direct writes without `user_sports` rows visible as accepted model debt.
+4. Keep the same-user multi-device token caveat visible as accepted MVP debt.
+5. Keep the transient `verify:milestone9` `502` flake visible unless it becomes reproducible.
+
+### Open questions / risks
+- Real-device push receipt and push tap-through proof are still missing.
+- Natural hosted-cron proof is still weaker than direct invocation proof.
+- The availability invariant for stale/direct writes without `user_sports` rows is still enforced mainly in the current client.
+- Same-user multi-device token behavior remains accepted MVP debt unless it turns into a real ownership problem.
+- The transient `verify:milestone9` `502` flake stays visible unless it becomes reproducible.
+
+## Milestone 10
+
+### Problem
+Milestone 10 needs the final MVP hardening pass: real generic reporting, a real account deletion flow, finished Settings controls for language/city, and the last shared polish items that directly affect accessibility and perceived quality.
+
+### Approach
+Keep the implementation narrow and production-oriented by adding two small Edge Functions (`reports` and `account`), one reusable client-side report sheet, a real account deletion screen, and a small shared polish pass for Settings editing, tab haptics, and accessibility hints.
+
+### Steps
+1. Add the accepted Milestone 9 debt note above, then implement `POST /v1/reports` plus the report UI on Event Detail and Player Profile with duplicate prevention and confirmation messaging.
+2. Replace the stub account deletion route with a real destructive flow backed by an Edge Function that follows the current backend contract for future events, availability, storage cleanup, and auth deletion.
+3. Finish the Milestone 10 client polish that is still clearly missing in the current repo: editable Settings language/city controls, shared accessibility hints on core interactive primitives, and tab-switch haptics.
+4. Add a Milestone 10 verifier, deploy/apply only the required Supabase changes, rerun validation, and separate proven behavior from device-limited proof gaps.
+
+### Open questions / risks
+- BLOCKER if no workable admin-email configuration exists for `POST /v1/reports`; the smallest production-oriented mail path should be chosen and kept explicit in docs rather than hidden behind a fake success path.
+- LIKELY SOON: deleted-user rendering may still need small follow-up touch-ups on historical surfaces once the real account deletion flow is exercised end to end.
+- RARE EDGE CASE: if the last authenticated session is deleted while the client is backgrounded, the next foreground may clear locally through auth expiry rather than the happy-path success screen, but that should not affect account ownership or data integrity.
+
+## Milestone 10 Fix Pass
+
+### Problem
+The current Milestone 10 implementation still has two reject-level gaps: report submission treats admin email as best-effort instead of contractual, and account deletion can fail after partial destructive changes if notification side effects break.
+
+### Approach
+Keep the fix narrow by hardening only the `reports` and `account` Edge Functions plus the Milestone 10 verifier: make report-email configuration and delivery explicit, and move account-deletion notifications onto a best-effort path that cannot roll back the user-visible destructive outcome.
+
+### Steps
+1. Patch `POST /v1/reports` so missing report-email config and email-delivery failures are explicit route failures rather than silent success, and make the verifier prove the intended email outcome instead of only config presence.
+2. Patch `POST /v1/account/delete` so notification fan-out/logging cannot leave the destructive path half-failed from the user's perspective, while keeping the actual deletion contract intact.
+3. If still cheap and low-risk, clean up the new functions' missing-Authorization behavior and unsafe report-email HTML interpolation, then rerun validation and live Milestone 10 proof.
+
+### Open questions / risks
+- LIKELY SOON: report-email proof may still be environment-limited if the current project lacks a working admin mailbox/Resend sender even after the route semantics are corrected.
+- RARE EDGE CASE: if account deletion succeeds but best-effort cancellation/promotion notifications fail, affected players may miss one notification even though the underlying event state is already correct.

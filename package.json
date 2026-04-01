@@ -20,7 +20,8 @@
     "verify:milestone6": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone6.mjs",
     "verify:milestone7": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone7.mjs",
     "verify:milestone8": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone8.mjs",
-    "verify:milestone9": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone9.mjs"
+    "verify:milestone9": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone9.mjs",
+    "verify:milestone10": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone10.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

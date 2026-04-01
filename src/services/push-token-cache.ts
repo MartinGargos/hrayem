@@ -41,6 +41,10 @@ export async function clearCachedPushToken(): Promise<void> {
   await SecureStore.deleteItemAsync(PUSH_TOKEN_CLEANUP_KEY);
 }
 
+export async function clearPushTokenOwnershipKey(): Promise<void> {
+  await SecureStore.deleteItemAsync(PUSH_TOKEN_OWNERSHIP_KEY);
+}
+
 export async function readOrCreatePushTokenOwnershipKey(): Promise<string> {
   const existingValue = normalizeStoredValue(
     await SecureStore.getItemAsync(PUSH_TOKEN_OWNERSHIP_KEY),

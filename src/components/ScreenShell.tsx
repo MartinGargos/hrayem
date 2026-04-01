@@ -60,6 +60,8 @@ export function SegmentedTabs<TValue extends string>({
 
         return (
           <Pressable
+            accessibilityHint={option.label}
+            accessibilityLabel={option.label}
             accessibilityRole="button"
             key={option.value}
             onPress={() => onChange(option.value)}

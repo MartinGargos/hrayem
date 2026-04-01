@@ -16,6 +16,12 @@ type ProfileUpdateInput = {
   photoAsset?: ImagePickerAsset | null;
 };
 
+type ProfilePreferencesInput = {
+  userId: string;
+  city: string;
+  language: AppLanguage;
+};
+
 async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Promise<string> {
   const manipulated = await ImageManipulator.manipulateAsync(
     asset.uri,
@@ -56,7 +62,7 @@ async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Prom
     data: { publicUrl },
   } = supabase.storage.from('avatars').getPublicUrl(objectPath);
 
-  return publicUrl;
+  return `${publicUrl}?v=${Date.now()}`;
 }
 
 export async function saveProfileSetup(input: ProfileUpdateInput): Promise<void> {
@@ -79,4 +85,18 @@ export async function saveProfileSetup(input: ProfileUpdateInput): Promise<void>
   );
 
   throwIfSupabaseError(result.error, 'Unable to save the profile.');
+}
+
+export async function saveProfilePreferences(input: ProfilePreferencesInput): Promise<void> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('profiles')
+      .update({
+        city: input.city,
+        language: input.language,
+      })
+      .eq('id', input.userId),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to save the profile preferences.');
 }

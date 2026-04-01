@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
@@ -16,6 +16,8 @@ import {
 } from './event-eligibility';
 import { AvatarPhoto, InfoPill, SportBadge } from './EventPrimitives';
 import { SkillLevelModal } from './SkillLevelModal';
+import { ReportSheet } from '../reports/ReportSheet';
+import { HeaderOverflowButton } from '../../components/HeaderOverflowButton';
 import { DetailRow, ScreenCard, ScreenShell } from '../../components/ScreenShell';
 import { buildEventWebUrl } from '../../navigation/deep-links';
 import type { RootStackParamList } from '../../navigation/types';
@@ -43,6 +45,7 @@ import type {
   LeaveEventResponse,
 } from '../../types/events';
 import { formatEventDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
+import { formatDisplayName } from '../../utils/people';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type EventDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
@@ -300,6 +303,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   const eventId = route.params.eventId;
   const [notice, setNotice] = useState<AppNotice | null>(null);
   const [isSkillModalVisible, setIsSkillModalVisible] = useState(false);
+  const [isReportSheetVisible, setIsReportSheetVisible] = useState(false);
   const [selectedSkillLevel, setSelectedSkillLevel] = useState<number | null>(null);
 
   const eventQuery = useQuery({
@@ -971,6 +975,48 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     });
   }
 
+  const handleOpenReportMenu = useCallback(() => {
+    Alert.alert(t('reports.menuTitle'), undefined, [
+      {
+        text: t('reports.reportEventAction'),
+        onPress: () => {
+          setNotice(null);
+          setIsReportSheetVisible(true);
+        },
+      },
+      {
+        text: t('events.common.cancel'),
+        style: 'cancel',
+      },
+    ]);
+  }, [t]);
+
+  useLayoutEffect(() => {
+    if (eventQuery.isPending || eventQuery.isError || !eventQuery.data) {
+      navigation.setOptions({
+        headerRight: undefined,
+      });
+      return;
+    }
+
+    navigation.setOptions({
+      headerRight: () => (
+        <HeaderOverflowButton
+          accessibilityHint={t('reports.reportEventAction')}
+          accessibilityLabel={t('reports.overflowLabel')}
+          onPress={handleOpenReportMenu}
+        />
+      ),
+    });
+  }, [
+    eventQuery.data,
+    eventQuery.isError,
+    eventQuery.isPending,
+    handleOpenReportMenu,
+    navigation,
+    t,
+  ]);
+
   if (eventQuery.isPending) {
     return (
       <ScreenShell
@@ -1004,10 +1050,9 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
 
   const event = eventQuery.data;
   const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
-  const organizerName = [event.organizerFirstName, event.organizerLastName]
-    .filter(Boolean)
-    .join(' ');
-  const resolvedOrganizerName = organizerName || t('events.common.organizerFallback');
+  const resolvedOrganizerName =
+    formatDisplayName(event.organizerFirstName, event.organizerLastName) ||
+    (event.organizerId ? t('events.common.organizerFallback') : t('common.deletedUser'));
   const confirmedPlayers = playersQuery.data ?? [];
   const organizerPlayer = confirmedPlayers.find((player) => player.userId === event.organizerId);
   const canOpenOrganizerProfile = Boolean(
@@ -1295,14 +1340,25 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             <View style={styles.playerList}>
               {confirmedPlayers.map((player) => {
                 const playerName =
-                  [player.firstName, player.lastName].filter(Boolean).join(' ') ||
-                  t('events.common.organizerFallback');
+                  formatDisplayName(player.firstName, player.lastName) ||
+                  (player.userId.startsWith('deleted-')
+                    ? t('common.deletedUser')
+                    : t('auth.home.defaultName'));
+                const canOpenPlayerProfile = !player.userId.startsWith('deleted-');
 
                 return (
                   <View key={player.userId} style={styles.playerCard}>
                     <Pressable
+                      accessibilityHint={
+                        canOpenPlayerProfile ? t('events.detail.openPlayerProfileHint') : undefined
+                      }
+                      accessibilityLabel={playerName}
+                      accessibilityRole={canOpenPlayerProfile ? 'button' : undefined}
+                      disabled={!canOpenPlayerProfile}
                       onPress={() =>
-                        navigation.navigate('PlayerProfile', { playerId: player.userId })
+                        canOpenPlayerProfile
+                          ? navigation.navigate('PlayerProfile', { playerId: player.userId })
+                          : undefined
                       }
                       style={styles.playerIdentityPressable}
                     >
@@ -1377,8 +1433,8 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                   <View style={styles.playerList}>
                     {noShowReportPlayers.map((player) => {
                       const playerName =
-                        [player.firstName, player.lastName].filter(Boolean).join(' ') ||
-                        t('events.common.organizerFallback');
+                        formatDisplayName(player.firstName, player.lastName) ||
+                        t('auth.home.defaultName');
 
                       return (
                         <View key={`no-show-${player.userId}`} style={styles.playerCard}>
@@ -1445,8 +1501,8 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                   <View style={styles.playerList}>
                     {thumbsPromptPlayers.map((player) => {
                       const playerName =
-                        [player.firstName, player.lastName].filter(Boolean).join(' ') ||
-                        t('events.common.organizerFallback');
+                        formatDisplayName(player.firstName, player.lastName) ||
+                        t('auth.home.defaultName');
 
                       return (
                         <View key={`thumbs-${player.userId}`} style={styles.playerCard}>
@@ -1501,6 +1557,16 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
         sport={skillModalSport}
         subtitleKey="events.join.skillModalSubtitle"
         visible={isSkillModalVisible}
+      />
+      <ReportSheet
+        onClose={() => setIsReportSheetVisible(false)}
+        onSubmitted={setNotice}
+        target={{
+          type: 'event',
+          eventId,
+          title: `${sportName} · ${event.venueName}`,
+        }}
+        visible={isReportSheetVisible}
       />
     </>
   );

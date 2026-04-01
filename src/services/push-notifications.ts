@@ -8,6 +8,7 @@ import { retrySupabaseOperationOnce, supabase } from './supabase';
 import {
   cachePushToken,
   clearCachedPushToken,
+  clearPushTokenOwnershipKey,
   readCachedPushToken,
   readOrCreatePushTokenOwnershipKey,
 } from './push-token-cache';
@@ -172,4 +173,9 @@ export async function restoreRegisteredPushToken(
   await claimPushToken(storedRecord, ownershipKey);
   await cachePushToken(storedRecord);
   useAuthStore.getState().setPushToken(storedRecord);
+}
+
+export async function clearLocalPushRegistrationState(): Promise<void> {
+  await Promise.all([clearCachedPushToken(), clearPushTokenOwnershipKey()]);
+  useAuthStore.getState().setPushToken(null);
 }
