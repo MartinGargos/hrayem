@@ -15,3 +15,6 @@ verify_jwt = false
 
 [functions.reports]
 verify_jwt = false
+
+[functions.share]
+verify_jwt = false

@@ -132,7 +132,7 @@ async function requireAuthenticatedUser(request: Request) {
 }
 
 function buildEventDetailUrl(eventId: string): string {
-  return `https://hrayem.app/event/${eventId}`;
+  return `https://hrayem.cz/event/${eventId}`;
 }
 
 async function loadEventNotificationContext(

@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/react-native';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { OfflineBanner } from './src/components/OfflineBanner';
@@ -16,9 +16,15 @@ import { ProfileSetupScreen } from './src/features/auth/ProfileSetupScreen';
 import { TermsReconsentScreen } from './src/features/auth/TermsReconsentScreen';
 import { FoundationScreen } from './src/features/foundation/FoundationScreen';
 import { HomeEntryScreen } from './src/features/home/HomeEntryScreen';
+import { PublicEventFallbackScreen } from './src/features/web/PublicEventFallbackScreen';
 import i18n from './src/i18n';
 import { bindAppStateToQueryFocus, queryClient } from './src/lib/query-client';
-import { isEventDeepLinkUrl, parseDeveloperSurfaceUrl } from './src/navigation/deep-links';
+import {
+  isEventDeepLinkUrl,
+  parseDeveloperSurfaceUrl,
+  parsePublicWebsiteRoute,
+  type PublicWebsiteRouteTarget,
+} from './src/navigation/deep-links';
 import {
   fetchCurrentUserProfile,
   fetchMinimumSupportedVersion,
@@ -68,6 +74,9 @@ function AppShell() {
   const bootstrapStartedRef = useRef(false);
   const pendingConsentSyncRef = useRef<string | null>(null);
   const [developerSurface, setDeveloperSurface] = useState<'foundation' | null>(null);
+  const [publicWebsiteRoute, setPublicWebsiteRoute] = useState<PublicWebsiteRouteTarget | null>(
+    null,
+  );
   const handledNotificationResponseIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -115,6 +124,15 @@ function AppShell() {
       if (developerSurfaceTarget) {
         setDeveloperSurface(developerSurfaceTarget);
         return;
+      }
+
+      if (Platform.OS === 'web') {
+        const publicWebsiteTarget = parsePublicWebsiteRoute(url);
+
+        if (publicWebsiteTarget?.kind === 'event') {
+          setPublicWebsiteRoute(publicWebsiteTarget);
+          return;
+        }
       }
 
       if (isSupabaseAuthCallbackUrl(url)) {
@@ -308,6 +326,15 @@ function AppShell() {
 
   if (__DEV__ && developerSurface === 'foundation') {
     return <FoundationScreen />;
+  }
+
+  if (Platform.OS === 'web' && publicWebsiteRoute?.kind === 'event') {
+    return (
+      <PublicEventFallbackScreen
+        eventId={publicWebsiteRoute.eventId}
+        screen={publicWebsiteRoute.screen}
+      />
+    );
   }
 
   const isAuthBootstrapping = authStatus === 'idle' || authStatus === 'loading';

@@ -856,5 +856,34 @@
       "sessions": "This device will be signed out and your push token will be cleared.",
       "history": "Past chat, reports, no-show, and thumbs-up history stays intact with your user references anonymized."
     }
+  },
+  "publicFallback": {
+    "eyebrow": "Shared from Hrayem",
+    "loadingTitle": "Loading shared event",
+    "loadingSubtitle": "Preparing the event details for this link.",
+    "loadingBody": "If you already have Hrayem installed, you can also open the event directly in the app.",
+    "errorTitle": "This event link is unavailable",
+    "errorSubtitle": "We couldn't load the shared event right now.",
+    "errorBody": "The event may have been removed, or this link is no longer active.",
+    "retry": "Try again",
+    "retryHint": "Reload the shared event details",
+    "detailSubtitle": "Event details for players opening this link without the app.",
+    "chatSubtitle": "This chat belongs to a Hrayem event. Install the app to open the conversation.",
+    "eventTitle": "Event overview",
+    "playersLabel": "Players",
+    "nextStepTitle": "Open Hrayem",
+    "detailBody": "Download Hrayem to join {{sport}} games, manage your RSVP, and chat with players.",
+    "chatBody": "Download Hrayem to open the event chat, see the latest messages, and join future games.",
+    "openInApp": "Open in app",
+    "openInAppHint": "Try opening this event in the Hrayem app",
+    "downloadHint": "Open the Hrayem store page",
+    "downloadIos": "Download for iPhone",
+    "downloadAndroid": "Download for Android",
+    "status": {
+      "active": "Active",
+      "full": "Full",
+      "finished": "Finished",
+      "cancelled": "Cancelled"
+    }
   }
 }

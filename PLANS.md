@@ -354,3 +354,77 @@ Keep the fix narrow by hardening only the `reports` and `account` Edge Functions
 ### Open questions / risks
 - LIKELY SOON: report-email proof may still be environment-limited if the current project lacks a working admin mailbox/Resend sender even after the route semantics are corrected.
 - RARE EDGE CASE: if account deletion succeeds but best-effort cancellation/promotion notifications fail, affected players may miss one notification even though the underlying event state is already correct.
+
+## Milestone 10 Accepted Known Debt
+
+### Problem
+Milestone 10 is accepted, but a short list of non-blocking durability and proof gaps still needs to stay visible before Milestone 11 work starts.
+
+### Approach
+Log the accepted Milestone 10 debt explicitly here and leave the current implementation unchanged unless one of these items directly blocks Milestone 11 behavior.
+
+### Steps
+1. Keep the account-deletion late-step durability caveat visible as accepted hardening debt.
+2. Keep the real-device walkthrough and settings/profile proof gaps visible as accepted runtime proof debt.
+3. Keep the production Sentry and broader device-polish proof gaps visible as accepted launch-readiness debt.
+
+### Open questions / risks
+- Account deletion still has a late-step durability caveat if avatar or auth-user cleanup fails after earlier destructive changes.
+- Real-device walkthrough proof for profile/settings/account surfaces is still missing.
+- Production Sentry proof and broader device-polish proof are still missing.
+
+## Milestone 11
+
+### Problem
+Milestone 11 needs the repo-side launch-readiness pass: accurate docs and env examples, launch-site assets for legal pages and app links, a public event web fallback surface, and the best possible pre-submission verification without drifting into Milestone 12 or pretending operational launch tasks are already done.
+
+### Approach
+Keep the implementation narrow and production-oriented by reusing the current Expo app as the web fallback shell, adding one small public read-only Edge Function for shared event pages, and adding only the config/docs/assets needed to make launch hosting and submission prep explicit.
+
+### Steps
+1. Add the accepted Milestone 10 debt note above, then tighten the repo docs/config for Milestone 11: README, `.env.example`, and `app.config.ts` launch metadata where the current repo is still incomplete.
+2. Add the repo-side launch-site assets: privacy/terms pages, app-link / universal-link asset generation, and a public event fallback surface that fetches safe event details without auth.
+3. Add focused Milestone 11 verification, rerun validation, and separate what is proven in this environment from what still depends on real devices, production signing identities, and launch/community operations.
+
+### Open questions / risks
+- BLOCKER if release-specific app-link values are still unavailable: the iOS Team ID, Android signing certificate fingerprint(s), and final store URLs may still need to be supplied externally before the well-known files and download buttons can be fully proven.
+- LIKELY SOON: the legal host pages can be implemented in-repo, but their wording still may need product/legal review before public launch.
+- RARE EDGE CASE: a shared event link opened on mobile web after the event is cancelled or filled may lag the in-app state briefly if CDN caching is introduced later, so the fallback surface should stay purely informational and not promise live joinability.
+
+## Milestone 11 Closeout Pass
+
+### Problem
+The current Milestone 11 state still overstates readiness: the verifier can pass without launch assets, the README has version and coverage drift, and the repo has no committed website hosting target/config for proving the hosted `/event/{id}` fallback.
+
+### Approach
+Keep this pass narrow and honest: fix only the verifier and docs so missing real-world launch inputs fail loudly, then separate repo-side proof from the remaining external deployment inputs instead of adding placeholder implementations.
+
+### Steps
+1. Make `verify:milestone11` fail when required launch-input env values or generated `public/.well-known/` assets are missing.
+2. Fix `README.md` so versions, milestone coverage, and Milestone 11 hosting/store-url status match the current repo state.
+3. Re-run focused validation and Milestone 11 verification, then report the exact missing real-world inputs blocking full closeout.
+
+### Open questions / risks
+- BLOCKER if the release inputs remain absent: `EXPO_PUBLIC_WEB_BASE_URL`, `EXPO_PUBLIC_APP_STORE_URL`, `EXPO_PUBLIC_PLAY_STORE_URL`, `HRAYEM_APPLE_TEAM_ID`, and `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS`.
+- BLOCKER if no hosting target/config is chosen for the public website: the repo can implement the fallback shell, but it still cannot prove deployed `/event/{id}` behavior without an actual host and route/static-file config.
+- LIKELY SOON: legal copy on the static terms/privacy pages may still need review before public launch.
+- RARE EDGE CASE: even after the correct `.well-known` files are deployed, universal link propagation can lag briefly on real devices.
+
+## Milestone 11 iPhone/Web First Closeout
+
+### Problem
+Milestone 11 now needs an honest iPhone/web-first closeout on `https://hrayem.cz`: the repo still assumes `hrayem.app`, the launch-asset scripts do not allow Android deferral, and the verifier cannot distinguish proven Apple/web progress from intentionally deferred Android launch inputs.
+
+### Approach
+Keep the pass minimal and explicit: switch repo-side launch surfaces to `hrayem.cz`, use the real App Store URL, generate and verify Apple/web assets when their inputs exist, treat Android app-link inputs as deferred instead of fake failures, and clearly leave hosted deployment blocked unless a real hosting target exists in-repo.
+
+### Steps
+1. Update launch-related code, docs, and examples from `hrayem.app` to `hrayem.cz`, and stop using App Store search fallbacks now that the real iPhone URL is known.
+2. Adjust launch-asset generation and `verify:milestone11` so Apple/web inputs are required for the iPhone/web target, while Android asset generation/proof is explicitly deferred if Play URL or signing fingerprints are not available.
+3. Generate the Apple-side well-known asset, add the minimal Vercel routing config now that the live site is clearly on Vercel, rerun focused validation, and report exactly what is proven for iPhone/web versus what remains deferred or blocked.
+
+### Open questions / risks
+- BLOCKER if `HRAYEM_APPLE_TEAM_ID` is still not the actual Apple Team ID needed for `apple-app-site-association`.
+- BLOCKER until the live Vercel deployment actually serves `/event/{id}`, `/privacy`, `/terms`, and `/.well-known/apple-app-site-association` correctly on `https://hrayem.cz`.
+- LIKELY SOON: once a hosting target exists, the next proof gap is real iPhone universal-link testing against the deployed `/.well-known/` files.
+- RARE EDGE CASE: Apple universal-link association can stay cached briefly after correct deployment, so first-device verification may lag.

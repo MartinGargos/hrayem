@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hrayem Privacy Policy</title>
+    <link rel="stylesheet" href="/site.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Hrayem</p>
+        <h1>Privacy Policy</h1>
+        <p>
+          This page explains what data Hrayem uses to run the app, why we use it, and what happens
+          when a player updates or deletes their account.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>What Hrayem does</h2>
+        <p>
+          Hrayem helps players create and join badminton, padel, and squash games, share event
+          links, chat with confirmed players, post availability, and manage their own profile.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Data we process</h2>
+        <ul>
+          <li>Account data needed for sign-in, password recovery, and session management.</li>
+          <li>Profile data such as name, city, preferred language, and optional photo.</li>
+          <li>
+            Sport profile data such as skill level, games played, no-shows, and thumbs-up stats.
+          </li>
+          <li>
+            Event data, event participation records, availability signals, and event chat messages.
+          </li>
+          <li>Push notification preferences and push-token registrations for your devices.</li>
+          <li>Consent records for the current Terms of Service and Privacy Policy versions.</li>
+          <li>
+            Reports submitted for events or players, plus delivery logs for admin review email.
+          </li>
+          <li>
+            Operational error data needed to keep the app reliable, including Sentry crash reports.
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Why we use this data</h2>
+        <ul>
+          <li>To authenticate users and keep sessions working across app launches.</li>
+          <li>To show player identities, stats, and availability inside the app.</li>
+          <li>To run event joins, waitlists, chat, notifications, reminders, and reporting.</li>
+          <li>To detect abuse, investigate user reports, and keep audit records where required.</li>
+          <li>To maintain product quality, debug failures, and improve launch readiness.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Where data is stored and processed</h2>
+        <p>
+          Hrayem currently relies on Supabase for authentication, database storage, realtime
+          updates, and file storage. Push notifications are delivered through Expo. Admin report
+          emails are delivered through Resend. Crash reporting is handled through Sentry when that
+          integration is enabled for a release build.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>How long data stays in the system</h2>
+        <p>
+          Future-looking activity such as availability posts and push-token registrations is cleaned
+          up when it expires or when account deletion succeeds. Historical participation, chat
+          history, thumbs-up records, reports, and audit data may remain with deleted user
+          references anonymized as “Deleted User” so past events and integrity checks stay
+          understandable.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Your controls</h2>
+        <p>
+          Inside the app, you can update your profile, language, city, sport skill levels,
+          notification preferences, availability, and account state. You can also delete your
+          account from Settings. When account deletion completes, future organized events are
+          cancelled, future joined events are cleaned up, availability and push registrations are
+          removed, and the remaining historical records are anonymized where the product requires
+          them for integrity.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Changes to this policy</h2>
+        <p>
+          Hrayem stores the accepted Terms and Privacy versions server-side. If the policy changes
+          in a later release, the app can require renewed consent before a signed-in user continues.
+        </p>
+        <p class="small">Last updated: 2026-04-01</p>
+      </section>
+
+      <div class="actions">
+        <a class="button button-primary" href="/terms">Read Terms of Service</a>
+        <a class="button button-secondary" href="/">Open Hrayem</a>
+      </div>
+    </main>
+  </body>
+</html>

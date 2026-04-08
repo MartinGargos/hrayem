@@ -218,7 +218,7 @@ export function FoundationScreen({ topSlot }: FoundationScreenProps) {
         <MetricRow label={t('foundation.networkScheme')} value={appMetadata.scheme} />
         <MetricRow
           label={t('foundation.networkUniversalLink')}
-          value="https://hrayem.app/event/example-id"
+          value={`${(publicEnv.webBaseUrl || 'https://hrayem.cz').replace(/\/+$/, '')}/event/example-id`}
         />
         <MetricRow label={t('foundation.networkDeepLink')} value={deepLinkPreview} />
       </Card>

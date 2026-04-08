@@ -1,5 +1,13 @@
 import type { ExpoConfig } from 'expo/config';
 
+const webBaseUrl = (process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://hrayem.cz').replace(
+  /\/+$/,
+  '',
+);
+const appStoreUrl =
+  process.env.EXPO_PUBLIC_APP_STORE_URL ?? 'https://apps.apple.com/app/id6761645539';
+const playStoreUrl = process.env.EXPO_PUBLIC_PLAY_STORE_URL?.trim() ?? '';
+
 const config: ExpoConfig = {
   name: 'Hrayem',
   slug: 'hrayem',
@@ -24,7 +32,8 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: 'com.martingargos.hrayem',
     buildNumber: '1',
-    associatedDomains: ['applinks:hrayem.app'],
+    appStoreUrl,
+    associatedDomains: ['applinks:hrayem.cz'],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
@@ -41,6 +50,7 @@ const config: ExpoConfig = {
   android: {
     package: 'app.hrayem',
     versionCode: 1,
+    ...(playStoreUrl ? { playStoreUrl } : {}),
     permissions: ['POST_NOTIFICATIONS'],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
@@ -55,7 +65,7 @@ const config: ExpoConfig = {
         data: [
           {
             scheme: 'https',
-            host: 'hrayem.app',
+            host: 'hrayem.cz',
             pathPrefix: '/event',
           },
         ],
@@ -86,6 +96,11 @@ const config: ExpoConfig = {
       sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? '',
       termsVersion: process.env.EXPO_PUBLIC_TERMS_VERSION ?? '',
       privacyVersion: process.env.EXPO_PUBLIC_PRIVACY_VERSION ?? '',
+      webBaseUrl,
+      termsUrl: `${webBaseUrl}/terms`,
+      privacyUrl: `${webBaseUrl}/privacy`,
+      appStoreUrl,
+      playStoreUrl,
     },
   },
   web: {

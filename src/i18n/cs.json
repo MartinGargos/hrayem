@@ -856,5 +856,34 @@
       "sessions": "Toto zařízení bude odhlášeno a váš push token se vyčistí.",
       "history": "Minulý chat, nahlášení, no-show a thumbs-up historie zůstávají zachované s anonymizovanými odkazy na uživatele."
     }
+  },
+  "publicFallback": {
+    "eyebrow": "Sdíleno z Hrayem",
+    "loadingTitle": "Načítám sdílenou hru",
+    "loadingSubtitle": "Připravuji detaily hry pro tento odkaz.",
+    "loadingBody": "Pokud už máte Hrayem nainstalovaný, můžete si tuto hru otevřít rovnou v aplikaci.",
+    "errorTitle": "Tento odkaz na hru není dostupný",
+    "errorSubtitle": "Sdílenou hru se teď nepodařilo načíst.",
+    "errorBody": "Hra mohla být odstraněna nebo už tento odkaz není aktivní.",
+    "retry": "Zkusit znovu",
+    "retryHint": "Znovu načíst detaily sdílené hry",
+    "detailSubtitle": "Detaily hry pro hráče, kteří tento odkaz otevřeli bez aplikace.",
+    "chatSubtitle": "Tento chat patří ke hře v Hrayem. Pro otevření konverzace si nainstalujte aplikaci.",
+    "eventTitle": "Přehled hry",
+    "playersLabel": "Hráči",
+    "nextStepTitle": "Otevřít Hrayem",
+    "detailBody": "Stáhněte si Hrayem, připojte se do {{sport}} her, spravujte svou účast a pište si s hráči.",
+    "chatBody": "Stáhněte si Hrayem, otevřete chat ke hře, uvidíte nejnovější zprávy a přidáte se do dalších her.",
+    "openInApp": "Otevřít v aplikaci",
+    "openInAppHint": "Zkusit otevřít tuto hru v aplikaci Hrayem",
+    "downloadHint": "Otevřít stránku Hrayem v obchodě",
+    "downloadIos": "Stáhnout pro iPhone",
+    "downloadAndroid": "Stáhnout pro Android",
+    "status": {
+      "active": "Aktivní",
+      "full": "Plná",
+      "finished": "Dokončená",
+      "cancelled": "Zrušená"
+    }
   }
 }

@@ -1,6 +1,6 @@
 import * as ExpoLinking from 'expo-linking';
 
-import { appMetadata } from '../utils/env';
+import { appMetadata, publicSiteLinks } from '../utils/env';
 
 export type EventDeepLinkTarget = {
   eventId: string;
@@ -10,6 +10,32 @@ export type EventDeepLinkTarget = {
 
 export type DeveloperSurfaceTarget = 'foundation';
 
+export type PublicWebsiteRouteTarget =
+  | {
+      kind: 'event';
+      eventId: string;
+      normalizedUrl: string;
+      screen: 'detail' | 'chat';
+    }
+  | {
+      kind: 'terms';
+      normalizedUrl: string;
+    }
+  | {
+      kind: 'privacy';
+      normalizedUrl: string;
+    };
+
+const publicWebsiteHost = (() => {
+  try {
+    return new URL(publicSiteLinks.webBaseUrl).hostname.toLowerCase();
+  } catch {
+    return 'hrayem.cz';
+  }
+})();
+
+const recognizedWebsiteHosts = new Set([publicWebsiteHost, 'hrayem.app']);
+
 function normalizeDeepLinkUrl(url: string): string {
   const trimmedUrl = url.trim();
 
@@ -17,7 +43,7 @@ function normalizeDeepLinkUrl(url: string): string {
     return trimmedUrl;
   }
 
-  if (trimmedUrl.startsWith('hrayem.app/')) {
+  if ([...recognizedWebsiteHosts].some((host) => trimmedUrl.startsWith(`${host}/`))) {
     return `https://${trimmedUrl}`;
   }
 
@@ -29,7 +55,7 @@ export function buildEventSchemeUrl(eventId: string): string {
 }
 
 export function buildEventWebUrl(eventId: string): string {
-  return `https://hrayem.app/event/${eventId}`;
+  return `${publicSiteLinks.webBaseUrl}/event/${eventId}`;
 }
 
 export function buildChatSchemeUrl(eventId: string): string {
@@ -37,7 +63,7 @@ export function buildChatSchemeUrl(eventId: string): string {
 }
 
 export function buildChatWebUrl(eventId: string): string {
-  return `https://hrayem.app/event/${eventId}?screen=chat`;
+  return `${publicSiteLinks.webBaseUrl}/event/${eventId}?screen=chat`;
 }
 
 export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
@@ -61,7 +87,12 @@ export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
     };
   }
 
-  if (hostname === 'hrayem.app' && pathSegments[0] === 'event' && pathSegments[1]) {
+  if (
+    hostname &&
+    recognizedWebsiteHosts.has(hostname) &&
+    pathSegments[0] === 'event' &&
+    pathSegments[1]
+  ) {
     return {
       eventId: decodeURIComponent(pathSegments[1]),
       normalizedUrl,
@@ -77,6 +108,49 @@ export function parseEventDeepLink(url: string): EventDeepLinkTarget | null {
 
 export function isEventDeepLinkUrl(url: string): boolean {
   return parseEventDeepLink(url) !== null;
+}
+
+export function parsePublicWebsiteRoute(url: string): PublicWebsiteRouteTarget | null {
+  const normalizedUrl = normalizeDeepLinkUrl(url);
+  const parsedUrl = ExpoLinking.parse(normalizedUrl);
+  const scheme = parsedUrl.scheme?.toLowerCase() ?? null;
+  const pathSegments = (parsedUrl.path ?? '')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const screenParam = parsedUrl.queryParams?.screen;
+
+  if (scheme !== 'http' && scheme !== 'https') {
+    return null;
+  }
+
+  if (pathSegments[0] === 'terms') {
+    return {
+      kind: 'terms',
+      normalizedUrl,
+    };
+  }
+
+  if (pathSegments[0] === 'privacy') {
+    return {
+      kind: 'privacy',
+      normalizedUrl,
+    };
+  }
+
+  if (pathSegments[0] === 'event' && pathSegments[1]) {
+    return {
+      kind: 'event',
+      eventId: decodeURIComponent(pathSegments[1]),
+      normalizedUrl,
+      screen:
+        screenParam === 'chat' || pathSegments[2] === 'chat'
+          ? ('chat' as const)
+          : ('detail' as const),
+    };
+  }
+
+  return null;
 }
 
 export function parseDeveloperSurfaceUrl(url: string): DeveloperSurfaceTarget | null {

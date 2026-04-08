@@ -27,11 +27,13 @@ import type {
   RemovePlayerResponse,
   SendChatMessageInput,
   SendChatMessageResponse,
+  SharedEventDetail,
   SportSummary,
   UpdateEventInput,
   UpdateEventResponse,
   UserSportProfile,
 } from '../types/events';
+import { requirePublicEnvValue } from '../utils/env';
 import { callEdgeFunctionRoute } from './edge-functions';
 import { retrySupabaseOperationOnce, supabase } from './supabase';
 
@@ -93,6 +95,18 @@ type EventDetailRow = EventFeedRow & {
   chat_closed_at: string | null;
   viewer_membership_status: EventMembershipStatus | null;
   viewer_waitlist_position: number | null;
+};
+
+type SharedEventDetailRow = EventFeedRow & {
+  organizer_last_name: string | null;
+};
+
+type SharedEventDetailResponse = {
+  data?: SharedEventDetailRow;
+  error?: {
+    code?: string;
+    message?: string;
+  };
 };
 
 type MyGamesUpcomingRow = EventFeedRow & {
@@ -453,6 +467,36 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
     chatClosedAt: detailRow.chat_closed_at,
     viewerMembershipStatus: detailRow.viewer_membership_status,
     viewerWaitlistPosition: detailRow.viewer_waitlist_position,
+  };
+}
+
+export async function fetchSharedEventDetailPublic(eventId: string): Promise<SharedEventDetail> {
+  const response = await fetch(
+    `${requirePublicEnvValue('supabaseUrl')}/functions/v1/share/event/${encodeURIComponent(eventId)}`,
+    {
+      method: 'GET',
+      headers: {
+        apikey: requirePublicEnvValue('supabaseAnonKey'),
+      },
+    },
+  );
+
+  const parsedBody = (await response.json().catch(() => null)) as SharedEventDetailResponse | null;
+
+  if (!response.ok) {
+    throw new Error(parsedBody?.error?.message ?? 'Unable to load the shared event.');
+  }
+
+  if (!parsedBody?.data) {
+    throw new Error('Missing shared event detail row.');
+  }
+
+  const detailRow = parsedBody.data;
+  const mappedDetail = mapEventFeedRow(detailRow);
+
+  return {
+    ...mappedDetail,
+    organizerLastName: detailRow.organizer_last_name,
   };
 }
 

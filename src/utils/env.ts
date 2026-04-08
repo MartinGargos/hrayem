@@ -6,6 +6,11 @@ type PublicEnv = {
   sentryDsn: string;
   termsVersion: string;
   privacyVersion: string;
+  webBaseUrl: string;
+  termsUrl: string;
+  privacyUrl: string;
+  appStoreUrl: string;
+  playStoreUrl: string;
 };
 
 type ExpoExtra = {
@@ -27,6 +32,11 @@ export const publicEnv: PublicEnv = {
   sentryDsn: resolvePublicEnvValue('sentryDsn', process.env.EXPO_PUBLIC_SENTRY_DSN),
   termsVersion: resolvePublicEnvValue('termsVersion', process.env.EXPO_PUBLIC_TERMS_VERSION),
   privacyVersion: resolvePublicEnvValue('privacyVersion', process.env.EXPO_PUBLIC_PRIVACY_VERSION),
+  webBaseUrl: resolvePublicEnvValue('webBaseUrl', process.env.EXPO_PUBLIC_WEB_BASE_URL),
+  termsUrl: resolvePublicEnvValue('termsUrl', undefined),
+  privacyUrl: resolvePublicEnvValue('privacyUrl', undefined),
+  appStoreUrl: resolvePublicEnvValue('appStoreUrl', process.env.EXPO_PUBLIC_APP_STORE_URL),
+  playStoreUrl: resolvePublicEnvValue('playStoreUrl', process.env.EXPO_PUBLIC_PLAY_STORE_URL),
 };
 
 export function requirePublicEnvValue(key: keyof PublicEnv): string {
@@ -47,4 +57,14 @@ export const appMetadata = {
     typeof configuredScheme === 'string' ? configuredScheme : (configuredScheme?.[0] ?? 'hrayem'),
   iosBundleIdentifier: Constants.expoConfig?.ios?.bundleIdentifier ?? 'app.hrayem',
   androidPackage: Constants.expoConfig?.android?.package ?? 'app.hrayem',
+};
+
+const normalizedWebBaseUrl = (publicEnv.webBaseUrl || 'https://hrayem.cz').replace(/\/+$/, '');
+
+export const publicSiteLinks = {
+  webBaseUrl: normalizedWebBaseUrl,
+  termsUrl: publicEnv.termsUrl || `${normalizedWebBaseUrl}/terms`,
+  privacyUrl: publicEnv.privacyUrl || `${normalizedWebBaseUrl}/privacy`,
+  appStoreUrl: publicEnv.appStoreUrl || 'https://apps.apple.com/app/id6761645539',
+  playStoreUrl: publicEnv.playStoreUrl || '',
 };

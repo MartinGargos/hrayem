@@ -1210,22 +1210,22 @@ Expo push tokens can change silently (OS updates, app reinstalls, token rotation
 ### 16.6 Deep linking and event sharing
 
 **URI scheme:** `hrayem://` (for development and direct links)
-**Universal links:** `https://hrayem.app/event/{id}` (for production sharing)
+**Universal links:** `https://hrayem.cz/event/{id}` (for production sharing)
 
 **Configuration (set up in Milestone 0, implement in Milestone 4):**
 - `app.json`: set `scheme: "hrayem"` and configure `associatedDomains` (iOS) / `intentFilters` (Android)
-- Deploy an `apple-app-site-association` file and `assetlinks.json` to `hrayem.app/.well-known/`
+- Deploy an `apple-app-site-association` file and `assetlinks.json` to `hrayem.cz/.well-known/`
 - Use `expo-linking` for handling incoming links
 
 **Deep link routing:**
-- `hrayem.app/event/{id}` → Event detail screen (if logged in) or Login → Event detail (after auth)
+- `hrayem.cz/event/{id}` → Event detail screen (if logged in) or Login → Event detail (after auth)
 - Store the pending deep link in Zustand if the user isn't logged in; navigate after auth completes
 
 **Share button:**
 - Event detail screen includes a share button that calls `Share.share()` with:
   - Text: "[Sport] at [Venue] on [Date] — join me on Hrayem!"
-  - URL: `https://hrayem.app/event/{id}`
-- The web fallback page at `hrayem.app/event/{id}` is a simple static/SSR page showing event details + app download links
+  - URL: `https://hrayem.cz/event/{id}`
+- The web fallback page at `hrayem.cz/event/{id}` is a simple static/SSR page showing event details + app download links
 
 ### 16.7 Force update
 

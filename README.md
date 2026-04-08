@@ -1,13 +1,13 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation plus the implemented Milestone 1-10 MVP flows: auth/session resilience, typed navigation, venue search, events, join/waitlist, organizer tools, post-game feedback, chat, notifications, availability, reporting, and account deletion.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation plus the implemented Milestone 1-10 MVP flows and the Milestone 11 repo-side launch surfaces: auth/session resilience, typed navigation, venue search, events, join/waitlist, organizer tools, post-game feedback, chat, notifications, availability, reporting, account deletion, public share fallback, and launch-site asset generation for the current canonical domain `https://hrayem.cz`. Hosted website deployment, final Android app-link inputs, and real production-device launch proof are still separate launch inputs, not completed repo proof.
 
 Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
 ## Tech stack
 
-- React Native `0.83.2`
-- Expo SDK `55.0.8`
+- React Native `0.83.4`
+- Expo SDK `55.0.9`
 - React `19.2.0`
 - TypeScript `5.9.x` in strict mode
 - Supabase JS `2.100.0`
@@ -49,6 +49,9 @@ Client variables bundled into the app:
 - `EXPO_PUBLIC_SENTRY_DSN`: Sentry DSN for crash reporting
 - `EXPO_PUBLIC_TERMS_VERSION`: active Terms of Service version string
 - `EXPO_PUBLIC_PRIVACY_VERSION`: active Privacy Policy version string
+- `EXPO_PUBLIC_WEB_BASE_URL`: canonical launch-site origin used for shared event fallback pages and legal pages (`https://hrayem.cz` for the current launch target)
+- `EXPO_PUBLIC_APP_STORE_URL`: final App Store page for "Download Hrayem" links
+- `EXPO_PUBLIC_PLAY_STORE_URL`: final Google Play page for "Download Hrayem" links; may stay blank while Android launch proof is intentionally deferred
 
 Server-only variables reserved for Edge Functions:
 
@@ -60,6 +63,11 @@ Server-only variables reserved for Edge Functions:
 - `ADMIN_REPORT_EMAIL`: destination for report notifications
 - `RESEND_API_KEY`: Resend API key for report email delivery
 - `REPORT_EMAIL_FROM`: verified sender used for report email delivery
+
+Launch-site asset variables used during Milestone 11:
+
+- `HRAYEM_APPLE_TEAM_ID`: Apple Team ID used to generate `apple-app-site-association`
+- `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS`: comma-separated release certificate SHA-256 fingerprints for `assetlinks.json`; may stay blank while Android app-link proof is deferred
 
 ## How to run locally
 
@@ -158,6 +166,7 @@ The repo now includes the Milestone 1 Supabase assets:
 - Milestone 2 adds launch-time `app_config` reads for force-update checks and an `avatars` Storage bucket migration for optional profile photos
 - Milestone 4 adds the `events` Edge Function for event creation plus `scripts/verify-milestone4.mjs` for venue search, `SKILL_LEVEL_REQUIRED`, feed pagination, and event-detail proof
 - Milestone 10 adds the `reports` and `account` Edge Functions plus `scripts/verify-milestone10.mjs` for report submission and account-deletion proof
+- Milestone 11 adds the public `share` Edge Function plus `scripts/verify-milestone11.mjs` for iPhone/web-first launch proof with Android app-link status reported separately
 
 Use this workflow once `.env` contains real `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` values:
 
@@ -168,9 +177,11 @@ pnpm dlx supabase db push
 pnpm dlx supabase functions deploy events
 pnpm dlx supabase functions deploy reports
 pnpm dlx supabase functions deploy account
+pnpm dlx supabase functions deploy share
 pnpm run verify:milestone1
 pnpm run verify:milestone4
 pnpm run verify:milestone10
+pnpm run verify:milestone11
 ```
 
 Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
@@ -192,6 +203,16 @@ For Milestone 2 auth flows, also configure these Supabase Auth settings:
 - Use an EAS development build for real OAuth and push-token testing; the app now includes `expo-notifications`, `expo-location`, `expo-image-picker`, `expo-image-manipulator`, and `expo-web-browser`.
 
 For Milestone 10 report emails, also configure a verified Resend sender and set `ADMIN_REPORT_EMAIL`, `RESEND_API_KEY`, and `REPORT_EMAIL_FROM` in Supabase Edge Function secrets before you deploy or claim admin-email proof.
+
+For Milestone 11 launch readiness, generate the well-known app-link assets before you deploy the website:
+
+```bash
+pnpm run generate:launch-assets
+```
+
+That command currently targets `https://hrayem.cz`. It always requires real iPhone/web inputs for the current launch target: `EXPO_PUBLIC_WEB_BASE_URL`, `EXPO_PUBLIC_APP_STORE_URL`, and `HRAYEM_APPLE_TEAM_ID`. It generates `public/.well-known/apple-app-site-association` for Apple/web now, and only generates `public/.well-known/assetlinks.json` when `EXPO_PUBLIC_PLAY_STORE_URL` and `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS` are both available for Android launch proof.
+
+The website should also host `public/privacy/index.html`, `public/terms/index.html`, the generated `public/.well-known/` files, and the Expo web build so shared `https://hrayem.cz/event/<id>` links can render the public fallback page for users without the app. The repo now includes a minimal [vercel.json](/home/martin/hrayem/vercel.json) for `/event/*`, `/privacy`, `/terms`, and `/.well-known/*`, but actual hosted proof still depends on a live Vercel deployment serving those paths correctly.
 
 ## Build and submit
 
@@ -240,7 +261,7 @@ src/
 
 ## Key decisions
 
-- The app config currently assumes `app.hrayem` for both the iOS `bundleIdentifier` and Android `package`, based on the `hrayem.app` domain. Confirm this before the first store build.
+- The app config currently uses `com.martingargos.hrayem` for iOS and `app.hrayem` for Android. Confirm both release IDs, the Apple Team ID, and the Android signing fingerprints before the first public store build.
 - The Milestone 0 root screen is an infrastructure verification surface, not product UI. It exercises React Query, i18n, offline detection, date formatting, deep-link config, and Sentry wiring in one place.
 - The repo is normalized to pnpm because the original WSL environment exposed a broken Windows `npm` shim; the package scripts also force Node `20.19.4` so validation and Expo commands work without a manual `nvm use` in every shell.
 - Supabase session persistence follows the Android-safe pattern from `BACKEND.md`: refresh token in secure storage, access token in memory only, refreshed on launch via `refreshSession({ refresh_token })`.

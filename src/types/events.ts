@@ -87,6 +87,10 @@ export type EventDetail = EventFeedItem & {
   viewerWaitlistPosition: number | null;
 };
 
+export type SharedEventDetail = EventFeedItem & {
+  organizerLastName: string | null;
+};
+
 export type MyGamesUpcomingItem = EventFeedItem & {
   viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
