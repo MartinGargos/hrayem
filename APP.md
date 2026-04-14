@@ -220,7 +220,7 @@ After an event finishes, each confirmed player can:
 The thumbs-up prompt appears as a card in the My Games (Past tab) and optionally on the event detail screen.
 
 ### 6.9 Event sharing
-Every event has a **shareable deep link** (e.g. `https://hrayem.cz/event/{id}`).
+Every event has a **shareable deep link** (e.g. `https://www.hrayem.cz/event/{id}`).
 - **Share button** on the event detail screen opens the native share sheet with the link + a short text: "[Sport] at [Venue] on [Date] — join me on Hrayem!"
 - If the recipient has the app installed: the link opens the event detail screen directly
 - If the recipient does not have the app: the link opens a simple **web fallback page** showing event details + "Download Hrayem" buttons for App Store and Google Play
@@ -649,7 +649,7 @@ This is not optional. An empty feed on day one means a dead app.
 Before launch, pre-populate the `venues` table with the most popular sports venues in Ostrava (and other launch cities). Source venues from Google Maps, local sports directories, and the founding user community.
 
 ### 15.3 Web fallback page
-Before launch, deploy a simple static page at the deep link domain (e.g. `hrayem.cz`) that:
+Before launch, deploy a simple static page at the deep link domain (e.g. `www.hrayem.cz`) that:
 - Shows event details when accessed via an event link (server-rendered or fetched client-side)
 - Includes "Download on App Store" and "Get it on Google Play" buttons
 - Serves as the Privacy Policy and Terms of Service host

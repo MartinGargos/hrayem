@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Pressable, StyleSheet } from 'react-native';
 
 type HeaderOverflowButtonProps = {
   accessibilityHint: string;
@@ -20,7 +21,7 @@ export function HeaderOverflowButton({
       onPress={onPress}
       style={({ pressed }) => [styles.button, pressed ? styles.buttonPressed : undefined]}
     >
-      <Text style={styles.buttonLabel}>⋯</Text>
+      <Ionicons color="#183153" name="ellipsis-horizontal" size={20} />
     </Pressable>
   );
 }
@@ -32,12 +33,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-  },
-  buttonLabel: {
-    fontSize: 28,
-    lineHeight: 28,
-    color: '#183153',
-    marginTop: -6,
   },
   buttonPressed: {
     backgroundColor: '#efe4d5',

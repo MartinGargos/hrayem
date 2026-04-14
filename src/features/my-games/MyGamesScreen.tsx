@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +14,7 @@ import {
 } from '../events/event-eligibility';
 import { AvatarPhoto, EventSummaryCard } from '../events/EventPrimitives';
 import { ScreenCard, SegmentedTabs } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import type { RootStackParamList } from '../../navigation/types';
 import {
   fetchConfirmedEventPlayers,
@@ -22,10 +24,21 @@ import {
 } from '../../services/events';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
-import type { EventConfirmedPlayer, MyGamesPastItem } from '../../types/events';
+import type {
+  EventConfirmedPlayer,
+  MyGamesPastItem,
+  MyGamesUpcomingItem,
+} from '../../types/events';
 import { formatRelativeTime } from '../../utils/dates';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
+type MyGamesListItem = MyGamesUpcomingItem | MyGamesPastItem;
+type MyGamesSection = {
+  data: MyGamesListItem[];
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  key: 'organizing' | 'playing';
+  title: string;
+};
 
 function PastEventActions({ event }: { event: MyGamesPastItem }) {
   const { t } = useTranslation();
@@ -134,6 +147,7 @@ function PastEventActions({ event }: { event: MyGamesPastItem }) {
             })}
           </Text>
           <ActionButton
+            iconName="alert-circle-outline"
             label={t('shell.myGames.reportNoShowAction')}
             onPress={() => navigation.navigate('EventDetail', { eventId: event.id })}
             variant="secondary"
@@ -170,6 +184,9 @@ function PastEventActions({ event }: { event: MyGamesPastItem }) {
                         player.alreadyThumbedUpByViewer ||
                         (thumbsUpMutation.isPending && thumbsUpTargetUserId === player.userId)
                       }
+                      iconName={
+                        player.alreadyThumbedUpByViewer ? 'checkmark-outline' : 'thumbs-up-outline'
+                      }
                       label={
                         player.alreadyThumbedUpByViewer
                           ? t('events.thumbsUp.done')
@@ -196,6 +213,55 @@ function PastEventActions({ event }: { event: MyGamesPastItem }) {
       ) : null}
     </ScreenCard>
   );
+}
+
+function MyGamesStateCard({
+  actionLabel,
+  body,
+  iconName,
+  onPress,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  onPress?: () => void | Promise<void>;
+  title: string;
+}) {
+  return (
+    <ScreenCard>
+      <StateMessage
+        action={
+          actionLabel && onPress ? (
+            <ActionButton
+              iconName={activeIconName(iconName)}
+              label={actionLabel}
+              onPress={onPress}
+              variant={iconName === 'cloud-offline-outline' ? 'secondary' : 'primary'}
+            />
+          ) : undefined
+        }
+        body={body}
+        iconName={iconName}
+        title={title}
+        tone={iconName === 'cloud-offline-outline' ? 'muted' : 'warm'}
+      />
+    </ScreenCard>
+  );
+}
+
+function activeIconName(
+  iconName: React.ComponentProps<typeof Ionicons>['name'],
+): React.ComponentProps<typeof Ionicons>['name'] {
+  if (iconName === 'cloud-offline-outline') {
+    return 'refresh-outline';
+  }
+
+  if (iconName === 'trophy-outline') {
+    return 'time-outline';
+  }
+
+  return 'add-outline';
 }
 
 export function MyGamesScreen() {
@@ -228,11 +294,45 @@ export function MyGamesScreen() {
   const activeQuery = activeTab === 'upcoming' ? upcomingGamesQuery : pastGamesQuery;
   const activeItems =
     activeTab === 'upcoming' ? (upcomingGamesQuery.data ?? []) : (pastGamesQuery.data ?? []);
+  const organizingItems = activeItems.filter((item) => item.viewerMembershipStatus === 'organizer');
+  const playingItems = activeItems.filter((item) => item.viewerMembershipStatus === 'confirmed');
+  const sections: MyGamesSection[] = [
+    {
+      key: 'organizing' as const,
+      title: t('shell.myGames.role.organizing'),
+      iconName: 'flag-outline' as const,
+      data: organizingItems,
+    },
+    {
+      key: 'playing' as const,
+      title: t('shell.myGames.role.playing'),
+      iconName: 'people-outline' as const,
+      data: playingItems,
+    },
+  ].filter((section) => section.data.length > 0);
 
   function renderHeader() {
     return (
       <View style={styles.headerWrap}>
         <View style={styles.hero}>
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroPill}>
+              <Ionicons
+                color="#dbe4ee"
+                name={activeTab === 'past' ? 'time-outline' : 'calendar-clear-outline'}
+                size={14}
+              />
+              <Text style={styles.heroPillLabel}>
+                {activeTab === 'past'
+                  ? t('shell.myGames.tabs.past')
+                  : t('shell.myGames.tabs.upcoming')}
+              </Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Ionicons color="#dbe4ee" name="layers-outline" size={14} />
+              <Text style={styles.heroPillLabel}>{activeItems.length}</Text>
+            </View>
+          </View>
           <Text style={styles.heroTitle}>{t('shell.myGames.title')}</Text>
           <Text style={styles.heroSubtitle}>{t('shell.myGames.subtitle')}</Text>
         </View>
@@ -244,14 +344,24 @@ export function MyGamesScreen() {
           ]}
           value={activeTab}
         />
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>{t('shell.myGames.role.organizing')}</Text>
+            <Text style={styles.summaryValue}>{organizingItems.length}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>{t('shell.myGames.role.playing')}</Text>
+            <Text style={styles.summaryValue}>{playingItems.length}</Text>
+          </View>
+        </View>
       </View>
     );
   }
 
   return (
-    <FlatList
+    <SectionList
       contentContainerStyle={styles.listContent}
-      data={activeItems}
+      sections={sections}
       keyExtractor={(item) => item.id}
       ListEmptyComponent={
         activeQuery.isPending ? (
@@ -259,60 +369,65 @@ export function MyGamesScreen() {
             <ActivityIndicator color="#183153" />
           </View>
         ) : activeQuery.isError ? (
-          <ScreenCard
+          <MyGamesStateCard
+            actionLabel={t('events.common.retry')}
+            body={
+              activeTab === 'upcoming'
+                ? t('shell.myGames.errorBody')
+                : t('shell.myGames.pastErrorBody')
+            }
+            iconName="cloud-offline-outline"
+            onPress={async () => {
+              await activeQuery.refetch();
+            }}
             title={
               activeTab === 'upcoming'
                 ? t('shell.myGames.errorTitle')
                 : t('shell.myGames.pastErrorTitle')
             }
-          >
-            <Text style={styles.placeholderText}>
-              {activeTab === 'upcoming'
-                ? t('shell.myGames.errorBody')
-                : t('shell.myGames.pastErrorBody')}
-            </Text>
-            <ActionButton
-              label={t('events.common.retry')}
-              onPress={async () => {
-                await activeQuery.refetch();
-              }}
-            />
-          </ScreenCard>
+          />
         ) : (
-          <ScreenCard
+          <MyGamesStateCard
+            actionLabel={activeTab === 'upcoming' ? t('shell.myGames.openCreate') : undefined}
+            body={
+              activeTab === 'upcoming'
+                ? t('shell.myGames.emptyBody')
+                : t('shell.myGames.pastEmptyBody')
+            }
+            iconName={activeTab === 'upcoming' ? 'calendar-outline' : 'trophy-outline'}
+            onPress={
+              activeTab === 'upcoming'
+                ? () =>
+                    navigation.navigate('MainTabs', {
+                      screen: 'CreateEventTab',
+                      params: { screen: 'CreateEvent' },
+                    })
+                : undefined
+            }
             title={
               activeTab === 'upcoming'
                 ? t('shell.myGames.emptyTitle')
                 : t('shell.myGames.pastEmptyTitle')
             }
-          >
-            <Text style={styles.placeholderText}>
-              {activeTab === 'upcoming'
-                ? t('shell.myGames.emptyBody')
-                : t('shell.myGames.pastEmptyBody')}
-            </Text>
-            {activeTab === 'upcoming' ? (
-              <ActionButton
-                label={t('shell.myGames.openCreate')}
-                onPress={() =>
-                  navigation.navigate('MainTabs', {
-                    screen: 'CreateEventTab',
-                    params: { screen: 'CreateEvent' },
-                  })
-                }
-              />
-            ) : null}
-          </ScreenCard>
+          />
         )
       }
       ListHeaderComponent={renderHeader}
+      SectionSeparatorComponent={() => <View style={styles.sectionSpacer} />}
+      ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+      renderSectionHeader={({ section }) => (
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderTitleRow}>
+            <Ionicons color="#183153" name={section.iconName} size={16} />
+            <Text style={styles.sectionHeaderTitle}>{section.title}</Text>
+          </View>
+          <View style={styles.sectionCountPill}>
+            <Text style={styles.sectionCountLabel}>{section.data.length}</Text>
+          </View>
+        </View>
+      )}
       renderItem={({ item }) => (
         <View style={styles.itemWrap}>
-          <Text style={styles.roleLabel}>
-            {item.viewerMembershipStatus === 'organizer'
-              ? t('shell.myGames.role.organizing')
-              : t('shell.myGames.role.playing')}
-          </Text>
           <EventSummaryCard
             event={item}
             language={language}
@@ -328,32 +443,79 @@ export function MyGamesScreen() {
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 28,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    gap: 14,
     backgroundColor: '#f7f0e6',
   },
   headerWrap: {
-    gap: 16,
-    marginBottom: 16,
+    gap: 14,
+    marginBottom: 14,
   },
   hero: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     backgroundColor: '#183153',
   },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  heroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 248, 240, 0.12)',
+  },
+  heroPillLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#dbe4ee',
+  },
   heroTitle: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 26,
+    lineHeight: 31,
     fontWeight: '800',
     color: '#fff8f0',
   },
   heroSubtitle: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 15,
-    lineHeight: 24,
-    color: '#d2dde8',
+    lineHeight: 22,
+    color: '#dbe4ee',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#fffbf6',
+    borderWidth: 1,
+    borderColor: '#ece0d1',
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#aa6d44',
+  },
+  summaryValue: {
+    marginTop: 6,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#183153',
   },
   centeredBlock: {
     alignItems: 'center',
@@ -361,20 +523,43 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   itemWrap: {
+    gap: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  sectionHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  roleLabel: {
-    fontSize: 12,
+  sectionHeaderTitle: {
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: '#a0603b',
-    paddingHorizontal: 6,
+    color: '#183153',
   },
-  placeholderText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#395065',
+  sectionCountPill: {
+    minWidth: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#efe4d5',
+  },
+  sectionCountLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  sectionSpacer: {
+    height: 20,
+  },
+  itemSeparator: {
+    height: 12,
   },
   actionBlock: {
     gap: 10,
@@ -394,11 +579,11 @@ const styles = StyleSheet.create({
   },
   promptPlayerCard: {
     gap: 10,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#eadfce',
-    backgroundColor: '#fffdf9',
-    padding: 14,
+    borderColor: '#ece0d1',
+    backgroundColor: '#fffdf8',
+    padding: 12,
   },
   promptPlayerName: {
     fontSize: 14,

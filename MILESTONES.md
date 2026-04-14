@@ -160,7 +160,7 @@ The sequence is designed so that:
 - [ ] Home feed has two sub-tabs: "Upcoming games" (default) and "Available players"
 - [ ] All screens exist as stubs (correct title, correct layout, placeholder content via i18n keys)
 - [ ] Navigation types are fully typed (React Navigation TypeScript setup)
-- [ ] Deep link routing implemented: `hrayem://event/{id}` and `hrayem.cz/event/{id}` → Event detail screen (store pending deep link in Zustand if user isn't logged in; navigate after auth)
+- [ ] Deep link routing implemented: `hrayem://event/{id}` and `www.hrayem.cz/event/{id}` → Event detail screen (store pending deep link in Zustand if user isn't logged in; navigate after auth)
 - [ ] Profile completion gate enforced on all main screens
 - [ ] **App foreground refresh:** set up `AppState` listener that triggers React Query refetch on app foreground (`active` state); all stale queries refresh silently in background
 
@@ -207,8 +207,8 @@ The sequence is designed so that:
   - Organizer shown with no-show count and games played for that sport
   - Confirmed players list with skill badges (avatars via `expo-image`)
   - Skill range note visible
-  - **Share button:** opens native share sheet with `https://hrayem.cz/event/{id}` + share text (see APP.md section 6.9)
-- [ ] **Deep link handling:** `hrayem.cz/event/{id}` opens event detail screen; if user has app → direct open; if not → web fallback page (deployed in Milestone 11)
+  - **Share button:** opens native share sheet with `https://www.hrayem.cz/event/{id}` + share text (see APP.md section 6.9)
+- [ ] **Deep link handling:** `www.hrayem.cz/event/{id}` opens event detail screen; if user has app → direct open; if not → web fallback page (deployed in Milestone 11)
 - [ ] All strings go through i18n
 
 **Checkpoint:** Create an event by selecting a venue → event appears in feed with correct venue name → tap to see full detail with venue address. Feed paginates (create 25+ events, verify infinite scroll loads more). Share button opens share sheet with correct link. Deep link from another app opens event detail. Add a new venue during event creation → it's available for future events. Skill level modal appears on first sport interaction. Filters work. Background/foreground: feed refreshes without spinner.
@@ -380,13 +380,13 @@ The sequence is designed so that:
 ### Documentation and config
 - [ ] `README.md` is complete and accurate (including WSL notes, Upstash setup, venue seeding, Sentry setup, client infrastructure overview)
 - [ ] All environment variables documented in `.env.example` (including `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_TERMS_VERSION`, `EXPO_PUBLIC_PRIVACY_VERSION`)
-- [ ] Privacy Policy URL set in `app.json` and live at `hrayem.cz/privacy`
-- [ ] Terms of Service URL live at `hrayem.cz/terms`
+- [ ] Privacy Policy URL set in `app.json` and live at `www.hrayem.cz/privacy`
+- [ ] Terms of Service URL live at `www.hrayem.cz/terms`
 
 ### Deep linking and web fallback
-- [ ] Deploy `apple-app-site-association` to `hrayem.cz/.well-known/` (iOS universal links)
-- [ ] Deploy `assetlinks.json` to `hrayem.cz/.well-known/` (Android app links)
-- [ ] Deploy web fallback page at `hrayem.cz/event/{id}` — shows event details + "Download Hrayem" buttons for users without the app
+- [ ] Deploy `apple-app-site-association` to `www.hrayem.cz/.well-known/` (iOS universal links)
+- [ ] Deploy `assetlinks.json` to `www.hrayem.cz/.well-known/` (Android app links)
+- [ ] Deploy web fallback page at `www.hrayem.cz/event/{id}` — shows event details + "Download Hrayem" buttons for users without the app
 - [ ] Verify: share an event link via WhatsApp/iMessage → recipient with app installed opens event detail directly; recipient without app sees fallback page
 
 ### Production build

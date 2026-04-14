@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 import * as Haptics from 'expo-haptics';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -21,7 +22,7 @@ import { z } from 'zod';
 
 import { ActionButton, ChoiceChips, FormTextField, NoticeBanner } from '../auth/AuthPrimitives';
 import { canOrganizerEditEvent } from './event-eligibility';
-import { AvatarPhoto, SportChoiceChip, StepperField } from './EventPrimitives';
+import { AvatarPhoto, SportBadge, SportChoiceChip, StepperField } from './EventPrimitives';
 import { NativePickerField } from './NativePickerField';
 import { SkillLevelModal } from './SkillLevelModal';
 import {
@@ -52,6 +53,22 @@ type EditEventRoute = RouteProp<RootStackParamList, 'EditEvent'>;
 type EventFormMode = 'create' | 'edit';
 
 const skillLevelValues = [1, 2, 3, 4] as const;
+
+function getSportBadgeLabel(slug: string | undefined, fallbackName: string): string {
+  if (slug === 'badminton') {
+    return 'BD';
+  }
+
+  if (slug === 'padel') {
+    return 'PD';
+  }
+
+  if (slug === 'squash') {
+    return 'SQ';
+  }
+
+  return fallbackName.slice(0, 2).toUpperCase();
+}
 
 function buildDefaultDateTime(hours: number, minutes: number): Date {
   const nextDay = addDays(startOfDay(new Date()), 1);
@@ -522,6 +539,14 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   );
   const skillModalSport = (sportsQuery.data ?? []).find((sport) => sport.id === pendingSportId);
   const descriptionLength = eventForm.watch('description')?.length ?? 0;
+  const previewDate = eventForm.watch('eventDate');
+  const previewStartTime = eventForm.watch('startTime');
+  const previewSportName = selectedSport
+    ? language === 'cs'
+      ? selectedSport.nameCs
+      : selectedSport.nameEn
+    : t('events.create.previewSportFallback');
+  const previewVenueName = selectedVenue?.name ?? t('events.create.previewVenueFallback');
   const isSubmitting = createEventMutation.isPending || updateEventMutation.isPending;
   const heroTitle = isEditMode ? t('events.edit.title') : t('shell.createEvent.title');
   const heroSubtitle = isEditMode ? t('events.edit.subtitle') : t('shell.createEvent.subtitle');
@@ -626,11 +651,59 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
           <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={styles.formStack}>
           <NoticeBanner notice={notice} resolveMessage={t} />
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('events.create.sections.sport')}</Text>
+          <View style={styles.previewCard}>
+            <View style={styles.previewHeader}>
+              <View style={styles.previewBadgeWrap}>
+                {selectedSport ? (
+                  <SportBadge
+                    colorHex={selectedSport.colorHex}
+                    label={getSportBadgeLabel(selectedSport.slug, previewSportName)}
+                  />
+                ) : (
+                  <View style={styles.previewBadgePlaceholder}>
+                    <Ionicons color="#5f7388" name="tennisball-outline" size={18} />
+                  </View>
+                )}
+              </View>
+              <View style={styles.previewHeaderCopy}>
+                <Text style={styles.previewTitle}>{t('events.create.previewTitle')}</Text>
+                <Text style={styles.previewEventTitle}>{previewSportName}</Text>
+                <Text style={styles.previewEventMeta}>{previewVenueName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.previewStats}>
+              <View style={styles.previewStatCard}>
+                <Ionicons color="#183153" name="calendar-clear-outline" size={16} />
+                <View style={styles.previewStatCopy}>
+                  <Text style={styles.previewStatLabel}>{t('events.create.eventDate')}</Text>
+                  <Text style={styles.previewStatValue}>
+                    {formatEventDate(previewDate, language)}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.previewStatCard}>
+                <Ionicons color="#183153" name="time-outline" size={16} />
+                <View style={styles.previewStatCopy}>
+                  <Text style={styles.previewStatLabel}>{t('events.create.startTime')}</Text>
+                  <Text style={styles.previewStatValue}>
+                    {formatEventTime(previewStartTime, language)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons color="#183153" name="tennisball-outline" size={16} />
+              </View>
+              <Text style={styles.sectionTitle}>{t('events.create.sections.sport')}</Text>
+            </View>
             {isEditMode ? (
               <View style={styles.selectedVenueCard}>
                 <Text style={styles.selectedVenueName}>
@@ -674,8 +747,13 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
             )}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('events.create.sections.schedule')}</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons color="#183153" name="calendar-clear-outline" size={16} />
+              </View>
+              <Text style={styles.sectionTitle}>{t('events.create.sections.schedule')}</Text>
+            </View>
             <Controller
               control={eventForm.control}
               name="eventDate"
@@ -690,40 +768,51 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
                 />
               )}
             />
-            <Controller
-              control={eventForm.control}
-              name="startTime"
-              render={({ field, fieldState }) => (
-                <NativePickerField
-                  error={translateFieldError(t, fieldState.error?.message)}
-                  label={t('events.create.startTime')}
-                  mode="time"
-                  onChange={field.onChange}
-                  placeholder={t('events.create.startTimePlaceholder')}
-                  value={field.value}
-                  valueText={formatEventTime(field.value, language)}
+            <View style={styles.twoColumnRow}>
+              <View style={styles.twoColumnItem}>
+                <Controller
+                  control={eventForm.control}
+                  name="startTime"
+                  render={({ field, fieldState }) => (
+                    <NativePickerField
+                      error={translateFieldError(t, fieldState.error?.message)}
+                      label={t('events.create.startTime')}
+                      mode="time"
+                      onChange={field.onChange}
+                      placeholder={t('events.create.startTimePlaceholder')}
+                      value={field.value}
+                      valueText={formatEventTime(field.value, language)}
+                    />
+                  )}
                 />
-              )}
-            />
-            <Controller
-              control={eventForm.control}
-              name="endTime"
-              render={({ field, fieldState }) => (
-                <NativePickerField
-                  error={translateFieldError(t, fieldState.error?.message)}
-                  label={t('events.create.endTime')}
-                  mode="time"
-                  onChange={field.onChange}
-                  placeholder={t('events.create.endTimePlaceholder')}
-                  value={field.value}
-                  valueText={formatEventTime(field.value, language)}
+              </View>
+              <View style={styles.twoColumnItem}>
+                <Controller
+                  control={eventForm.control}
+                  name="endTime"
+                  render={({ field, fieldState }) => (
+                    <NativePickerField
+                      error={translateFieldError(t, fieldState.error?.message)}
+                      label={t('events.create.endTime')}
+                      mode="time"
+                      onChange={field.onChange}
+                      placeholder={t('events.create.endTimePlaceholder')}
+                      value={field.value}
+                      valueText={formatEventTime(field.value, language)}
+                    />
+                  )}
                 />
-              )}
-            />
+              </View>
+            </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('events.create.sections.venue')}</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons color="#183153" name="location-outline" size={16} />
+              </View>
+              <Text style={styles.sectionTitle}>{t('events.create.sections.venue')}</Text>
+            </View>
             <TextInput
               accessibilityLabel={t('events.create.venueSearch')}
               onChangeText={(nextValue) => {
@@ -742,7 +831,9 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
 
             {selectedVenue ? (
               <View style={styles.selectedVenueCard}>
-                <Text style={styles.selectedVenueName}>{selectedVenue.name}</Text>
+                <Text numberOfLines={2} style={styles.selectedVenueName}>
+                  {selectedVenue.name}
+                </Text>
                 <Text style={styles.selectedVenueMeta}>
                   {selectedVenue.address ?? t('events.venue.noAddress')}
                 </Text>
@@ -765,8 +856,10 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
                     }}
                     style={styles.venueMatchCard}
                   >
-                    <Text style={styles.venueMatchName}>{venue.name}</Text>
-                    <Text style={styles.venueMatchMeta}>
+                    <Text numberOfLines={2} style={styles.venueMatchName}>
+                      {venue.name}
+                    </Text>
+                    <Text numberOfLines={2} style={styles.venueMatchMeta}>
                       {venue.address ?? t('events.venue.noAddress')}
                     </Text>
                   </Pressable>
@@ -778,6 +871,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
               <View style={styles.inlineVenuePrompt}>
                 <Text style={styles.inlineVenuePromptText}>{t('events.venue.noMatch')}</Text>
                 <ActionButton
+                  iconName="add-circle-outline"
                   label={t('events.venue.addInlineAction')}
                   onPress={() => {
                     venueForm.reset({
@@ -821,6 +915,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
                 />
                 <ActionButton
                   disabled={!venueForm.formState.isValid || createVenueMutation.isPending}
+                  iconName="save-outline"
                   label={t('events.venue.submit')}
                   onPress={venueForm.handleSubmit(handleCreateVenue)}
                 />
@@ -834,8 +929,13 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
             ) : null}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('events.create.sections.rules')}</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons color="#183153" name="options-outline" size={16} />
+              </View>
+              <Text style={styles.sectionTitle}>{t('events.create.sections.rules')}</Text>
+            </View>
             <Controller
               control={eventForm.control}
               name="reservationType"
@@ -904,8 +1004,13 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
             <Text style={styles.helperText}>{t('events.create.skillHelper')}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('events.create.sections.description')}</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons color="#183153" name="reader-outline" size={16} />
+              </View>
+              <Text style={styles.sectionTitle}>{t('events.create.sections.description')}</Text>
+            </View>
             <Controller
               control={eventForm.control}
               name="description"
@@ -941,37 +1046,27 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
             />
           </View>
 
-          <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>{t('events.create.previewTitle')}</Text>
-            <View style={styles.previewRow}>
+          <View style={styles.submitCard}>
+            <View style={styles.submitHeader}>
               <AvatarPhoto
                 label={profile?.firstName ?? t('events.common.organizerFallback')}
                 uri={profile?.photoUrl ?? null}
               />
-              <View style={styles.previewTextWrap}>
-                <Text style={styles.previewEventTitle}>
-                  {selectedSport
-                    ? language === 'cs'
-                      ? selectedSport.nameCs
-                      : selectedSport.nameEn
-                    : t('events.create.previewSportFallback')}
-                </Text>
-                <Text style={styles.previewEventMeta}>
-                  {selectedVenue?.name ?? t('events.create.previewVenueFallback')}
-                </Text>
-                <Text style={styles.previewEventMeta}>
-                  {formatEventDate(eventForm.watch('eventDate'), language)} ·{' '}
-                  {formatEventTime(eventForm.watch('startTime'), language)}
+              <View style={styles.submitCopy}>
+                <Text style={styles.submitTitle}>{previewSportName}</Text>
+                <Text style={styles.submitMeta}>
+                  {formatEventDate(previewDate, language)} ·{' '}
+                  {formatEventTime(previewStartTime, language)}
                 </Text>
               </View>
             </View>
-          </View>
 
-          <ActionButton
-            disabled={!eventForm.formState.isValid || isSubmitting}
-            label={submitLabel}
-            onPress={eventForm.handleSubmit(handleEventSubmit)}
-          />
+            <ActionButton
+              disabled={!eventForm.formState.isValid || isSubmitting}
+              label={submitLabel}
+              onPress={eventForm.handleSubmit(handleEventSubmit)}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -1005,24 +1100,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 32,
-    gap: 18,
+    gap: 16,
     backgroundColor: '#f7f0e6',
   },
   hero: {
     borderRadius: 28,
-    padding: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
     backgroundColor: '#183153',
   },
   heroTitle: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '800',
     color: '#fff8f0',
   },
   heroSubtitle: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 15,
-    lineHeight: 24,
+    lineHeight: 22,
     color: '#d2dde8',
   },
   card: {
@@ -1033,11 +1129,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eedfca',
   },
-  section: {
-    gap: 12,
+  formStack: {
+    gap: 14,
+  },
+  sectionCard: {
+    gap: 14,
+    borderRadius: 22,
+    padding: 18,
+    backgroundColor: '#fffaf4',
+    borderWidth: 1,
+    borderColor: '#eee0cf',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sectionIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef3f8',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     color: '#183153',
   },
@@ -1058,10 +1180,12 @@ const styles = StyleSheet.create({
     color: '#183153',
   },
   selectedVenueCard: {
-    gap: 4,
+    gap: 6,
     borderRadius: 18,
-    padding: 14,
+    padding: 15,
     backgroundColor: '#eff5fb',
+    borderWidth: 1,
+    borderColor: '#dbe5f0',
   },
   selectedVenueName: {
     fontSize: 15,
@@ -1095,7 +1219,10 @@ const styles = StyleSheet.create({
     color: '#5a6475',
   },
   inlineVenuePrompt: {
-    gap: 10,
+    gap: 12,
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: '#f7efe3',
   },
   inlineVenuePromptText: {
     fontSize: 14,
@@ -1110,7 +1237,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: '#6d7f95',
   },
   multilineInput: {
@@ -1138,32 +1265,118 @@ const styles = StyleSheet.create({
     color: '#d9594c',
   },
   previewCard: {
-    gap: 12,
-    borderRadius: 20,
-    padding: 16,
-    backgroundColor: '#f0e6d8',
+    gap: 14,
+    borderRadius: 24,
+    padding: 18,
+    backgroundColor: '#fffaf4',
+    borderWidth: 1,
+    borderColor: '#eee0cf',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 1,
   },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#183153',
-  },
-  previewRow: {
+  previewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  previewTextWrap: {
+  previewBadgeWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewBadgePlaceholder: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e8edf3',
+  },
+  previewHeaderCopy: {
     flex: 1,
     gap: 2,
   },
+  previewTitle: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    fontWeight: '800',
+    color: '#8b5a34',
+  },
   previewEventTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#183153',
   },
   previewEventMeta: {
     fontSize: 14,
+    color: '#5a6475',
+  },
+  previewStats: {
+    gap: 10,
+  },
+  previewStatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    backgroundColor: '#f6efe5',
+    borderWidth: 1,
+    borderColor: '#eadfce',
+  },
+  previewStatCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  previewStatLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#a16a42',
+  },
+  previewStatValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  twoColumnRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  twoColumnItem: {
+    flex: 1,
+    minWidth: 148,
+  },
+  submitCard: {
+    gap: 14,
+    borderRadius: 24,
+    padding: 18,
+    backgroundColor: '#fff8f0',
+    borderWidth: 1,
+    borderColor: '#e8dbc9',
+  },
+  submitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  submitCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  submitTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  submitMeta: {
+    fontSize: 13,
     color: '#5a6475',
   },
 });

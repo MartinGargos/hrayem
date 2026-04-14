@@ -1,9 +1,10 @@
 import type { ExpoConfig } from 'expo/config';
 
-const webBaseUrl = (process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://hrayem.cz').replace(
+const webBaseUrl = (process.env.EXPO_PUBLIC_WEB_BASE_URL ?? 'https://www.hrayem.cz').replace(
   /\/+$/,
   '',
 );
+const webHost = new URL(webBaseUrl).hostname;
 const appStoreUrl =
   process.env.EXPO_PUBLIC_APP_STORE_URL ?? 'https://apps.apple.com/app/id6761645539';
 const playStoreUrl = process.env.EXPO_PUBLIC_PLAY_STORE_URL?.trim() ?? '';
@@ -33,7 +34,7 @@ const config: ExpoConfig = {
     bundleIdentifier: 'com.martingargos.hrayem',
     buildNumber: '1',
     appStoreUrl,
-    associatedDomains: ['applinks:hrayem.cz'],
+    associatedDomains: [`applinks:${webHost}`],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
@@ -65,7 +66,7 @@ const config: ExpoConfig = {
         data: [
           {
             scheme: 'https',
-            host: 'hrayem.cz',
+            host: webHost,
             pathPrefix: '/event',
           },
         ],
@@ -76,6 +77,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     '@sentry/react-native/expo',
+    'expo-font',
     'expo-web-browser',
     '@react-native-community/datetimepicker',
     [

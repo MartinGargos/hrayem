@@ -4,8 +4,8 @@
   },
   "auth": {
     "loading": {
-      "title": "Připravuji vaši session",
-      "subtitle": "Hrayem ověřuje verzi aplikace, stav souhlasu a profil, než vás pustí dál."
+      "title": "Připravuji aplikaci",
+      "subtitle": "Hrayem kontroluje verzi aplikace, souhlas s podmínkami a váš profil, aby vás mohl pustit dál."
     },
     "fields": {
       "email": "E-mail",
@@ -28,7 +28,7 @@
     },
     "login": {
       "title": "Vítejte zpět",
-      "subtitle": "Přihlaste se a mějte své hry, profil i session spolehlivě dostupné po dalším spuštění.",
+      "subtitle": "Přihlaste se a mějte své hry i profil připravené hned po dalším spuštění.",
       "submit": "Přihlásit se",
       "apple": "Pokračovat přes Apple",
       "google": "Pokračovat přes Google",
@@ -128,13 +128,16 @@
       "pushToken": "Na tomto zařízení se nepodařilo zaregistrovat push notifikace.",
       "logoutFailed": "Odhlášení se nepodařilo dokončit čistě. Zkuste to prosím znovu."
     },
-    "sessionExpired": "Vaše session vypršela. Přihlaste se prosím znovu.",
+    "sessionExpired": "Platnost přihlášení vypršela. Přihlaste se prosím znovu.",
     "passwordRecoveryReady": "Pro dokončení obnovy nastavte nové heslo.",
     "passwordUpdated": "Vaše heslo bylo aktualizováno.",
     "logoutPartial": "Na tomto zařízení jste byli odhlášeni. Vzdálený úklid může chvíli trvat."
   },
   "common": {
-    "deletedUser": "Smazaný uživatel"
+    "deletedUser": "Smazaný uživatel",
+    "nothingYet": "Zatím tu nic není",
+    "allSet": "Hotovo",
+    "tryAgainTitle": "Zkusme to znovu"
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -149,12 +152,12 @@
     "queryRefetch": "Znovu načíst demo dotaz",
     "queryLoading": "Načítám demo dotaz...",
     "queryRefreshing": "Obnovuje se",
-    "authCardTitle": "Supabase session",
-    "authStatusLabel": "Stav session",
-    "authErrorLabel": "Chyba session",
+    "authCardTitle": "Přihlášení v aplikaci",
+    "authStatusLabel": "Stav přihlášení",
+    "authErrorLabel": "Chyba přihlášení",
     "authState": {
       "idle": "Čeká na bootstrap",
-      "loading": "Obnovuji session",
+      "loading": "Obnovuji přihlášení",
       "authenticated": "Přihlášený",
       "signed-out": "Nepřihlášený"
     },
@@ -164,7 +167,7 @@
     "networkOffline": "Offline",
     "networkScheme": "Schéma",
     "networkUniversalLink": "Univerzální odkaz",
-    "networkDeepLink": "Náhled deep linku",
+    "networkDeepLink": "Náhled odkazu do aplikace",
     "citiesCardTitle": "Kurátorovaný seznam měst",
     "citiesCount": "Počet měst",
     "selectedCity": "Vybrané město",
@@ -182,7 +185,7 @@
     "privacyVersion": "Verze soukromí",
     "sentryAction": "Odeslat testovací chybu do Sentry",
     "sentrySent": "Testovací chyba byla odeslána do Sentry.",
-    "sessionExpired": "Vaše session vypršela. Přihlaste se prosím znovu.",
+    "sessionExpired": "Platnost přihlášení vypršela. Přihlaste se prosím znovu.",
     "unsetValue": "Nenastaveno",
     "emptyValue": "Žádná",
     "booleanYes": "Ano",
@@ -211,7 +214,7 @@
       "postAvailability": "Přidat dostupnost",
       "settings": "Nastavení",
       "accountDeletion": "Smazat účet",
-      "addVenue": "Přidat venue",
+      "addVenue": "Přidat sportoviště",
       "skillLevel": "Výkonnost"
     }
   },
@@ -221,8 +224,8 @@
       "noCity": "Zatím nevybráno"
     },
     "home": {
-      "title": "Domovský feed",
-      "subtitle": "Procházejte nadcházející hry ve svém městě, upravujte filtry a otevírejte detail hry bez opuštění hlavního shellu.",
+      "title": "Najděte si hru",
+      "subtitle": "Procházejte hry ve svém městě nebo se podívejte, kdo je právě k dispozici.",
       "tabs": {
         "upcoming": "Nadcházející hry",
         "availablePlayers": "Dostupní hráči"
@@ -246,9 +249,9 @@
     },
     "eventDetail": {
       "title": "Detail hry",
-      "subtitle": "Zobrazte venue, organizátora i potvrzené hráče a sdílejte odkaz z finální route detailu hry.",
+      "subtitle": "Zobrazte sportoviště, organizátora i potvrzené hráče a sdílejte odkaz z finální route detailu hry.",
       "stubTitle": "Stub detailu hry",
-      "placeholder": "Tato obrazovka rezervuje finální route detailu hry, zatímco Milestone 4 doplní skutečná data, sdílení a informace o venue.",
+      "placeholder": "Tato obrazovka rezervuje finální route detailu hry, zatímco Milestone 4 doplní skutečná data, sdílení a informace o sportovišti.",
       "eventIdLabel": "ID události",
       "schemeLabel": "Scheme deep link",
       "webLabel": "Webový odkaz",
@@ -264,17 +267,17 @@
     },
     "createEvent": {
       "title": "Vytvořit hru",
-      "subtitle": "Nastavte sport, termín, venue a skill range v jednom scrollovatelném formuláři a potom hru publikujte.",
+      "subtitle": "Vyberte sport, termín a sportoviště a během chvilky hru zveřejněte.",
       "stubTitle": "Stub vytvoření hry",
-      "placeholder": "Finální formulář přidá sport, datum, čas, venue, počet hráčů a skill range v dalším milestone.",
-      "openAddVenue": "Otevřít stub přidání venue",
+      "placeholder": "Finální formulář přidá sport, datum, čas, sportoviště, počet hráčů a skill range v dalším milestone.",
+      "openAddVenue": "Otevřít stub přidání sportoviště",
       "openSkillLevel": "Otevřít stub modalu výkonnosti"
     },
     "addVenue": {
-      "title": "Přidat venue",
-      "subtitle": "Tato modal route je vyhrazená pro krok vytvoření venue v průběhu vytváření hry.",
-      "stubTitle": "Stub přidání venue",
-      "placeholder": "Vyhledávání venue a crowdsourcované vytváření venue přijdou v Milestone 4."
+      "title": "Přidat sportoviště",
+      "subtitle": "Tato modal route je vyhrazená pro krok vytvoření sportoviště v průběhu vytváření hry.",
+      "stubTitle": "Stub přidání sportoviště",
+      "placeholder": "Vyhledávání sportovišť a crowdsourcované vytváření sportovišť přijdou v Milestone 4."
     },
     "skillLevel": {
       "title": "Výkonnost",
@@ -284,7 +287,7 @@
     },
     "myGames": {
       "title": "Moje hry",
-      "subtitle": "Sledujte hry, které organizujete nebo hrajete, a po dokončení se k nim vraťte kvůli no-show hlášení a post-game feedbacku.",
+      "subtitle": "Mějte své nadcházející hry po ruce a k dokončeným se vracejte kvůli rychlým akcím po hře.",
       "tabs": {
         "upcoming": "Nadcházející",
         "past": "Minulé"
@@ -307,16 +310,16 @@
       "pastErrorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online znovu otevřete záložku Minulé.",
       "pastEmptyTitle": "Zatím žádné dokončené hry",
       "pastEmptyBody": "Jakmile některá z vašich her skončí, přesune se sem pro následné akce po hře.",
-      "reportNoShowBody": "Organizátor může ještě {{remaining}} nahlásit no-show.",
-      "reportNoShowAction": "Zkontrolovat no-show",
-      "thumbsUpBody": "Post-game feedback můžete ještě odeslat {{remaining}}.",
-      "thumbsUpEmpty": "Nezbývají žádní potvrzení hráči, kterým by šel dát feedback.",
+      "reportNoShowBody": "Organizátor může ještě {{remaining}} nahlásit neomluvenou neúčast.",
+      "reportNoShowAction": "Zkontrolovat neúčasti",
+      "thumbsUpBody": "Ještě {{remaining}} můžete označit, s kým byste si zahráli znovu.",
+      "thumbsUpEmpty": "Nezbývá žádný potvrzený hráč, kterého by ještě šlo doporučit pro další hru.",
       "openEvent": "Otevřít stub detailu hry",
       "openChat": "Otevřít stub chatu"
     },
     "profile": {
       "title": "Profil",
-      "subtitle": "Sledujte své sportovní statistiky, upravujte si skill level a zobrazte si hráče, se kterými byste si rádi zahráli znovu.",
+      "subtitle": "Mějte své statistiky, úrovně i oblíbené hráče pohromadě.",
       "stubTitle": "Souhrn profilu",
       "nameLabel": "Jméno",
       "languageLabel": "Jazyk",
@@ -325,7 +328,7 @@
     },
     "settings": {
       "title": "Nastavení",
-      "subtitle": "Spravujte preference notifikací, účet a základní nastavení aplikace na jednom místě.",
+      "subtitle": "Spravujte preference, notifikace i účet na jednom čistém místě.",
       "stubTitle": "Stub nastavení",
       "placeholder": "Preference notifikací a editovatelné nastavení aplikace zůstávají jako stuby, dokud nezačne jejich milestone práce.",
       "openAccountDeletion": "Smazat účet"
@@ -353,29 +356,40 @@
   "profile": {
     "summaryTitle": "Souhrn profilu",
     "statsTitle": "Vaše sportovní statistiky",
+    "statsSubtitle": "Tady uvidíte své úrovně, odehrané hry a další signály z jednotlivých sportů.",
     "statsEmpty": "Dokončete více her nebo přidejte další sporty a statistiky se zobrazí tady.",
     "connectionsTitle": "Spojení pro další hru",
-    "connectionsEmpty": "Vzájemné thumbs up se tady začnou zobrazovat po dokončených hrách.",
+    "connectionsSubtitle": "Hráči, se kterými jste si sedli nejvíc, se objeví právě tady.",
+    "connectionsEmpty": "Doporučení na další společnou hru se tady začnou zobrazovat po dokončených hrách.",
+    "connectionsGroupCount": "{{count}} hráčů pro další hru",
     "playAgainBadge": "Zahrál bych si znovu",
     "skillEditHint": "Klepnutím upravíte svou úroveň pro tento sport.",
     "skillModalSubtitle": "Upravte svou aktuální úroveň pro tento sport, aby další hry pracovaly se správným očekáváním.",
     "skillUpdated": "Vaše úroveň byla aktualizována.",
     "skillUpdateFailed": "Vaši úroveň se nepodařilo aktualizovat. Zkuste to prosím znovu.",
+    "highlights": {
+      "sports": "Sporty",
+      "games": "Hry",
+      "connections": "Další hra"
+    },
     "errors": {
       "stats": "Sportovní statistiky se teď nepodařilo načíst.",
       "connections": "Spojení pro další hru se teď nepodařilo načíst."
     },
     "stats": {
+      "reliabilityLabel": "Spolehlivost",
+      "feedbackLabel": "Doporučení",
       "gamesAndHours": "{{games}} her · {{hours}} h",
-      "noShows": "{{count}} no-show",
-      "thumbsHidden": "Procento thumbs up se odemkne až po alespoň 3 dokončených hrách.",
-      "thumbsValue": "{{percentage}} % thumbs up"
+      "noShows": "Bez omluvy: {{count}}",
+      "thumbsHidden": "Podíl doporučení se zobrazí až po alespoň 3 dokončených hrách.",
+      "thumbsValue": "{{percentage}} % doporučení"
     }
   },
   "playerProfile": {
     "subtitle": "Zobrazte si viditelné sportovní statistiky tohoto hráče a společné signály pro další hru.",
     "summaryTitle": "Souhrn hráče",
     "statsTitle": "Sportovní statistiky",
+    "statsSubtitle": "Tady se zobrazují viditelné úrovně a signály z dokončených her.",
     "empty": "Tento hráč zatím nemá žádné viditelné sportovní statistiky.",
     "errors": {
       "summary": "Souhrn profilu tohoto hráče se teď nepodařilo načíst.",
@@ -383,7 +397,9 @@
     }
   },
   "settings": {
-    "profileTitle": "Preference aplikace",
+    "profileTitle": "Aplikace",
+    "accountTitle": "Účet",
+    "accountSubtitle": "Tady najdete přihlášení na tomto zařízení i citlivé akce kolem účtu.",
     "languageLabel": "Jazyk",
     "cityLabel": "Město",
     "profileSaved": "Preference aplikace byly uloženy.",
@@ -397,6 +413,12 @@
     "closeCityPicker": "Zavřít výběr města",
     "validation": {
       "city": "Vyberte jedno z podporovaných měst."
+    },
+    "account": {
+      "logoutTitle": "Odhlásit se",
+      "logoutSubtitle": "Odhlásit se na tomto zařízení.",
+      "deleteTitle": "Smazat účet",
+      "deleteSubtitle": "Trvale smazat účet a související budoucí data."
     },
     "notifications": {
       "permissionTitle": "Push oprávnění",
@@ -431,7 +453,7 @@
   },
   "availability": {
     "title": "Jsem k dispozici",
-    "subtitle": "Zveřejněte dny, kdy si můžete zahrát, aby lidé ve vašem městě mohli vytvořit správnou hru kolem vás.",
+    "subtitle": "Sdílejte své volné termíny, aby kolem vás mohli ostatní snadno postavit správnou hru.",
     "availablePlayersTitle": "Dostupní hráči",
     "allSports": "Všechny sporty",
     "openFormAction": "Jsem k dispozici",
@@ -506,9 +528,9 @@
       "endDate": "Do",
       "endDatePlaceholder": "Vyberte koncové datum",
       "errorTitle": "Nepodařilo se načíst hry",
-      "errorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online feed znovu otevřete.",
+      "errorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online tuto obrazovku otevřete znovu.",
       "emptyTitle": "Žádné hry nenalezeny",
-      "emptyBody": "Tomuto nastavení filtrů neodpovídají žádné hry. Vytvořte první.",
+      "emptyBody": "Tomuto nastavení filtrů teď neodpovídají žádné hry. Zkuste upravit filtry, nebo vytvořte první hru.",
       "emptyCreateAction": "Vytvořit první hru",
       "statusFull": "Plno",
       "waitlistCount": "Čekačka: {{count}}",
@@ -517,41 +539,41 @@
     },
     "detail": {
       "loadingTitle": "Načítám hru",
-      "loadingSubtitle": "Načítají se aktuální informace o venue, organizátorovi a hráčích.",
+      "loadingSubtitle": "Načítají se aktuální informace o sportovišti, organizátorovi a hráčích.",
       "errorTitle": "Nepodařilo se načíst detail hry",
-      "errorSubtitle": "Route detailu je připravená, ale tuto hru teď nešlo načíst.",
+      "errorSubtitle": "Detail hry je připravený, ale tuto hru se teď nepodařilo načíst.",
       "errorBody": "Zkuste to prosím znovu. Pokud je odkaz starší nebo byla hra odstraněna, detail už nemusí být dostupný.",
       "whenWhereTitle": "Kdy a kde",
       "dateTimeLabel": "Datum a čas",
-      "venueLabel": "Venue",
+      "venueLabel": "Sportoviště",
       "addressLabel": "Adresa",
       "addressFallback": "Adresa zatím není uvedená",
       "waitlistLabel": "Čekačka",
       "yourStatusTitle": "Váš stav",
       "yourSkill": "Vaše úroveň: {{level}}",
       "skillTitle": "Skill range",
-      "skillRangeNote": "Hráči mimo tento rozsah se stále mohou přidat. Rozsah tu slouží hlavně k nastavení očekávání před joinem.",
+      "skillRangeNote": "Hráči mimo tento rozsah se stále mohou přidat. Rozsah tu slouží hlavně k lepšímu očekávání před přidáním do hry.",
       "descriptionTitle": "Popis",
       "noDescription": "K této hře nebyla přidaná žádná doplňující poznámka.",
       "organizerTitle": "Organizátor",
-      "organizerStats": "{{games}} odehraných her · {{noShows}} no-show",
-      "playerStats": "{{games}} her · {{noShows}} no-show",
-      "thumbsUpPercentage": "{{percentage}} % thumbs up",
-      "thumbsUpPercentageHidden": "Procento thumbs up se odemkne až po alespoň 3 dokončených hrách.",
+      "organizerStats": "{{games}} odehraných her · bez omluvy: {{noShows}}",
+      "playerStats": "{{games}} her · bez omluvy: {{noShows}}",
+      "thumbsUpPercentage": "{{percentage}} % doporučení",
+      "thumbsUpPercentageHidden": "Podíl doporučení se zobrazí až po alespoň 3 dokončených hrách.",
       "playAgainBadge": "Zahrál bych si znovu",
       "openOrganizerProfile": "Otevřít profil organizátora",
-      "openEventHint": "Otevřít {{sport}} ve venue {{venue}}",
+      "openEventHint": "Otevřít {{sport}} v {{venue}}",
       "openPlayerProfileHint": "Otevřít profil tohoto hráče",
       "confirmedPlayersTitle": "Potvrzení hráči",
       "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
       "skillUnknown": "Skill zatím není nastavený",
       "shareAction": "Sdílet hru",
-      "shareMessage": "{{sport}} ve venue {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}",
+      "shareMessage": "{{sport}} v {{venue}} dne {{date}} — přidej se ke mně na Hrayem! {{url}}",
       "backToEvent": "Zpět na detail hry",
       "state": {
-        "joinTitle": "Připraveno k joinu",
-        "joinBody": "Tlačítkem níže si vezmete potvrzené místo, pokud je ještě volné.",
-        "joinWaitlistBody": "Tato hra je právě plná. Noví hráči půjdou na čekačku ve strict FIFO pořadí.",
+        "joinTitle": "Můžete se přidat",
+        "joinBody": "Tlačítkem níže si vezmete místo, pokud je ještě volné.",
+        "joinWaitlistBody": "Tato hra je právě plná. Noví hráči půjdou na čekačku v pořadí, v jakém se přidají.",
         "organizerTitle": "Tuto hru organizujete",
         "organizerBody": "Organizátor zůstává potvrzený automaticky a tuto hru může spravovat přímo odsud.",
         "organizerLabel": "Organizátor",
@@ -564,7 +586,7 @@
         "finishedTitle": "Tato hra už skončila",
         "finishedBody": "Tato hra už skončila, takže organizační akce ani přidání už nejsou dostupné.",
         "closedTitle": "Tato hra už není otevřená",
-        "closedBody": "Join i leave jsou dostupné jen dokud je hra ještě nadcházející a aktivní."
+        "closedBody": "Přidat se nebo odejít můžete jen u aktivní nadcházející hry."
       }
     },
     "chat": {
@@ -581,6 +603,10 @@
       "messagesErrorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení a po návratu online chat znovu otevřete.",
       "emptyTitle": "Zatím žádné zprávy",
       "emptyBody": "Až budete připravení, pozdravte skupinu jako první.",
+      "threadTitle": "Konverzace",
+      "syncing": "Aktualizuji",
+      "liveStatus": "Živě",
+      "readOnlyStatus": "Jen pro čtení",
       "deletedParticipant": "Smazaný hráč",
       "deletedBody": "Tato zpráva byla odstraněna.",
       "inputLabel": "Zpráva",
@@ -617,7 +643,7 @@
       "warningContinue": "Přidat se i tak",
       "errors": {
         "alreadyJoined": "V této hře už jste.",
-        "unavailable": "Tato hra už není otevřená pro nové joiny.",
+        "unavailable": "Tato hra už není otevřená pro nové hráče.",
         "organizerCannotJoin": "Organizátor se nemůže přidat do vlastní hry."
       }
     },
@@ -636,20 +662,20 @@
       "submit": "Vytvořit hru",
       "previewTitle": "Náhled",
       "previewSportFallback": "Vyberte sport",
-      "previewVenueFallback": "Vyberte venue",
+      "previewVenueFallback": "Vyberte sportoviště",
       "eventDate": "Datum",
       "eventDatePlaceholder": "Vyberte datum hry",
       "startTime": "Začátek",
       "startTimePlaceholder": "Vyberte čas začátku",
       "endTime": "Konec",
       "endTimePlaceholder": "Vyberte čas konce",
-      "venueSearch": "Hledání venue",
-      "venueSearchPlaceholder": "Hledejte venue ve svém městě",
+      "venueSearch": "Hledání sportoviště",
+      "venueSearchPlaceholder": "Hledejte sportoviště ve svém městě",
       "reservationType": "Stav kurtu",
       "playerCountTotal": "Celkový počet hráčů",
       "skillMin": "Minimální skill",
       "skillMax": "Maximální skill",
-      "skillHelper": "Tento rozsah nastavuje očekávání. Hráči mimo něj se v dalších milestones stále budou moci přidat.",
+      "skillHelper": "Rozsah pomáhá hráčům rychle odhadnout úroveň hry. Přidání mimo rozsah je stále možné.",
       "description": "Popis",
       "descriptionPlaceholder": "Volitelná poznámka k formátu, úrovni nebo tomu, co si mají hráči vzít s sebou.",
       "descriptionCounter": "{{count}}/{{max}} znaků",
@@ -660,13 +686,13 @@
       "sections": {
         "sport": "Sport",
         "schedule": "Termín",
-        "venue": "Venue",
+        "venue": "Sportoviště",
         "rules": "Nastavení hry",
         "description": "Poznámky"
       },
       "validation": {
         "sport": "Vyberte sport.",
-        "venue": "Vyberte venue.",
+        "venue": "Vyberte sportoviště.",
         "description": "Popis musí zůstat do 500 znaků.",
         "skillRange": "Minimální skill musí být menší nebo stejný jako maximální skill.",
         "endTime": "Čas konce musí být později než čas začátku.",
@@ -675,7 +701,7 @@
     },
     "edit": {
       "title": "Upravit hru",
-      "subtitle": "Upravte místo, čas, kapacitu a poznámky k této hře ještě před začátkem.",
+      "subtitle": "Dolaďte termín, sportoviště a kapacitu ještě před začátkem hry.",
       "submit": "Uložit změny",
       "loadingTitle": "Načítám detail hry",
       "loadingBody": "Právě doplňujeme aktuální hodnoty hry do formuláře.",
@@ -690,11 +716,11 @@
     },
     "venue": {
       "noAddress": "Adresa není uvedená",
-      "noMatch": "Ve vašem městě zatím nebyla nalezena žádná odpovídající venue.",
-      "addInlineAction": "Přidat novou venue",
-      "submit": "Uložit venue",
+      "noMatch": "Ve vašem městě zatím nebylo nalezeno žádné odpovídající sportoviště.",
+      "addInlineAction": "Přidat nové sportoviště",
+      "submit": "Uložit sportoviště",
       "fields": {
-        "name": "Název venue",
+        "name": "Název sportoviště",
         "address": "Adresa"
       },
       "placeholders": {
@@ -702,11 +728,11 @@
         "address": "Ulice nebo adresa areálu"
       },
       "errors": {
-        "missing": "Vybranou venue už se nepodařilo najít.",
-        "cityRequired": "Než přidáte novou venue, nastavte si ve svém profilu město."
+        "missing": "Vybrané sportoviště už se nepodařilo najít.",
+        "cityRequired": "Než přidáte nové sportoviště, nastavte si ve svém profilu město."
       },
       "validation": {
-        "name": "Zadejte název venue.",
+        "name": "Zadejte název sportoviště.",
         "address": "Adresa musí zůstat do 200 znaků."
       }
     },
@@ -737,7 +763,7 @@
     },
     "organizerTools": {
       "title": "Nástroje organizátora",
-      "body": "Udržujte hru aktuální, případně odeberte hráče nebo hru před začátkem zrušte.",
+      "body": "Udržujte hru aktuální a v případě potřeby ji před začátkem zrušte.",
       "editAction": "Upravit hru",
       "cancelAction": "Zrušit hru",
       "errors": {
@@ -763,35 +789,35 @@
       "confirmAction": "Odebrat"
     },
     "noShow": {
-      "title": "Hlášení no-show",
-      "body": "Potvrzeného hráče můžete ještě {{remaining}} nahlásit jako no-show.",
-      "action": "Nahlásit no-show",
+      "title": "Nahlášení neomluvené neúčasti",
+      "body": "Potvrzeného hráče můžete ještě {{remaining}} nahlásit, že nedorazil bez omluvy.",
+      "action": "Nahlásit neúčast",
       "pending": "Hlašuji...",
-      "confirmTitle": "Nahlásit no-show?",
-      "confirmBody": "{{player}} dostane za tuto dokončenou hru no-show do svého sportovního profilu.",
+      "confirmTitle": "Nahlásit neomluvenou neúčast?",
+      "confirmBody": "{{player}} dostane za tuto dokončenou hru do sportovního profilu záznam o neomluvené neúčasti.",
       "confirmAction": "Nahlásit",
       "noneLeft": "Nezbývají žádní potvrzení hráči, které by šlo tady nahlásit.",
-      "minimumPlayersBody": "No-show hlášení se odemkne jen tehdy, když v této hře byli alespoň dva potvrzení hráči mimo organizátora.",
-      "organizerOnly": "Během post-game okna může no-show hlásit pouze organizátor.",
-      "closedBody": "Okno pro no-show hlášení pro tuto hru už skončilo.",
-      "success": "No-show bylo zaznamenáno.",
+      "minimumPlayersBody": "Nahlášení neomluvené neúčasti se odemkne jen tehdy, když v této hře byli alespoň dva potvrzení hráči mimo organizátora.",
+      "organizerOnly": "Během krátké doby po hře může neomluvenou neúčast hlásit pouze organizátor.",
+      "closedBody": "Čas pro nahlášení neomluvené neúčasti u této hry už skončil.",
+      "success": "Neomluvená neúčast byla zaznamenána.",
       "errors": {
-        "unavailable": "No-show hlášení už pro tuto hru není dostupné.",
-        "alreadyReported": "Tento hráč už byl pro tuto hru jako no-show nahlášen."
+        "unavailable": "Nahlášení neomluvené neúčasti už pro tuto hru není dostupné.",
+        "alreadyReported": "Tento hráč už byl pro tuto hru nahlášen jako ten, kdo nedorazil bez omluvy."
       }
     },
     "thumbsUp": {
       "title": "S kým byste si zahráli znovu?",
-      "body": "Post-game feedback můžete ještě odeslat {{remaining}}.",
-      "action": "Poslat thumbs up",
+      "body": "Ještě {{remaining}} můžete označit, s kým byste si zahráli znovu.",
+      "action": "Doporučit",
       "pending": "Ukládám...",
-      "done": "Odesláno",
-      "empty": "Nezbývají žádní potvrzení hráči, kterým by šel dát feedback.",
-      "closedBody": "Okno pro post-game feedback pro tuto hru už skončilo.",
-      "success": "Vaše thumbs up bylo zaznamenáno.",
+      "done": "Doporučeno",
+      "empty": "Nezbývají žádní potvrzení hráči, které by ještě šlo doporučit pro další hru.",
+      "closedBody": "Čas pro doporučení po této hře už skončil.",
+      "success": "Vaše doporučení bylo uloženo.",
       "errors": {
-        "unavailable": "Post-game feedback už pro tuto hru není dostupný.",
-        "alreadyGiven": "Tomuto hráči už jste v této hře thumbs up poslali."
+        "unavailable": "Doporučení po této hře už není dostupné.",
+        "alreadyGiven": "Tomuto hráči už jste po této hře doporučení poslali."
       }
     }
   },
@@ -833,28 +859,28 @@
   },
   "accountDeletion": {
     "title": "Smazat účet",
-    "subtitle": "Odstraňte svůj účet Hrayem a ukliďte budoucí data her, která jsou s ním spojená.",
+    "subtitle": "Trvale smažte svůj účet Hrayem a odeberte svou budoucí účast ve hrách.",
     "body": "Smazání účtu je trvalé. Hrayem zruší vaše budoucí organizované hry, odebere vás z budoucích her, do kterých jste přihlášení, a smaže profilová data, která je bezpečné odstranit.",
-    "actionTitle": "Potvrdit smazání účtu",
+    "actionTitle": "Trvalé smazání účtu",
     "warning": "Tuto akci není možné vrátit zpět.",
     "deleteAction": "Smazat můj účet",
     "pending": "Mažu účet...",
     "confirmTitle": "Smazat účet?",
-    "confirmBody": "Tímto trvale smažete svůj účet Hrayem a uklidíte svou budoucí účast ve hrách.",
+    "confirmBody": "Tímto trvale smažete svůj účet Hrayem a odeberete svou budoucí účast ve hrách.",
     "confirmAction": "Smazat trvale",
     "success": "Váš účet byl smazán.",
     "errors": {
-      "unauthorized": "Vaše session vypršela. Před smazáním účtu se prosím znovu přihlaste.",
+      "unauthorized": "Platnost přihlášení vypršela. Před smazáním účtu se prosím znovu přihlaste.",
       "network": "Jste offline. Připojte se znovu a pak zkuste účet smazat.",
       "generic": "Účet se teď nepodařilo smazat. Zkuste to prosím znovu."
     },
     "impacts": {
-      "organizedEvents": "Budoucí hry, které organizujete, budou zrušeny a dotčení hráči dostanou notifikaci.",
+      "organizedEvents": "Budoucí hry, které organizujete, budou zrušeny a dotčení hráči dostanou upozornění.",
       "joinedEvents": "Budete odebráni z budoucích her, do kterých jste přihlášeni, a hráči z čekačky se mohou posunout.",
       "availability": "Vaše aktivní příspěvky dostupnosti budou odstraněny.",
-      "profilePhoto": "Nahraná profilová fotka bude smazána ze storage.",
-      "sessions": "Toto zařízení bude odhlášeno a váš push token se vyčistí.",
-      "history": "Minulý chat, nahlášení, no-show a thumbs-up historie zůstávají zachované s anonymizovanými odkazy na uživatele."
+      "profilePhoto": "Nahraná profilová fotka bude smazána z úložiště.",
+      "sessions": "Na tomto zařízení se odhlásíte a uložená push registrace se vyčistí.",
+      "history": "Minulý chat, nahlášení, neomluvené neúčasti a doporučení zůstanou zachované s anonymizovanými odkazy na uživatele."
     }
   },
   "publicFallback": {

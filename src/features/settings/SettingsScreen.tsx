@@ -1,17 +1,19 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Switch, Text, View } from 'react-native';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { CURATED_CITIES, type CityName } from '../../constants/cities';
 import { ScreenCard, ScreenShell } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import type { RootStackParamList } from '../../navigation/types';
 import { saveProfilePreferences } from '../../services/profile';
 import { signOutAndClearState } from '../../services/auth';
@@ -31,8 +33,13 @@ import {
   PickerSheet,
   SelectionField,
 } from '../auth/AuthPrimitives';
+import { AvatarPhoto, InfoPill } from '../events/EventPrimitives';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+type NotificationPermissionStatus =
+  | Notifications.NotificationPermissionsStatus['status']
+  | 'provisional';
 
 const languageOptions: { labelKey: string; value: AppLanguage }[] = [
   { labelKey: 'auth.language.cs', value: 'cs' },
@@ -55,6 +62,98 @@ function notificationPreferenceLabelKey(type: NotificationPreferenceType): strin
   return `settings.notifications.types.${type}`;
 }
 
+function notificationPreferenceIconName(type: NotificationPreferenceType): IoniconName {
+  switch (type) {
+    case 'player_joined':
+      return 'person-add-outline';
+    case 'join_confirmed':
+      return 'checkmark-circle-outline';
+    case 'waitlist_promoted':
+      return 'arrow-up-circle-outline';
+    case 'event_full':
+      return 'people-outline';
+    case 'chat_message':
+      return 'chatbubble-ellipses-outline';
+    case 'event_reminder':
+      return 'alarm-outline';
+    case 'event_cancelled':
+      return 'close-circle-outline';
+    case 'player_removed':
+      return 'person-remove-outline';
+  }
+}
+
+function SettingsSectionHeader({
+  iconName,
+  title,
+  subtitle,
+}: {
+  iconName: IoniconName;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <View style={styles.sectionIconWrap}>
+        <Ionicons color="#183153" name={iconName} size={18} />
+      </View>
+      <View style={styles.sectionHeaderCopy}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+function SettingsActionRow({
+  iconName,
+  title,
+  subtitle,
+  onPress,
+  tone = 'neutral',
+}: {
+  iconName: IoniconName;
+  title: string;
+  subtitle: string;
+  onPress: () => void | Promise<void>;
+  tone?: 'neutral' | 'danger';
+}) {
+  return (
+    <Pressable
+      accessibilityHint={title}
+      accessibilityLabel={title}
+      accessibilityRole="button"
+      onPress={() => {
+        void onPress();
+      }}
+      style={({ pressed }) => [
+        styles.actionRow,
+        tone === 'danger' ? styles.actionRowDanger : undefined,
+        pressed ? styles.actionRowPressed : undefined,
+      ]}
+    >
+      <View
+        style={[styles.actionIconWrap, tone === 'danger' ? styles.actionIconWrapDanger : undefined]}
+      >
+        <Ionicons color={tone === 'danger' ? '#b44740' : '#183153'} name={iconName} size={18} />
+      </View>
+      <View style={styles.actionCopy}>
+        <Text
+          style={[styles.actionTitle, tone === 'danger' ? styles.actionTitleDanger : undefined]}
+        >
+          {title}
+        </Text>
+        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      </View>
+      <Ionicons
+        color={tone === 'danger' ? '#b44740' : '#9aacbd'}
+        name="chevron-forward"
+        size={18}
+      />
+    </Pressable>
+  );
+}
+
 export function SettingsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<RootNavigation>();
@@ -67,9 +166,9 @@ export function SettingsScreen() {
   const setSelectedCity = useUserStore((state) => state.setSelectedCity);
   const [notice, setNotice] = useState<AppNotice | null>(null);
   const [isCityPickerVisible, setIsCityPickerVisible] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<
-    Notifications.NotificationPermissionsStatus['status']
-  >(Notifications.PermissionStatus.UNDETERMINED);
+  const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>(
+    Notifications.PermissionStatus.UNDETERMINED,
+  );
   const settingsForm = useForm<SettingsProfileValues>({
     resolver: zodResolver(settingsProfileSchema),
     defaultValues: {
@@ -99,7 +198,7 @@ export function SettingsScreen() {
 
   async function refreshNotificationPermission() {
     const permission = await Notifications.getPermissionsAsync();
-    setPermissionStatus(permission.status);
+    setPermissionStatus(permission.status as NotificationPermissionStatus);
     return permission;
   }
 
@@ -225,10 +324,34 @@ export function SettingsScreen() {
     }
   }
 
+  const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
+  const languageLabel = t(`auth.language.${profile?.language ?? language}`);
+  const permissionLabel = t(`settings.notifications.permissionStatus.${permissionStatus}`);
+
   return (
     <ScreenShell title={t('shell.settings.title')} subtitle={t('shell.settings.subtitle')}>
-      <ScreenCard title={t('settings.profileTitle')}>
+      <ScreenCard>
         <NoticeBanner notice={notice} resolveMessage={t} />
+        <View style={styles.accountHero}>
+          <View style={styles.accountAvatarWrap}>
+            <AvatarPhoto
+              label={fullName || t('auth.home.defaultName')}
+              size={72}
+              uri={profile?.photoUrl ?? null}
+            />
+          </View>
+          <View style={styles.accountCopy}>
+            <Text style={styles.accountName}>{fullName || t('auth.home.defaultName')}</Text>
+          </View>
+        </View>
+        <View style={styles.accountPillRow}>
+          <InfoPill>{profile?.city ?? selectedCity ?? t('shell.common.noCity')}</InfoPill>
+          <InfoPill accentColor="#183153">{languageLabel}</InfoPill>
+        </View>
+      </ScreenCard>
+
+      <ScreenCard>
+        <SettingsSectionHeader iconName="options-outline" title={t('settings.profileTitle')} />
         <Controller
           control={settingsForm.control}
           name="language"
@@ -274,6 +397,7 @@ export function SettingsScreen() {
         <ActionButton
           accessibilityHint={t('settings.saveProfileAction')}
           disabled={saveProfileMutation.isPending}
+          iconName="save-outline"
           label={
             saveProfileMutation.isPending
               ? t('settings.saveProfilePending')
@@ -286,18 +410,48 @@ export function SettingsScreen() {
         />
       </ScreenCard>
 
-      <ScreenCard title={t('settings.notifications.permissionTitle')}>
-        <Text style={styles.bodyText}>{t('settings.notifications.permissionBody')}</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>
-            {t('settings.notifications.permissionStatusLabel')}
-          </Text>
-          <Text style={styles.detailValue}>
-            {t(`settings.notifications.permissionStatus.${permissionStatus}`)}
-          </Text>
+      <ScreenCard>
+        <SettingsSectionHeader
+          iconName="notifications-outline"
+          title={t('settings.notifications.permissionTitle')}
+        />
+        <View style={styles.permissionPanel}>
+          <View style={styles.permissionPanelCopy}>
+            <Text style={styles.detailLabel}>
+              {t('settings.notifications.permissionStatusLabel')}
+            </Text>
+            <Text style={styles.detailValue}>{permissionLabel}</Text>
+          </View>
+          <View
+            style={[
+              styles.permissionBadge,
+              permissionStatus === 'granted'
+                ? styles.permissionBadgeReady
+                : permissionStatus === 'provisional'
+                  ? styles.permissionBadgeQuiet
+                  : styles.permissionBadgeBlocked,
+            ]}
+          >
+            <Text
+              style={[
+                styles.permissionBadgeText,
+                permissionStatus === 'granted'
+                  ? styles.permissionBadgeTextReady
+                  : permissionStatus === 'provisional'
+                    ? styles.permissionBadgeTextQuiet
+                    : styles.permissionBadgeTextBlocked,
+              ]}
+            >
+              {permissionLabel}
+            </Text>
+          </View>
         </View>
+        <Text style={styles.bodyText}>{t('settings.notifications.permissionBody')}</Text>
         <ActionButton
           accessibilityHint={t('settings.notifications.permissionAction')}
+          iconName={
+            permissionStatus === 'granted' ? 'checkmark-circle-outline' : 'notifications-outline'
+          }
           label={t('settings.notifications.permissionAction')}
           onPress={handleEnableNotifications}
           variant={permissionStatus === 'granted' ? 'secondary' : 'primary'}
@@ -310,20 +464,35 @@ export function SettingsScreen() {
             <ActivityIndicator color="#183153" />
           </View>
         ) : preferencesQuery.isError ? (
-          <>
-            <Text style={styles.bodyText}>{t('settings.notifications.loadFailed')}</Text>
-            <ActionButton
-              accessibilityHint={t('events.common.retry')}
-              label={t('events.common.retry')}
-              onPress={async () => {
-                await preferencesQuery.refetch();
-              }}
-            />
-          </>
+          <StateMessage
+            action={
+              <ActionButton
+                accessibilityHint={t('events.common.retry')}
+                iconName="refresh-outline"
+                label={t('events.common.retry')}
+                onPress={async () => {
+                  await preferencesQuery.refetch();
+                }}
+                variant="secondary"
+              />
+            }
+            body={t('settings.notifications.loadFailed')}
+            compact
+            iconName="notifications-off-outline"
+            title={t('common.tryAgainTitle')}
+            tone="muted"
+          />
         ) : (
           <View style={styles.preferenceList}>
             {(preferencesQuery.data ?? []).map((preference) => (
               <View key={preference.type} style={styles.preferenceRow}>
+                <View style={styles.preferenceIconWrap}>
+                  <Ionicons
+                    color="#183153"
+                    name={notificationPreferenceIconName(preference.type)}
+                    size={18}
+                  />
+                </View>
                 <View style={styles.preferenceCopy}>
                   <Text style={styles.preferenceLabel}>
                     {t(notificationPreferenceLabelKey(preference.type))}
@@ -332,12 +501,16 @@ export function SettingsScreen() {
                 <Switch
                   accessibilityHint={t('settings.notifications.toggleHint')}
                   accessibilityLabel={t(notificationPreferenceLabelKey(preference.type))}
+                  disabled={togglePreferenceMutation.isPending}
+                  ios_backgroundColor="#d8cab7"
                   onValueChange={(nextValue) => {
                     void togglePreferenceMutation.mutateAsync({
                       type: preference.type,
                       isEnabled: nextValue,
                     });
                   }}
+                  thumbColor="#fffaf3"
+                  trackColor={{ false: '#d8cab7', true: '#183153' }}
                   value={preference.isEnabled}
                 />
               </View>
@@ -346,18 +519,27 @@ export function SettingsScreen() {
         )}
       </ScreenCard>
 
-      <ScreenCard title={t('shell.settings.title')}>
-        <ActionButton
-          accessibilityHint={t('shell.settings.openAccountDeletion')}
-          label={t('shell.settings.openAccountDeletion')}
-          onPress={() => navigation.navigate('AccountDeletion')}
+      <ScreenCard>
+        <SettingsSectionHeader
+          iconName="shield-checkmark-outline"
+          subtitle={t('settings.accountSubtitle')}
+          title={t('settings.accountTitle')}
         />
-        <ActionButton
-          accessibilityHint={t('auth.home.logout')}
-          label={t('auth.home.logout')}
-          onPress={signOutAndClearState}
-          variant="secondary"
-        />
+        <View style={styles.actionList}>
+          <SettingsActionRow
+            iconName="log-out-outline"
+            onPress={signOutAndClearState}
+            subtitle={t('settings.account.logoutSubtitle')}
+            title={t('settings.account.logoutTitle')}
+          />
+          <SettingsActionRow
+            iconName="trash-outline"
+            onPress={() => navigation.navigate('AccountDeletion')}
+            subtitle={t('settings.account.deleteSubtitle')}
+            title={t('settings.account.deleteTitle')}
+            tone="danger"
+          />
+        </View>
       </ScreenCard>
     </ScreenShell>
   );
@@ -374,6 +556,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 24,
   },
+  accountHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  accountAvatarWrap: {
+    padding: 5,
+    borderRadius: 999,
+    backgroundColor: '#eef3f8',
+  },
+  accountCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  accountName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  accountPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sectionIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef3f8',
+  },
+  sectionHeaderCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#5a6475',
+  },
   detailLabel: {
     fontSize: 12,
     fontWeight: '700',
@@ -381,17 +614,83 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: '#a0603b',
   },
-  detailRow: {
-    gap: 4,
-  },
   detailValue: {
     fontSize: 15,
     lineHeight: 22,
     color: '#395065',
+    fontWeight: '700',
+  },
+  permissionPanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    backgroundColor: '#f8f1e6',
+  },
+  permissionPanelCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  permissionBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  permissionBadgeReady: {
+    backgroundColor: '#ebf6ef',
+    borderColor: '#b7d8c2',
+  },
+  permissionBadgeQuiet: {
+    backgroundColor: '#eef4fa',
+    borderColor: '#c9d9e8',
+  },
+  permissionBadgeBlocked: {
+    backgroundColor: '#fdeceb',
+    borderColor: '#f1b9b6',
+  },
+  permissionBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  permissionBadgeTextReady: {
+    color: '#2f6b47',
+  },
+  permissionBadgeTextQuiet: {
+    color: '#37536e',
+  },
+  permissionBadgeTextBlocked: {
+    color: '#a33d37',
+  },
+  preferenceList: {
+    gap: 12,
+  },
+  preferenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#eadfce',
+    backgroundColor: '#fffaf5',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  preferenceIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef3f8',
   },
   preferenceCopy: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 8,
   },
   preferenceLabel: {
     fontSize: 15,
@@ -399,18 +698,53 @@ const styles = StyleSheet.create({
     color: '#183153',
     fontWeight: '600',
   },
-  preferenceList: {
-    gap: 14,
+  actionList: {
+    gap: 12,
   },
-  preferenceRow: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#eadfce',
-    backgroundColor: '#fffdf8',
+    backgroundColor: '#fffaf5',
     paddingHorizontal: 14,
     paddingVertical: 14,
+  },
+  actionRowDanger: {
+    borderColor: '#f0d0cb',
+    backgroundColor: '#fff4f3',
+  },
+  actionRowPressed: {
+    opacity: 0.9,
+  },
+  actionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef3f8',
+  },
+  actionIconWrapDanger: {
+    backgroundColor: '#fdeceb',
+  },
+  actionCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  actionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  actionTitleDanger: {
+    color: '#8f332d',
+  },
+  actionSubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#5a6475',
   },
 });

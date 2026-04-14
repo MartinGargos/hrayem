@@ -6,7 +6,7 @@ const projectRoot = path.resolve(new URL('..', import.meta.url).pathname);
 const outputDir = path.join(projectRoot, 'public', '.well-known');
 const iosBundleIdentifier = 'com.martingargos.hrayem';
 const androidPackage = 'app.hrayem';
-const canonicalWebBaseUrl = 'https://hrayem.cz';
+const canonicalWebBaseUrl = 'https://www.hrayem.cz';
 
 function requireEnv(name) {
   const value = process.env[name]?.trim();

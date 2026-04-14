@@ -11,6 +11,7 @@ import {
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { addDays, formatISO, startOfDay } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,7 @@ import {
 } from '../events/EventPrimitives';
 import { NativePickerField } from '../events/NativePickerField';
 import { ScreenCard, SegmentedTabs } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import { fetchActiveSports, fetchEventFeedPage } from '../../services/events';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
@@ -88,37 +90,80 @@ function AvailabilityPlayerCard({
             <AvatarPhoto label={fullName} uri={item.photoUrl} size={48} />
             <View style={styles.availabilityIdentityCopy}>
               <Text style={styles.availabilityName}>{fullName}</Text>
-              <Text style={styles.availabilityMeta}>
-                {language === 'cs' ? item.sportNameCs : item.sportNameEn}
-              </Text>
+              <Text style={styles.availabilityMeta}>{sportName}</Text>
             </View>
           </View>
-          <View style={styles.headerPills}>
-            <SportBadge
-              colorHex={item.sportColor}
-              label={getSportBadgeLabel(item.sportSlug, sportName)}
-            />
-            <InfoPill accentColor={item.sportColor}>{timePreferenceLabel}</InfoPill>
-            {item.isPlayAgainConnection ? (
-              <InfoPill accentColor="#183153">{playAgainLabel}</InfoPill>
-            ) : null}
-          </View>
+          <SportBadge
+            colorHex={item.sportColor}
+            label={getSportBadgeLabel(item.sportSlug, sportName)}
+          />
         </View>
 
-        <Text style={styles.availabilityDates}>
-          {item.availableDates
-            .map((dateValue) => formatEventDate(`${dateValue}T00:00:00`, language))
-            .join(' · ')}
-        </Text>
         <Text style={styles.availabilityMeta}>
           {t('availability.cardSummary', {
             games: item.gamesPlayed,
             skill: translatedSkillLevel,
           })}
         </Text>
-        {item.note ? <Text style={styles.availabilityNote}>{item.note}</Text> : null}
+
+        <View style={styles.availabilitySignalsRow}>
+          <InfoPill accentColor={item.sportColor}>{timePreferenceLabel}</InfoPill>
+          {item.isPlayAgainConnection ? (
+            <InfoPill accentColor="#183153">{playAgainLabel}</InfoPill>
+          ) : null}
+        </View>
+
+        <View style={styles.availabilityDatesRow}>
+          <Ionicons color="#708298" name="calendar-clear-outline" size={16} />
+          <Text style={styles.availabilityDates}>
+            {item.availableDates
+              .map((dateValue) => formatEventDate(`${dateValue}T00:00:00`, language))
+              .join(' · ')}
+          </Text>
+        </View>
+
+        {item.note ? (
+          <Text numberOfLines={2} style={styles.availabilityNote}>
+            {item.note}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
+  );
+}
+
+function FeedStateCard({
+  actionLabel,
+  body,
+  iconName,
+  onPress,
+  title,
+}: {
+  actionLabel?: string;
+  body: string;
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  onPress?: () => void | Promise<void>;
+  title: string;
+}) {
+  return (
+    <ScreenCard>
+      <StateMessage
+        action={
+          actionLabel && onPress ? (
+            <ActionButton
+              iconName={iconName === 'cloud-offline-outline' ? 'refresh-outline' : 'add-outline'}
+              label={actionLabel}
+              onPress={onPress}
+              variant={iconName === 'cloud-offline-outline' ? 'secondary' : 'primary'}
+            />
+          ) : undefined
+        }
+        body={body}
+        iconName={iconName}
+        title={title}
+        tone={iconName === 'cloud-offline-outline' ? 'muted' : 'warm'}
+      />
+    </ScreenCard>
   );
 }
 
@@ -202,6 +247,8 @@ export function HomeFeedScreen() {
     refetchIntervalInBackground: false,
     staleTime: 30_000,
   });
+  const activeCount =
+    activeTab === 'available' ? (availablePlayersQuery.data?.length ?? 0) : feedItems.length;
 
   function toggleSportFilter(sportId: string) {
     setSelectedSportIds((current) =>
@@ -238,8 +285,28 @@ export function HomeFeedScreen() {
     return (
       <View style={styles.headerWrap}>
         <View style={styles.hero}>
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroPill}>
+              <Ionicons color="#dbe4ee" name="location-outline" size={14} />
+              <Text style={styles.heroPillLabel}>{selectedCity ?? t('shell.common.noCity')}</Text>
+            </View>
+            <View style={styles.heroPill}>
+              <Ionicons
+                color="#dbe4ee"
+                name={activeTab === 'available' ? 'people-outline' : 'flash-outline'}
+                size={14}
+              />
+              <Text style={styles.heroPillLabel}>
+                {activeTab === 'available'
+                  ? t('shell.home.tabs.availablePlayers')
+                  : t('shell.home.tabs.upcoming')}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.heroTitle}>{t('shell.home.title')}</Text>
-          <Text style={styles.heroSubtitle}>{t('shell.home.subtitle')}</Text>
+          <Text style={styles.heroSubtitle}>
+            {activeTab === 'available' ? t('availability.subtitle') : t('shell.home.subtitle')}
+          </Text>
         </View>
 
         <SegmentedTabs
@@ -252,12 +319,24 @@ export function HomeFeedScreen() {
         />
 
         {activeTab === 'upcoming' ? (
-          <ScreenCard title={t('events.feed.filtersTitle')}>
-            <View style={styles.filterMeta}>
-              <Text style={styles.filterMetaLabel}>{t('shell.common.cityLabel')}</Text>
-              <Text style={styles.filterMetaValue}>{selectedCity ?? t('shell.common.noCity')}</Text>
+          <ScreenCard>
+            <View style={styles.surfaceHeader}>
+              <View style={styles.surfaceTitleWrap}>
+                <View style={styles.surfaceTitleRow}>
+                  <Ionicons color="#183153" name="options-outline" size={16} />
+                  <Text style={styles.surfaceTitle}>{t('events.feed.filtersTitle')}</Text>
+                </View>
+                <Text style={styles.surfaceSubtitle}>
+                  {selectedCity ?? t('shell.common.noCity')}
+                </Text>
+              </View>
             </View>
             <View style={styles.filterChipWrap}>
+              <FilterChip
+                label={t('availability.allSports')}
+                onPress={() => setSelectedSportIds([])}
+                selected={selectedSportIds.length === 0}
+              />
               {(sportsQuery.data ?? []).map((sport) => (
                 <FilterChip
                   key={sport.id}
@@ -267,36 +346,49 @@ export function HomeFeedScreen() {
                 />
               ))}
             </View>
-            <NativePickerField
-              label={t('events.feed.startDate')}
-              mode="date"
-              onChange={(nextValue) => {
-                setStartDate(nextValue);
+            <View style={styles.dateFieldRow}>
+              <View style={styles.dateFieldWrap}>
+                <NativePickerField
+                  label={t('events.feed.startDate')}
+                  mode="date"
+                  onChange={(nextValue) => {
+                    setStartDate(nextValue);
 
-                if (nextValue > endDate) {
-                  setEndDate(nextValue);
-                }
-              }}
-              placeholder={t('events.feed.startDatePlaceholder')}
-              value={startDate}
-              valueText={formatEventDate(startDate, language)}
-            />
-            <NativePickerField
-              label={t('events.feed.endDate')}
-              mode="date"
-              onChange={(nextValue) => {
-                setEndDate(nextValue < startDate ? startDate : nextValue);
-              }}
-              placeholder={t('events.feed.endDatePlaceholder')}
-              value={endDate}
-              valueText={formatEventDate(endDate, language)}
-            />
+                    if (nextValue > endDate) {
+                      setEndDate(nextValue);
+                    }
+                  }}
+                  placeholder={t('events.feed.startDatePlaceholder')}
+                  value={startDate}
+                  valueText={formatEventDate(startDate, language)}
+                />
+              </View>
+              <View style={styles.dateFieldWrap}>
+                <NativePickerField
+                  label={t('events.feed.endDate')}
+                  mode="date"
+                  onChange={(nextValue) => {
+                    setEndDate(nextValue < startDate ? startDate : nextValue);
+                  }}
+                  placeholder={t('events.feed.endDatePlaceholder')}
+                  value={endDate}
+                  valueText={formatEventDate(endDate, language)}
+                />
+              </View>
+            </View>
           </ScreenCard>
         ) : (
-          <ScreenCard title={t('availability.availablePlayersTitle')}>
-            <View style={styles.filterMeta}>
-              <Text style={styles.filterMetaLabel}>{t('shell.common.cityLabel')}</Text>
-              <Text style={styles.filterMetaValue}>{selectedCity ?? t('shell.common.noCity')}</Text>
+          <ScreenCard>
+            <View style={styles.surfaceHeader}>
+              <View style={styles.surfaceTitleWrap}>
+                <View style={styles.surfaceTitleRow}>
+                  <Ionicons color="#183153" name="sparkles-outline" size={16} />
+                  <Text style={styles.surfaceTitle}>{t('availability.availablePlayersTitle')}</Text>
+                </View>
+                <Text style={styles.surfaceSubtitle}>
+                  {selectedCity ?? t('shell.common.noCity')}
+                </Text>
+              </View>
             </View>
             <View style={styles.filterChipWrap}>
               <FilterChip
@@ -313,36 +405,57 @@ export function HomeFeedScreen() {
                 />
               ))}
             </View>
-            <NativePickerField
-              label={t('availability.startDate')}
-              mode="date"
-              onChange={(nextValue) => {
-                setStartDate(nextValue);
+            <View style={styles.dateFieldRow}>
+              <View style={styles.dateFieldWrap}>
+                <NativePickerField
+                  label={t('availability.startDate')}
+                  mode="date"
+                  onChange={(nextValue) => {
+                    setStartDate(nextValue);
 
-                if (nextValue > endDate) {
-                  setEndDate(nextValue);
-                }
-              }}
-              placeholder={t('availability.startDatePlaceholder')}
-              value={startDate}
-              valueText={formatEventDate(startDate, language)}
-            />
-            <NativePickerField
-              label={t('availability.endDate')}
-              mode="date"
-              onChange={(nextValue) => {
-                setEndDate(nextValue < startDate ? startDate : nextValue);
-              }}
-              placeholder={t('availability.endDatePlaceholder')}
-              value={endDate}
-              valueText={formatEventDate(endDate, language)}
-            />
+                    if (nextValue > endDate) {
+                      setEndDate(nextValue);
+                    }
+                  }}
+                  placeholder={t('availability.startDatePlaceholder')}
+                  value={startDate}
+                  valueText={formatEventDate(startDate, language)}
+                />
+              </View>
+              <View style={styles.dateFieldWrap}>
+                <NativePickerField
+                  label={t('availability.endDate')}
+                  mode="date"
+                  onChange={(nextValue) => {
+                    setEndDate(nextValue < startDate ? startDate : nextValue);
+                  }}
+                  placeholder={t('availability.endDatePlaceholder')}
+                  value={endDate}
+                  valueText={formatEventDate(endDate, language)}
+                />
+              </View>
+            </View>
             <ActionButton
+              iconName="add-circle-outline"
               label={t('availability.openFormAction')}
               onPress={() => navigation.navigate('PostAvailability')}
             />
           </ScreenCard>
         )}
+
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleWrap}>
+            <Text style={styles.sectionTitle}>
+              {activeTab === 'available'
+                ? t('availability.availablePlayersTitle')
+                : t('shell.home.tabs.upcoming')}
+            </Text>
+            <Text style={styles.sectionSubtitle}>{selectedCity ?? t('shell.common.noCity')}</Text>
+          </View>
+          <View style={styles.sectionCountPill}>
+            <Text style={styles.sectionCountLabel}>{activeCount}</Text>
+          </View>
+        </View>
       </View>
     );
   }
@@ -361,26 +474,27 @@ export function HomeFeedScreen() {
               <ActivityIndicator color="#183153" />
             </View>
           ) : availablePlayersQuery.isError ? (
-            <ScreenCard title={t('availability.errorTitle')}>
-              <Text style={styles.placeholderText}>{t('availability.errorBody')}</Text>
-              <ActionButton
-                label={t('events.common.retry')}
-                onPress={async () => {
-                  await availablePlayersQuery.refetch();
-                }}
-              />
-            </ScreenCard>
+            <FeedStateCard
+              actionLabel={t('events.common.retry')}
+              body={t('availability.errorBody')}
+              iconName="cloud-offline-outline"
+              onPress={async () => {
+                await availablePlayersQuery.refetch();
+              }}
+              title={t('availability.errorTitle')}
+            />
           ) : (
-            <ScreenCard title={t('availability.emptyTitle')}>
-              <Text style={styles.placeholderText}>{t('availability.emptyBody')}</Text>
-              <ActionButton
-                label={t('availability.openFormAction')}
-                onPress={() => navigation.navigate('PostAvailability')}
-              />
-            </ScreenCard>
+            <FeedStateCard
+              actionLabel={t('availability.openFormAction')}
+              body={t('availability.emptyBody')}
+              iconName="people-outline"
+              onPress={() => navigation.navigate('PostAvailability')}
+              title={t('availability.emptyTitle')}
+            />
           )
         }
         ListHeaderComponent={renderHeader}
+        ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
         refreshControl={
           <RefreshControl onRefresh={() => void handleRefresh()} refreshing={isPullRefreshing} />
         }
@@ -412,28 +526,28 @@ export function HomeFeedScreen() {
             <ActivityIndicator color="#183153" />
           </View>
         ) : feedQuery.isError ? (
-          <ScreenCard title={t('events.feed.errorTitle')}>
-            <Text style={styles.placeholderText}>{t('events.feed.errorBody')}</Text>
-            <ActionButton
-              label={t('events.common.retry')}
-              onPress={async () => {
-                await feedQuery.refetch();
-              }}
-            />
-          </ScreenCard>
+          <FeedStateCard
+            actionLabel={t('events.common.retry')}
+            body={t('events.feed.errorBody')}
+            iconName="cloud-offline-outline"
+            onPress={async () => {
+              await feedQuery.refetch();
+            }}
+            title={t('events.feed.errorTitle')}
+          />
         ) : (
-          <ScreenCard title={t('events.feed.emptyTitle')}>
-            <Text style={styles.placeholderText}>{t('events.feed.emptyBody')}</Text>
-            <ActionButton
-              label={t('events.feed.emptyCreateAction')}
-              onPress={() =>
-                navigation.navigate('MainTabs', {
-                  screen: 'CreateEventTab',
-                  params: { screen: 'CreateEvent' },
-                })
-              }
-            />
-          </ScreenCard>
+          <FeedStateCard
+            actionLabel={t('events.feed.emptyCreateAction')}
+            body={t('events.feed.emptyBody')}
+            iconName="search-outline"
+            onPress={() =>
+              navigation.navigate('MainTabs', {
+                screen: 'CreateEventTab',
+                params: { screen: 'CreateEvent' },
+              })
+            }
+            title={t('events.feed.emptyTitle')}
+          />
         )
       }
       ListFooterComponent={
@@ -444,6 +558,7 @@ export function HomeFeedScreen() {
         ) : null
       }
       ListHeaderComponent={renderHeader}
+      ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
       onEndReached={() => {
         if (feedQuery.hasNextPage && !feedQuery.isFetchingNextPage) {
           void feedQuery.fetchNextPage();
@@ -467,69 +582,143 @@ export function HomeFeedScreen() {
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 28,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    gap: 14,
     backgroundColor: '#f7f0e6',
   },
   headerWrap: {
-    gap: 16,
-    marginBottom: 16,
-  },
-  headerPills: {
-    alignItems: 'flex-end',
-    gap: 8,
+    gap: 14,
+    marginBottom: 14,
   },
   hero: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     backgroundColor: '#183153',
   },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  heroPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 248, 240, 0.12)',
+  },
+  heroPillLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#dbe4ee',
+  },
   heroTitle: {
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 26,
+    lineHeight: 31,
     fontWeight: '800',
     color: '#fff8f0',
   },
   heroSubtitle: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 15,
-    lineHeight: 24,
-    color: '#d2dde8',
+    lineHeight: 22,
+    color: '#dbe4ee',
   },
-  filterMeta: {
+  surfaceHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  surfaceTitleWrap: {
+    flex: 1,
     gap: 4,
   },
-  filterMetaLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    color: '#a0603b',
+  surfaceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  filterMetaValue: {
-    fontSize: 15,
-    color: '#395065',
+  surfaceTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  surfaceSubtitle: {
+    fontSize: 13,
+    color: '#6c7f94',
   },
   filterChipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
+  dateFieldRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dateFieldWrap: {
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionTitleWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#708298',
+  },
+  sectionCountPill: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#efe4d5',
+  },
+  sectionCountLabel: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#183153',
+  },
   centeredBlock: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 24,
   },
+  listSeparator: {
+    height: 12,
+  },
   availabilityCard: {
-    borderRadius: 24,
-    borderLeftWidth: 6,
-    backgroundColor: '#fffaf3',
+    borderRadius: 20,
+    borderLeftWidth: 4,
+    backgroundColor: '#fffbf6',
     borderWidth: 1,
-    borderColor: '#eadfce',
-    padding: 18,
-    gap: 10,
+    borderColor: '#ece0d1',
+    padding: 16,
+    gap: 8,
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1,
   },
   availabilityDates: {
     fontSize: 14,
@@ -539,12 +728,13 @@ const styles = StyleSheet.create({
   },
   availabilityHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
   availabilityIdentity: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     flex: 1,
   },
@@ -555,24 +745,30 @@ const styles = StyleSheet.create({
   availabilityMeta: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#5a6475',
+    color: '#617184',
+  },
+  availabilitySignalsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  availabilityDatesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   availabilityName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#183153',
   },
   availabilityNote: {
     fontSize: 14,
     lineHeight: 20,
     color: '#395065',
+    paddingTop: 2,
   },
   cardPressable: {
-    marginBottom: 16,
-  },
-  placeholderText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#395065',
+    borderRadius: 20,
   },
 });

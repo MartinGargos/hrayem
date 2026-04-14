@@ -59,7 +59,7 @@ export const appMetadata = {
   androidPackage: Constants.expoConfig?.android?.package ?? 'app.hrayem',
 };
 
-const normalizedWebBaseUrl = (publicEnv.webBaseUrl || 'https://hrayem.cz').replace(/\/+$/, '');
+const normalizedWebBaseUrl = (publicEnv.webBaseUrl || 'https://www.hrayem.cz').replace(/\/+$/, '');
 
 export const publicSiteLinks = {
   webBaseUrl: normalizedWebBaseUrl,

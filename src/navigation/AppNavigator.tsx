@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
   NavigationContainer,
   createNavigationContainerRef,
@@ -7,7 +7,9 @@ import {
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AddVenueScreen, SkillLevelScreen } from '../features/shell/StubScreens';
@@ -41,6 +43,7 @@ const MyGamesStack = createNativeStackNavigator<MyGamesStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
 const navigationTheme: Theme = {
   ...DefaultTheme,
@@ -54,17 +57,41 @@ const navigationTheme: Theme = {
   },
 };
 
+const baseStackScreenOptions = {
+  contentStyle: {
+    backgroundColor: '#f7f0e6',
+  },
+  gestureEnabled: Platform.OS === 'ios',
+  headerTintColor: '#183153',
+  headerStyle: {
+    backgroundColor: '#fffaf3',
+  },
+  headerShadowVisible: false,
+  headerBackButtonDisplayMode: 'minimal' as const,
+  headerTitleStyle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+  },
+};
+
+function getTabIconName(routeName: keyof MainTabParamList, focused: boolean): IoniconName {
+  switch (routeName) {
+    case 'HomeTab':
+      return focused ? 'home' : 'home-outline';
+    case 'CreateEventTab':
+      return focused ? 'add-circle' : 'add-circle-outline';
+    case 'MyGamesTab':
+      return focused ? 'calendar' : 'calendar-outline';
+    case 'ProfileTab':
+      return focused ? 'person' : 'person-outline';
+  }
+}
+
 function HomeStackNavigator() {
   const { t } = useTranslation();
 
   return (
-    <HomeStack.Navigator
-      screenOptions={{
-        contentStyle: {
-          backgroundColor: '#f7f0e6',
-        },
-      }}
-    >
+    <HomeStack.Navigator screenOptions={baseStackScreenOptions}>
       <HomeStack.Screen
         component={HomeFeedScreen}
         name="HomeFeed"
@@ -80,13 +107,7 @@ function CreateStackNavigator() {
   const { t } = useTranslation();
 
   return (
-    <CreateStack.Navigator
-      screenOptions={{
-        contentStyle: {
-          backgroundColor: '#f7f0e6',
-        },
-      }}
-    >
+    <CreateStack.Navigator screenOptions={baseStackScreenOptions}>
       <CreateStack.Screen
         component={CreateEventScreen}
         name="CreateEvent"
@@ -102,13 +123,7 @@ function MyGamesStackNavigator() {
   const { t } = useTranslation();
 
   return (
-    <MyGamesStack.Navigator
-      screenOptions={{
-        contentStyle: {
-          backgroundColor: '#f7f0e6',
-        },
-      }}
-    >
+    <MyGamesStack.Navigator screenOptions={baseStackScreenOptions}>
       <MyGamesStack.Screen
         component={MyGamesScreen}
         name="MyGames"
@@ -124,13 +139,7 @@ function ProfileStackNavigator() {
   const { t } = useTranslation();
 
   return (
-    <ProfileStack.Navigator
-      screenOptions={{
-        contentStyle: {
-          backgroundColor: '#f7f0e6',
-        },
-      }}
-    >
+    <ProfileStack.Navigator screenOptions={baseStackScreenOptions}>
       <ProfileStack.Screen
         component={ProfileScreen}
         name="Profile"
@@ -152,20 +161,33 @@ function MainTabNavigator() {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         },
       }}
-      screenOptions={() => ({
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#183153',
-        tabBarInactiveTintColor: '#7a8ca3',
+        tabBarInactiveTintColor: '#8795a5',
+        tabBarIcon: ({ color, focused }) => (
+          <Ionicons
+            color={color}
+            name={getTabIconName(route.name, focused)}
+            size={route.name === 'CreateEventTab' ? 28 : 22}
+          />
+        ),
         tabBarStyle: {
-          height: 70,
+          height: 74,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: 12,
           backgroundColor: '#fffaf3',
           borderTopColor: '#eadfce',
+          shadowColor: '#10233f',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.04,
+          shadowRadius: 10,
+          elevation: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '700',
+          marginTop: 2,
         },
       })}
     >
@@ -182,12 +204,6 @@ function MainTabNavigator() {
         options={{
           title: t('navigation.tabs.create'),
           tabBarAccessibilityLabel: t('navigation.tabs.create'),
-          tabBarLabel: t('navigation.tabs.createPlus'),
-          tabBarLabelStyle: {
-            fontSize: 22,
-            fontWeight: '800',
-            marginTop: -2,
-          },
         }}
       />
       <Tab.Screen
@@ -267,13 +283,7 @@ export function AppNavigator() {
     >
       <RootStack.Navigator
         screenOptions={{
-          contentStyle: {
-            backgroundColor: '#f7f0e6',
-          },
-          headerTintColor: '#183153',
-          headerStyle: {
-            backgroundColor: '#fffaf3',
-          },
+          ...baseStackScreenOptions,
         }}
       >
         <RootStack.Screen

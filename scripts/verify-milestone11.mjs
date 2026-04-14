@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const projectRoot = path.resolve(new URL('..', import.meta.url).pathname);
 const iosBundleIdentifier = 'com.martingargos.hrayem';
 const androidPackage = 'app.hrayem';
-const canonicalWebBaseUrl = 'https://hrayem.cz';
+const canonicalWebBaseUrl = 'https://www.hrayem.cz';
 const hostingConfigCandidates = [
   'vercel.json',
   'netlify.toml',

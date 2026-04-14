@@ -223,11 +223,11 @@ const rateLimitConfigByRoute: Record<
 };
 
 function buildEventDetailUrl(eventId: string): string {
-  return `https://hrayem.cz/event/${eventId}`;
+  return `https://www.hrayem.cz/event/${eventId}`;
 }
 
 function buildEventChatUrl(eventId: string): string {
-  return `https://hrayem.cz/event/${eventId}?screen=chat`;
+  return `https://www.hrayem.cz/event/${eventId}?screen=chat`;
 }
 
 function isUuid(value: string): boolean {

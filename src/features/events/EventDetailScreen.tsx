@@ -5,6 +5,7 @@ import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
@@ -19,6 +20,7 @@ import { SkillLevelModal } from './SkillLevelModal';
 import { ReportSheet } from '../reports/ReportSheet';
 import { HeaderOverflowButton } from '../../components/HeaderOverflowButton';
 import { DetailRow, ScreenCard, ScreenShell } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import { buildEventWebUrl } from '../../navigation/deep-links';
 import type { RootStackParamList } from '../../navigation/types';
 import {
@@ -1023,10 +1025,12 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
         title={t('shell.eventDetail.title')}
         subtitle={t('events.detail.loadingSubtitle')}
       >
-        <ScreenCard title={t('events.detail.loadingTitle')}>
-          <View style={styles.centeredBlock}>
-            <ActivityIndicator color="#183153" />
-          </View>
+        <ScreenCard>
+          <StateMessage
+            body={t('events.detail.loadingSubtitle')}
+            iconName="calendar-clear-outline"
+            title={t('events.detail.loadingTitle')}
+          />
         </ScreenCard>
       </ScreenShell>
     );
@@ -1035,13 +1039,22 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   if (eventQuery.isError || !eventQuery.data) {
     return (
       <ScreenShell title={t('shell.eventDetail.title')} subtitle={t('events.detail.errorSubtitle')}>
-        <ScreenCard title={t('events.detail.errorTitle')}>
-          <Text style={styles.bodyText}>{t('events.detail.errorBody')}</Text>
-          <ActionButton
-            label={t('events.common.retry')}
-            onPress={async () => {
-              await eventQuery.refetch();
-            }}
+        <ScreenCard>
+          <StateMessage
+            action={
+              <ActionButton
+                iconName="refresh-outline"
+                label={t('events.common.retry')}
+                onPress={async () => {
+                  await eventQuery.refetch();
+                }}
+                variant="secondary"
+              />
+            }
+            body={t('events.detail.errorBody')}
+            iconName="alert-circle-outline"
+            title={t('events.detail.errorTitle')}
+            tone="muted"
           />
         </ScreenCard>
       </ScreenShell>
@@ -1115,6 +1128,12 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     colorHex: event.sportColor,
     sortOrder: 0,
   };
+  const formattedDateTime = `${formatEventDate(event.startsAt, language)} · ${formatEventTime(
+    event.startsAt,
+    language,
+  )} - ${formatEventTime(event.endsAt, language)}`;
+  const formattedVenue = `${event.venueName} · ${event.city}`;
+  const eventDescription = event.description ?? t('events.detail.noDescription');
 
   let stateTitle = t('events.detail.state.joinTitle');
   let stateBody =
@@ -1124,10 +1143,12 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
   let primaryAction: {
     label: string;
     onPress: () => void;
+    iconName?: React.ComponentProps<typeof Ionicons>['name'];
     variant?: 'primary' | 'secondary';
     disabled?: boolean;
   } | null = {
     label: joinMutation.isPending ? t('events.join.pending') : t('events.join.action'),
+    iconName: 'checkmark-circle-outline',
     onPress: handleJoinPress,
     disabled: joinOrLeaveBusy || !isJoinableWindow,
   };
@@ -1149,6 +1170,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     stateBody = t('events.detail.state.organizerBody');
     primaryAction = {
       label: t('events.detail.state.organizerLabel'),
+      iconName: 'person-outline',
       onPress: () => undefined,
       variant: 'secondary',
       disabled: true,
@@ -1158,6 +1180,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
     stateBody = t('events.detail.state.confirmedBody');
     primaryAction = {
       label: leaveMutation.isPending ? t('events.leave.pending') : t('events.leave.action'),
+      iconName: 'exit-outline',
       onPress: handleLeavePress,
       variant: 'secondary',
       disabled: joinOrLeaveBusy,
@@ -1171,6 +1194,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
       label: leaveMutation.isPending
         ? t('events.leave.waitlistPending')
         : t('events.leave.waitlistAction'),
+      iconName: 'exit-outline',
       onPress: handleLeavePress,
       variant: 'secondary',
       disabled: joinOrLeaveBusy,
@@ -1189,10 +1213,41 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
               />
               <View style={styles.heroCopy}>
                 <Text style={styles.heroTitle}>{sportName}</Text>
-                <Text style={styles.heroSubtitle}>{event.venueName}</Text>
+                <Text numberOfLines={2} style={styles.heroSubtitle}>
+                  {event.venueName}
+                </Text>
               </View>
             </View>
-            <ActionButton label={t('events.detail.shareAction')} onPress={handleShare} />
+            <ActionButton
+              iconName="share-social-outline"
+              label={t('events.detail.shareAction')}
+              onPress={handleShare}
+              variant="secondary"
+            />
+          </View>
+
+          <View style={styles.summaryHighlightList}>
+            <View style={styles.summaryHighlightCard}>
+              <View style={styles.summaryHighlightIcon}>
+                <Ionicons color="#183153" name="calendar-clear-outline" size={16} />
+              </View>
+              <View style={styles.summaryHighlightCopy}>
+                <Text style={styles.summaryHighlightLabel}>{t('events.detail.dateTimeLabel')}</Text>
+                <Text style={styles.summaryHighlightValue}>{formattedDateTime}</Text>
+              </View>
+            </View>
+            <View style={styles.summaryHighlightCard}>
+              <View style={styles.summaryHighlightIcon}>
+                <Ionicons color="#183153" name="location-outline" size={16} />
+              </View>
+              <View style={styles.summaryHighlightCopy}>
+                <Text style={styles.summaryHighlightLabel}>{t('events.detail.venueLabel')}</Text>
+                <Text style={styles.summaryHighlightValue}>{formattedVenue}</Text>
+                <Text style={styles.summaryHighlightMeta}>
+                  {event.venueAddress ?? t('events.detail.addressFallback')}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.pillRow}>
@@ -1213,67 +1268,78 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
 
         <ScreenCard title={t('events.detail.yourStatusTitle')}>
           <NoticeBanner notice={notice} resolveMessage={t} />
-          <Text style={styles.statusTitle}>{stateTitle}</Text>
-          <Text style={styles.bodyText}>{stateBody}</Text>
-          {currentSkillLevel ? (
-            <Text style={styles.helperText}>
-              {t('events.detail.yourSkill', {
-                level: t(`events.skillLevel.label.${currentSkillLevel}`),
-              })}
-            </Text>
-          ) : null}
-          {primaryAction ? (
-            <ActionButton
-              disabled={primaryAction.disabled}
-              label={primaryAction.label}
-              onPress={primaryAction.onPress}
-              variant={primaryAction.variant}
-            />
-          ) : null}
-          {canOpenChat ? (
-            <ActionButton
-              label={t('events.chat.openAction')}
-              onPress={handleOpenChatPress}
-              variant="secondary"
-            />
+          <View style={styles.statusPanel}>
+            <Text style={styles.statusTitle}>{stateTitle}</Text>
+            <Text style={styles.bodyText}>{stateBody}</Text>
+            {currentSkillLevel ? (
+              <Text style={styles.helperText}>
+                {t('events.detail.yourSkill', {
+                  level: t(`events.skillLevel.label.${currentSkillLevel}`),
+                })}
+              </Text>
+            ) : null}
+          </View>
+          {primaryAction || canOpenChat ? (
+            <View style={styles.inlineActions}>
+              {primaryAction ? (
+                <View style={styles.inlineAction}>
+                  <ActionButton
+                    disabled={primaryAction.disabled}
+                    iconName={primaryAction.iconName}
+                    label={primaryAction.label}
+                    onPress={primaryAction.onPress}
+                    variant={primaryAction.variant}
+                  />
+                </View>
+              ) : null}
+              {canOpenChat ? (
+                <View style={styles.inlineAction}>
+                  <ActionButton
+                    iconName="chatbubble-ellipses-outline"
+                    label={t('events.chat.openAction')}
+                    onPress={handleOpenChatPress}
+                    variant={primaryAction ? 'secondary' : 'primary'}
+                  />
+                </View>
+              ) : null}
+            </View>
           ) : null}
         </ScreenCard>
 
         {canManageEvent ? (
           <ScreenCard title={t('events.organizerTools.title')}>
-            <Text style={styles.bodyText}>{t('events.organizerTools.body')}</Text>
-            {canEditEvent ? (
-              <ActionButton
-                disabled={cancelMutation.isPending || removePlayerMutation.isPending}
-                label={t('events.organizerTools.editAction')}
-                onPress={handleEditPress}
-              />
-            ) : null}
-            <ActionButton
-              disabled={cancelMutation.isPending || removePlayerMutation.isPending}
-              label={
-                cancelMutation.isPending
-                  ? t('events.cancel.pending')
-                  : t('events.organizerTools.cancelAction')
-              }
-              onPress={handleCancelPress}
-              variant="secondary"
-            />
+            <Text style={styles.helperText}>{t('events.organizerTools.body')}</Text>
+            <View style={styles.inlineActions}>
+              {canEditEvent ? (
+                <View style={styles.inlineAction}>
+                  <ActionButton
+                    disabled={cancelMutation.isPending || removePlayerMutation.isPending}
+                    iconName="create-outline"
+                    label={t('events.organizerTools.editAction')}
+                    onPress={handleEditPress}
+                  />
+                </View>
+              ) : null}
+              <View style={styles.inlineAction}>
+                <ActionButton
+                  disabled={cancelMutation.isPending || removePlayerMutation.isPending}
+                  iconName="close-outline"
+                  label={
+                    cancelMutation.isPending
+                      ? t('events.cancel.pending')
+                      : t('events.organizerTools.cancelAction')
+                  }
+                  onPress={handleCancelPress}
+                  variant="secondary"
+                />
+              </View>
+            </View>
           </ScreenCard>
         ) : null}
 
         <ScreenCard title={t('events.detail.whenWhereTitle')}>
-          <DetailRow
-            label={t('events.detail.dateTimeLabel')}
-            value={`${formatEventDate(event.startsAt, language)} · ${formatEventTime(
-              event.startsAt,
-              language,
-            )} - ${formatEventTime(event.endsAt, language)}`}
-          />
-          <DetailRow
-            label={t('events.detail.venueLabel')}
-            value={`${event.venueName} · ${event.city}`}
-          />
+          <DetailRow label={t('events.detail.dateTimeLabel')} value={formattedDateTime} />
+          <DetailRow label={t('events.detail.venueLabel')} value={formattedVenue} />
           <DetailRow
             label={t('events.detail.addressLabel')}
             value={event.venueAddress ?? t('events.detail.addressFallback')}
@@ -1282,19 +1348,18 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             label={t('events.detail.waitlistLabel')}
             value={t('events.feed.waitlistCount', { count: event.waitlistCount })}
           />
-        </ScreenCard>
-
-        <ScreenCard title={t('events.detail.skillTitle')}>
-          <Text style={styles.bodyText}>
-            {t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax })}
-          </Text>
-          <Text style={styles.helperText}>{t('events.detail.skillRangeNote')}</Text>
-        </ScreenCard>
-
-        <ScreenCard title={t('events.detail.descriptionTitle')}>
-          <Text style={styles.bodyText}>
-            {event.description ?? t('events.detail.noDescription')}
-          </Text>
+          <View style={styles.detailSectionDivider} />
+          <View style={styles.compactSection}>
+            <Text style={styles.compactSectionTitle}>{t('events.detail.skillTitle')}</Text>
+            <Text style={styles.bodyText}>
+              {t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax })}
+            </Text>
+            <Text style={styles.helperText}>{t('events.detail.skillRangeNote')}</Text>
+          </View>
+          <View style={styles.compactSection}>
+            <Text style={styles.compactSectionTitle}>{t('events.detail.descriptionTitle')}</Text>
+            <Text style={styles.bodyText}>{eventDescription}</Text>
+          </View>
         </ScreenCard>
 
         <ScreenCard title={t('events.detail.organizerTitle')}>
@@ -1320,10 +1385,13 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
             </View>
           </View>
           {organizerPlayer?.isPlayAgainConnection ? (
-            <InfoPill accentColor="#183153">{t('events.detail.playAgainBadge')}</InfoPill>
+            <View style={styles.organizerPillRow}>
+              <InfoPill accentColor="#183153">{t('events.detail.playAgainBadge')}</InfoPill>
+            </View>
           ) : null}
           {canOpenOrganizerProfile ? (
             <ActionButton
+              iconName="person-circle-outline"
               label={t('events.detail.openOrganizerProfile')}
               onPress={() => navigation.navigate('PlayerProfile', { playerId: event.organizerId! })}
               variant="secondary"
@@ -1384,6 +1452,8 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                           </Text>
                         ) : null}
                       </View>
+                    </Pressable>
+                    {player.skillLevel || player.isPlayAgainConnection ? (
                       <View style={styles.playerPills}>
                         {player.skillLevel ? (
                           <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
@@ -1394,13 +1464,14 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                           </InfoPill>
                         ) : null}
                       </View>
-                    </Pressable>
+                    ) : null}
                     {canRemovePlayers && player.userId !== event.organizerId ? (
                       <ActionButton
                         disabled={
                           removePlayerMutation.isPending &&
                           removePlayerTargetUserId === player.userId
                         }
+                        iconName="person-remove-outline"
                         label={
                           removePlayerMutation.isPending &&
                           removePlayerTargetUserId === player.userId
@@ -1416,7 +1487,13 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
               })}
             </View>
           ) : (
-            <Text style={styles.bodyText}>{t('events.detail.confirmedPlayersEmpty')}</Text>
+            <StateMessage
+              body={t('events.detail.confirmedPlayersEmpty')}
+              compact
+              iconName="people-outline"
+              title={t('common.nothingYet')}
+              tone="warm"
+            />
           )}
         </ScreenCard>
 
@@ -1455,6 +1532,7 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                               reportNoShowMutation.isPending &&
                               reportNoShowTargetUserId === player.userId
                             }
+                            iconName="alert-circle-outline"
                             label={
                               reportNoShowMutation.isPending &&
                               reportNoShowTargetUserId === player.userId
@@ -1469,7 +1547,13 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                     })}
                   </View>
                 ) : (
-                  <Text style={styles.helperText}>{t('events.noShow.noneLeft')}</Text>
+                  <StateMessage
+                    body={t('events.noShow.noneLeft')}
+                    compact
+                    iconName="checkmark-done-outline"
+                    title={t('common.allSet')}
+                    tone="warm"
+                  />
                 )}
               </>
             ) : isNoShowEligibilityLoading ? (
@@ -1522,6 +1606,11 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                               player.alreadyThumbedUpByViewer ||
                               (thumbsUpMutation.isPending && thumbsUpTargetUserId === player.userId)
                             }
+                            iconName={
+                              player.alreadyThumbedUpByViewer
+                                ? 'checkmark-outline'
+                                : 'thumbs-up-outline'
+                            }
                             label={
                               player.alreadyThumbedUpByViewer
                                 ? t('events.thumbsUp.done')
@@ -1538,7 +1627,13 @@ export function EventDetailScreen({ route }: EventDetailScreenProps) {
                     })}
                   </View>
                 ) : (
-                  <Text style={styles.helperText}>{t('events.thumbsUp.empty')}</Text>
+                  <StateMessage
+                    body={t('events.thumbsUp.empty')}
+                    compact
+                    iconName="heart-outline"
+                    title={t('common.allSet')}
+                    tone="warm"
+                  />
                 )}
               </>
             ) : (
@@ -1599,10 +1694,59 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#5a6475',
   },
+  summaryHighlightList: {
+    gap: 10,
+  },
+  summaryHighlightCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    backgroundColor: '#f6efe5',
+    borderWidth: 1,
+    borderColor: '#eadfce',
+  },
+  summaryHighlightIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e7edf4',
+  },
+  summaryHighlightCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  summaryHighlightLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#a16a42',
+  },
+  summaryHighlightValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#183153',
+  },
+  summaryHighlightMeta: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#6d7f95',
+  },
   pillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  statusPanel: {
+    gap: 6,
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: '#f8f1e6',
   },
   statusTitle: {
     fontSize: 18,
@@ -1619,6 +1763,27 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#6d7f95',
   },
+  inlineActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  inlineAction: {
+    flexBasis: 160,
+    flexGrow: 1,
+  },
+  detailSectionDivider: {
+    height: 1,
+    backgroundColor: '#efe2d1',
+  },
+  compactSection: {
+    gap: 6,
+  },
+  compactSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#183153',
+  },
   organizerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1633,25 +1798,31 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#183153',
   },
+  organizerPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   playerList: {
     gap: 10,
   },
   playerCard: {
-    gap: 12,
+    gap: 10,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#eadfce',
-    backgroundColor: '#fffdf9',
+    backgroundColor: '#fffaf5',
     padding: 14,
   },
   playerIdentityPressable: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
   },
   playerPills: {
-    alignItems: 'flex-end',
-    gap: 6,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   playerCopy: {
     flex: 1,

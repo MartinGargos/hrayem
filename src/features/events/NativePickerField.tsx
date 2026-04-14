@@ -64,6 +64,7 @@ export function NativePickerField({
       >
         <Pressable onPress={() => setIsVisible(false)} style={styles.backdrop}>
           <Pressable style={styles.card}>
+            <View style={styles.handle} />
             <Text style={styles.title}>{label}</Text>
             <DateTimePicker
               display="spinner"
@@ -105,14 +106,22 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     backgroundColor: '#fff9f1',
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 12,
     paddingBottom: 28,
-    gap: 12,
+    gap: 14,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#d6c9b7',
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
     color: '#183153',
+    textAlign: 'center',
   },
   picker: {
     alignSelf: 'center',

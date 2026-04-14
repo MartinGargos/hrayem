@@ -1,6 +1,6 @@
 # Hrayem
 
-Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation plus the implemented Milestone 1-10 MVP flows and the Milestone 11 repo-side launch surfaces: auth/session resilience, typed navigation, venue search, events, join/waitlist, organizer tools, post-game feedback, chat, notifications, availability, reporting, account deletion, public share fallback, and launch-site asset generation for the current canonical domain `https://hrayem.cz`. Hosted website deployment, final Android app-link inputs, and real production-device launch proof are still separate launch inputs, not completed repo proof.
+Hrayem is a production-oriented mobile app for Czech racket-sport players who want to find or create badminton, padel, and squash games by city, time, venue, and skill level without relying on messaging groups. This repository currently includes the Milestone 0 Expo client foundation plus the implemented Milestone 1-10 MVP flows and the Milestone 11 repo-side launch surfaces: auth/session resilience, typed navigation, venue search, events, join/waitlist, organizer tools, post-game feedback, chat, notifications, availability, reporting, account deletion, public share fallback, and launch-site asset generation for the current canonical iPhone/web domain `https://www.hrayem.cz`. Android app-link proof is still intentionally deferred until a physical Android device and final signing fingerprints are available, and real production-device launch proof remains separate from repo proof.
 
 Milestone 0 is complete in code, but real-device proof is still pending until Apple Developer activation is available again. The remaining deferred checks are iOS dev-build install, offline banner verification on device, CZ/EN switching on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
@@ -49,7 +49,7 @@ Client variables bundled into the app:
 - `EXPO_PUBLIC_SENTRY_DSN`: Sentry DSN for crash reporting
 - `EXPO_PUBLIC_TERMS_VERSION`: active Terms of Service version string
 - `EXPO_PUBLIC_PRIVACY_VERSION`: active Privacy Policy version string
-- `EXPO_PUBLIC_WEB_BASE_URL`: canonical launch-site origin used for shared event fallback pages and legal pages (`https://hrayem.cz` for the current launch target)
+- `EXPO_PUBLIC_WEB_BASE_URL`: canonical launch-site origin used for shared event fallback pages and legal pages (`https://www.hrayem.cz` for the current iPhone/web launch target)
 - `EXPO_PUBLIC_APP_STORE_URL`: final App Store page for "Download Hrayem" links
 - `EXPO_PUBLIC_PLAY_STORE_URL`: final Google Play page for "Download Hrayem" links; may stay blank while Android launch proof is intentionally deferred
 
@@ -210,9 +210,9 @@ For Milestone 11 launch readiness, generate the well-known app-link assets befor
 pnpm run generate:launch-assets
 ```
 
-That command currently targets `https://hrayem.cz`. It always requires real iPhone/web inputs for the current launch target: `EXPO_PUBLIC_WEB_BASE_URL`, `EXPO_PUBLIC_APP_STORE_URL`, and `HRAYEM_APPLE_TEAM_ID`. It generates `public/.well-known/apple-app-site-association` for Apple/web now, and only generates `public/.well-known/assetlinks.json` when `EXPO_PUBLIC_PLAY_STORE_URL` and `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS` are both available for Android launch proof.
+That command currently targets `https://www.hrayem.cz`. It always requires real iPhone/web inputs for the current launch target: `EXPO_PUBLIC_WEB_BASE_URL`, `EXPO_PUBLIC_APP_STORE_URL`, and `HRAYEM_APPLE_TEAM_ID`. It generates `public/.well-known/apple-app-site-association` for Apple/web now, and only generates `public/.well-known/assetlinks.json` when `EXPO_PUBLIC_PLAY_STORE_URL` and `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS` are both available for Android launch proof.
 
-The website should also host `public/privacy/index.html`, `public/terms/index.html`, the generated `public/.well-known/` files, and the Expo web build so shared `https://hrayem.cz/event/<id>` links can render the public fallback page for users without the app. The repo now includes a minimal [vercel.json](/home/martin/hrayem/vercel.json) for `/event/*`, `/privacy`, `/terms`, and `/.well-known/*`, but actual hosted proof still depends on a live Vercel deployment serving those paths correctly.
+The website should also host `public/privacy/index.html`, `public/terms/index.html`, the generated `public/.well-known/` files, and the Expo web build so shared `https://www.hrayem.cz/event/<id>` links can render the public fallback page for users without the app. The repo now includes a minimal [vercel.json](/home/martin/hrayem/vercel.json) for `/event/*`, `/privacy`, `/terms`, and `/.well-known/*`, and the current live iPhone/web host is `https://www.hrayem.cz`. Android app-link deployment is still intentionally deferred until the final Play-side inputs exist.
 
 ## Build and submit
 

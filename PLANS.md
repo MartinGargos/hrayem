@@ -413,18 +413,136 @@ Keep this pass narrow and honest: fix only the verifier and docs so missing real
 ## Milestone 11 iPhone/Web First Closeout
 
 ### Problem
-Milestone 11 now needs an honest iPhone/web-first closeout on `https://hrayem.cz`: the repo still assumes `hrayem.app`, the launch-asset scripts do not allow Android deferral, and the verifier cannot distinguish proven Apple/web progress from intentionally deferred Android launch inputs.
+Milestone 11 now needs a final iPhone/web repo-alignment pass because the live launch surface is working on `https://www.hrayem.cz`, but the main app repo still assumes apex `https://hrayem.cz` in the verifier, launch-asset generation, iOS associated domains, and docs.
 
 ### Approach
-Keep the pass minimal and explicit: switch repo-side launch surfaces to `hrayem.cz`, use the real App Store URL, generate and verify Apple/web assets when their inputs exist, treat Android app-link inputs as deferred instead of fake failures, and clearly leave hosted deployment blocked unless a real hosting target exists in-repo.
+Keep the pass minimal and explicit: switch the repo-side iPhone/web canonical host to `https://www.hrayem.cz`, regenerate the Apple association asset with the real Team ID, align iOS universal-link config and docs to the live host, keep Android honestly deferred, and rerun `verify:milestone11`.
 
 ### Steps
-1. Update launch-related code, docs, and examples from `hrayem.app` to `hrayem.cz`, and stop using App Store search fallbacks now that the real iPhone URL is known.
-2. Adjust launch-asset generation and `verify:milestone11` so Apple/web inputs are required for the iPhone/web target, while Android asset generation/proof is explicitly deferred if Play URL or signing fingerprints are not available.
-3. Generate the Apple-side well-known asset, add the minimal Vercel routing config now that the live site is clearly on Vercel, rerun focused validation, and report exactly what is proven for iPhone/web versus what remains deferred or blocked.
+1. Update the canonical iPhone/web host assumption from `https://hrayem.cz` to `https://www.hrayem.cz` in the Milestone 11 verifier, launch-asset generator, runtime defaults, and iOS associated domains.
+2. Regenerate `public/.well-known/apple-app-site-association` so it matches `8SPL3CKFTF.com.martingargos.hrayem` for `/event/*`, while keeping Android asset generation deferred.
+3. Update README and milestone-facing docs to describe `https://www.hrayem.cz` as the live canonical iPhone/web host, rerun focused validation plus `verify:milestone11`, and report what is fixed versus still unproven.
 
 ### Open questions / risks
-- BLOCKER if `HRAYEM_APPLE_TEAM_ID` is still not the actual Apple Team ID needed for `apple-app-site-association`.
-- BLOCKER until the live Vercel deployment actually serves `/event/{id}`, `/privacy`, `/terms`, and `/.well-known/apple-app-site-association` correctly on `https://hrayem.cz`.
-- LIKELY SOON: once a hosting target exists, the next proof gap is real iPhone universal-link testing against the deployed `/.well-known/` files.
+- BLOCKER if the repo is not aligned to the now-live canonical host `https://www.hrayem.cz`, because Milestone 11 verification will keep failing even though the website is up.
+- LIKELY SOON: after repo alignment passes, the next proof gap is real iPhone universal-link testing against the deployed `/.well-known/` files on `https://www.hrayem.cz`.
 - RARE EDGE CASE: Apple universal-link association can stay cached briefly after correct deployment, so first-device verification may lag.
+
+## UI Foundation Cleanup
+
+### Problem
+The current mobile shell works, but the visual foundation still looks like an internal prototype because the shared hero, card, header, and tab patterns are too heavy and inconsistent across the core screens.
+
+### Approach
+Keep this pass strictly presentational: lighten the shared shell/auth/event primitives, remove internal navigation labels from the top bar, add a more polished tab treatment, and only touch screen-level styles where Home or My Games still duplicate the older heavy shell patterns.
+
+### Steps
+1. Tighten the shared shell/auth/event primitives so cards, pills, buttons, inputs, and hero sections feel lighter and more consistent without changing flows or business logic.
+2. Polish navigation chrome by hiding internal back labels, standardizing top-bar presentation, and adding simple bottom-tab icons.
+3. Align the duplicated Home and My Games header styles to the refreshed foundation, rerun validation, and report what this pass intentionally leaves for later screen-specific redesign work.
+
+### Open questions / risks
+- LIKELY SOON: the chat composer spacing and a few long-form screens may still need deeper screen-by-screen layout work after this foundation pass.
+- RARE EDGE CASE: if iOS-native header back-button options behave differently on an older OS version, the fallback risk is cosmetic rather than functional.
+
+## Home + My Games UI Polish
+
+### Problem
+Home and My Games still feel denser and flatter than the rest of the refreshed shell, so the two most important day-to-day screens are not yet reading like polished product surfaces on iPhone.
+
+### Approach
+Keep this pass screen-specific and presentational: strengthen event-card hierarchy, lighten filter and empty-state surfaces, and reorganize My Games visually around role-based sections instead of one flat list, while keeping the existing data, navigation, and actions unchanged.
+
+### Steps
+1. Upgrade the shared event card so sport, schedule, venue, organizer, and status scan cleanly at a glance without changing event logic.
+2. Refresh Home with lighter filter panels, stronger section rhythm, warmer empty states, and an available-players presentation that feels more like a feed than a form.
+3. Refresh My Games with clearer section/value hierarchy for upcoming and past items, then rerun validation and keep any remaining screen-specific density issues explicit for the next pass.
+
+### Open questions / risks
+- LIKELY SOON: Event Detail and Chat may feel comparatively denser after Home and My Games improve, but they stay intentionally out of scope here.
+- RARE EDGE CASE: if a very long venue name or date string wraps unexpectedly on a smaller iPhone width, the risk is layout-only and can be handled in the next polish pass if it appears in device testing.
+
+## Profile + Settings UI Polish
+
+### Problem
+Profile and Settings still feel heavier, flatter, and more tool-like than the refreshed Home, My Games, Event Detail, and Create Game screens, so the account area does not yet feel polished enough for a real consumer app.
+
+### Approach
+Keep this pass strictly presentational: strengthen the personal summary treatment on Profile and Player Profile, reorganize Settings into clearer grouped account surfaces, and visually isolate destructive actions without changing any backend behavior or account flows.
+
+### Steps
+1. Refresh Profile and Player Profile hierarchy so avatar, identity, stats, and play-again signals feel more personal and easier to scan.
+2. Rework Settings into lighter grouped sections with clearer row treatment for app preferences, notification status/preferences, and account actions.
+3. Give Account Deletion a more deliberate, contained destructive treatment, rerun validation, and explicitly leave any remaining screen-specific polish debt for later passes.
+
+### Open questions / risks
+- LIKELY SOON: Chat will likely stand out as the next dense major screen after this pass, but it remains intentionally out of scope here.
+- RARE EDGE CASE: unusually long player names or localized notification labels may wrap more than ideal on smaller iPhones, but the risk should stay cosmetic if it appears.
+
+## Chat + Microinteractions UI Polish
+
+### Problem
+Chat still feels denser and more prototype-like than the refreshed core screens, so the conversation experience now stands out as the least polished major surface on iPhone.
+
+### Approach
+Keep this pass strictly presentational: reuse the lighter card rhythm from the refreshed app, soften the conversation and composer surfaces, and add only tiny haptic or status feedback that improves trust without changing chat behavior.
+
+### Steps
+1. Refresh the chat hero, inline banners, and empty or error states so the screen feels cleaner and more intentional.
+2. Improve message spacing, metadata hierarchy, bubble treatment, and composer polish while keeping the current query, realtime, and send flow intact.
+3. Add lightweight send-state polish where it is already cleanly supported, rerun validation, and leave any remaining chat-specific visual debt explicit for the next pass.
+
+### Open questions / risks
+- LIKELY SOON: real-device testing may still justify one more keyboard and spacing pass for very long multilingual conversations on smaller iPhones, but the risk is presentational rather than behavioral.
+- RARE EDGE CASE: unusually dense back-to-back long messages from one sender can still create tall bubble stacks, though the remaining risk should stay cosmetic.
+
+## Final Visual Consistency Polish
+
+### Problem
+After the screen-by-screen refreshes, the app still has a few remaining weak points around empty states, icon coverage, secondary-action consistency, and text-heavy utility surfaces, so it still needs one final warmth-and-consistency pass before screenshot readiness.
+
+### Approach
+Keep this pass broad but shallow: improve the shared button and state patterns, add icon-led structure where it clearly helps scanning, and replace the plainest empty or recovery states on the major surfaces without reopening layout or behavior work.
+
+### Steps
+1. Tighten the shared action and state primitives so secondary actions and empty or retry surfaces feel warmer and more product-like.
+2. Apply the shared state treatment to the highest-value screens that still rely on plain text for empty, error, or recovery states.
+3. Add a small amount of icon-led polish to major CTA surfaces, rerun validation, and leave any remaining screenshot-era tweaks explicit rather than overbuilding them now.
+
+### Open questions / risks
+- LIKELY SOON: a final iPhone screenshot pass may still reveal a few typography or spacing nits that only show up in real device captures, but they should be polish debt rather than structural UI problems after this pass.
+- RARE EDGE CASE: some translated button labels may wrap sooner once icons are added to tighter action rows, though the risk should stay cosmetic and easy to trim in the screenshot pass if it appears.
+
+## Final iPhone Screenshot Polish
+
+### Problem
+The app is visually coherent now, but it still needs one last iPhone-first pass for screenshot-level details like back navigation feel, small-width wrapping, terminology quality, and venue-list cleanliness before release-readiness review.
+
+### Approach
+Keep this pass intentionally small: make navigation feel more native on iPhone, tighten the most visible cramped layouts, update Czech venue wording to natural product language, and clean obvious junk from the venue picker without changing backend contracts.
+
+### Steps
+1. Add the minimum iPhone-native stack gesture tuning and trim the densest button or action rows that are most likely to look cramped in screenshots.
+2. Update live Czech venue wording to `sportoviště` where it improves natural user-facing language without renaming internal code.
+3. Improve the venue picker experience with a small client-side quality filter or ordering fix, rerun validation, and leave any remaining screenshot-only nits explicit instead of reopening broader UI work.
+
+### Open questions / risks
+- LIKELY SOON: a real iPhone screenshot sweep may still expose one or two final line-break or spacing trims that are easier to judge from captures than from code.
+- RARE EDGE CASE: a legitimate venue with an unusual short or test-like name could be filtered by the new cleanup heuristic, so the filter should stay conservative and user-facing only.
+
+## Czech UX Clarity + Chat Keyboard Fix
+
+### Problem
+Several live Czech strings still sound technical or literally translated, and Chat on iPhone can leave the composer partially covered when the keyboard opens.
+
+### Approach
+Keep this pass tightly scoped: improve only the real user-facing Czech copy on current app surfaces, and make Chat keyboard avoidance header-aware and safe-area-aware on iPhone without changing chat behavior.
+
+### Steps
+1. Replace awkward Czech wording on the main live surfaces, especially around přihlášení, account deletion, post-game actions, and chat or event status text.
+2. Update the iPhone chat layout so the composer respects the native stack header and bottom safe area when the keyboard opens.
+3. Re-run validation and leave any remaining wording or UX debt explicit instead of widening this pass into broader redesign work.
+
+### Open questions / risks
+- LIKELY SOON: a few English-first skill or rating terms may still deserve a dedicated terminology pass later, but that stays intentionally out of scope for this request.
+- RARE EDGE CASE: very long localized status strings may wrap in tighter stat rows after the Czech clarity cleanup, though the risk should stay cosmetic and easy to trim in a later pass if it appears.

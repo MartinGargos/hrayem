@@ -30,11 +30,11 @@ const publicWebsiteHost = (() => {
   try {
     return new URL(publicSiteLinks.webBaseUrl).hostname.toLowerCase();
   } catch {
-    return 'hrayem.cz';
+    return 'www.hrayem.cz';
   }
 })();
 
-const recognizedWebsiteHosts = new Set([publicWebsiteHost, 'hrayem.app']);
+const recognizedWebsiteHosts = new Set([publicWebsiteHost, 'hrayem.cz', 'hrayem.app']);
 
 function normalizeDeepLinkUrl(url: string): string {
   const trimmedUrl = url.trim();

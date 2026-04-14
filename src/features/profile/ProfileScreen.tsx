@@ -4,14 +4,16 @@ import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
-import { AvatarPhoto, InfoPill } from '../events/EventPrimitives';
+import { AvatarPhoto, InfoPill, SportBadge } from '../events/EventPrimitives';
 import { SkillLevelModal } from '../events/SkillLevelModal';
 import { ReportSheet } from '../reports/ReportSheet';
 import { HeaderOverflowButton } from '../../components/HeaderOverflowButton';
 import { ScreenCard, ScreenShell } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import type { RootStackParamList } from '../../navigation/types';
 import {
   fetchPlayAgainConnections,
@@ -37,6 +39,31 @@ function groupConnectionsBySport(connections: PlayAgainConnection[]) {
   }, {});
 }
 
+function getSportBadgeLabel(slug: string, fallbackName: string) {
+  if (slug === 'badminton') {
+    return 'BD';
+  }
+
+  if (slug === 'padel') {
+    return 'PD';
+  }
+
+  if (slug === 'squash') {
+    return 'SQ';
+  }
+
+  return fallbackName.slice(0, 2).toUpperCase();
+}
+
+function SummaryHighlight({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.highlightCard}>
+      <Text style={styles.highlightValue}>{value}</Text>
+      <Text style={styles.highlightLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function SkillLevelStatCard({
   onPress,
   stat,
@@ -45,11 +72,19 @@ function SkillLevelStatCard({
   stat: PlayerSportStat;
 }) {
   const { t } = useTranslation();
+  const language = useUserStore((state) => state.language);
+  const sportName = language === 'cs' ? stat.sportNameCs : stat.sportNameEn;
+  const thumbsText =
+    stat.thumbsUpPercentage === null
+      ? t('profile.stats.thumbsHidden')
+      : t('profile.stats.thumbsValue', {
+          percentage: stat.thumbsUpPercentage,
+        });
 
   return (
     <Pressable
       accessibilityHint={onPress ? t('profile.skillEditHint') : undefined}
-      accessibilityLabel={`${stat.sportNameEn} ${t(`events.skillLevel.label.${stat.skillLevel}`)}`}
+      accessibilityLabel={`${sportName} ${t(`events.skillLevel.label.${stat.skillLevel}`)}`}
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={() => {
@@ -58,38 +93,54 @@ function SkillLevelStatCard({
       style={[styles.statCard, !onPress ? styles.statCardStatic : undefined]}
     >
       <View style={styles.statHeader}>
-        <View>
-          <Text style={styles.statSportName}>{stat.sportNameEn}</Text>
-          <Text style={styles.statSportNameSecondary}>{stat.sportNameCs}</Text>
+        <View style={styles.statIdentity}>
+          <SportBadge
+            colorHex={stat.sportColor}
+            label={getSportBadgeLabel(stat.sportSlug, sportName)}
+          />
+          <View style={styles.statIdentityCopy}>
+            <Text style={styles.statSportName}>{sportName}</Text>
+            <Text style={styles.statMetaSoft}>
+              {t('profile.stats.gamesAndHours', {
+                games: stat.gamesPlayed,
+                hours: stat.hoursPlayed.toFixed(1),
+              })}
+            </Text>
+          </View>
         </View>
-        <View style={styles.statPills}>
-          <InfoPill accentColor={stat.sportColor}>
-            {t(`events.skillLevel.label.${stat.skillLevel}`)}
-          </InfoPill>
-          {stat.isPlayAgainConnection ? (
-            <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
-          ) : null}
+        {onPress ? <Ionicons color="#9aacbd" name="chevron-forward" size={18} /> : null}
+      </View>
+
+      <View style={styles.statPills}>
+        <InfoPill accentColor={stat.sportColor}>
+          {t(`events.skillLevel.label.${stat.skillLevel}`)}
+        </InfoPill>
+        {stat.isPlayAgainConnection ? (
+          <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
+        ) : null}
+      </View>
+
+      <View style={styles.statSummaryRow}>
+        <View style={styles.statSummaryCard}>
+          <Text style={styles.statSummaryLabel}>{t('profile.stats.reliabilityLabel')}</Text>
+          <Text style={styles.statSummaryValue}>
+            {t('profile.stats.noShows', {
+              count: stat.noShows,
+            })}
+          </Text>
+        </View>
+        <View style={styles.statSummaryCard}>
+          <Text style={styles.statSummaryLabel}>{t('profile.stats.feedbackLabel')}</Text>
+          <Text style={styles.statSummaryValue}>{thumbsText}</Text>
         </View>
       </View>
-      <Text style={styles.statMeta}>
-        {t('profile.stats.gamesAndHours', {
-          games: stat.gamesPlayed,
-          hours: stat.hoursPlayed.toFixed(1),
-        })}
-      </Text>
-      <Text style={styles.statMeta}>
-        {t('profile.stats.noShows', {
-          count: stat.noShows,
-        })}
-      </Text>
-      <Text style={styles.statMeta}>
-        {stat.thumbsUpPercentage === null
-          ? t('profile.stats.thumbsHidden')
-          : t('profile.stats.thumbsValue', {
-              percentage: stat.thumbsUpPercentage,
-            })}
-      </Text>
-      {onPress ? <Text style={styles.editHint}>{t('profile.skillEditHint')}</Text> : null}
+
+      {onPress ? (
+        <View style={styles.editHintRow}>
+          <Ionicons color="#a0603b" name="sparkles-outline" size={14} />
+          <Text style={styles.editHint}>{t('profile.skillEditHint')}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -156,6 +207,25 @@ export function ProfileScreen() {
     () => groupConnectionsBySport(connectionsQuery.data ?? []),
     [connectionsQuery.data],
   );
+  const totalSports = statsQuery.data?.length ?? 0;
+  const totalGames = (statsQuery.data ?? []).reduce((sum, stat) => sum + stat.gamesPlayed, 0);
+  const totalConnections = connectionsQuery.data?.length ?? 0;
+  const languageLabel = t(`auth.language.${profile?.language ?? language}`);
+  const summaryHighlights = [
+    {
+      label: t('profile.highlights.sports'),
+      value: statsQuery.isPending || statsQuery.isError ? '—' : String(totalSports),
+    },
+    {
+      label: t('profile.highlights.games'),
+      value: statsQuery.isPending || statsQuery.isError ? '—' : String(totalGames),
+    },
+    {
+      label: t('profile.highlights.connections'),
+      value:
+        connectionsQuery.isPending || connectionsQuery.isError ? '—' : String(totalConnections),
+    },
+  ];
 
   function handleOpenSkillEditor(stat: PlayerSportStat) {
     setSelectedStat(stat);
@@ -190,23 +260,34 @@ export function ProfileScreen() {
   return (
     <>
       <ScreenShell title={t('shell.profile.title')} subtitle={t('shell.profile.subtitle')}>
-        <ScreenCard title={t('profile.summaryTitle')}>
+        <ScreenCard>
           <NoticeBanner notice={notice} resolveMessage={t} />
-          <View style={styles.summaryRow}>
-            <AvatarPhoto
-              label={fullName || t('auth.home.defaultName')}
-              size={64}
-              uri={profile?.photoUrl ?? null}
-            />
+          <View style={styles.summaryHeader}>
+            <View style={styles.summaryAvatarWrap}>
+              <AvatarPhoto
+                label={fullName || t('auth.home.defaultName')}
+                size={72}
+                uri={profile?.photoUrl ?? null}
+              />
+            </View>
             <View style={styles.summaryCopy}>
+              <Text style={styles.summaryEyebrow}>{t('profile.summaryTitle')}</Text>
               <Text style={styles.summaryName}>{fullName || t('auth.home.defaultName')}</Text>
-              <Text style={styles.summaryMeta}>{profile?.city ?? t('shell.common.noCity')}</Text>
-              <Text style={styles.summaryMeta}>
-                {t(`auth.language.${profile?.language ?? language}`)}
-              </Text>
+              <View style={styles.summaryPillRow}>
+                <InfoPill>{profile?.city ?? t('shell.common.noCity')}</InfoPill>
+                <InfoPill accentColor="#183153">{languageLabel}</InfoPill>
+              </View>
             </View>
           </View>
+
+          <View style={styles.highlightRow}>
+            {summaryHighlights.map((item) => (
+              <SummaryHighlight key={item.label} label={item.label} value={item.value} />
+            ))}
+          </View>
+
           <ActionButton
+            iconName="settings-outline"
             label={t('shell.profile.openSettings')}
             onPress={() => navigation.navigate('Settings')}
             variant="secondary"
@@ -214,20 +295,29 @@ export function ProfileScreen() {
         </ScreenCard>
 
         <ScreenCard title={t('profile.statsTitle')}>
+          <Text style={styles.sectionIntro}>{t('profile.statsSubtitle')}</Text>
           {statsQuery.isPending ? (
             <View style={styles.centeredBlock}>
               <ActivityIndicator color="#183153" />
             </View>
           ) : statsQuery.isError ? (
-            <>
-              <Text style={styles.bodyText}>{t('profile.errors.stats')}</Text>
-              <ActionButton
-                label={t('events.common.retry')}
-                onPress={async () => {
-                  await statsQuery.refetch();
-                }}
-              />
-            </>
+            <StateMessage
+              action={
+                <ActionButton
+                  iconName="refresh-outline"
+                  label={t('events.common.retry')}
+                  onPress={async () => {
+                    await statsQuery.refetch();
+                  }}
+                  variant="secondary"
+                />
+              }
+              body={t('profile.errors.stats')}
+              compact
+              iconName="bar-chart-outline"
+              title={t('common.tryAgainTitle')}
+              tone="muted"
+            />
           ) : statsQuery.data?.length ? (
             <View style={styles.stack}>
               {statsQuery.data.map((stat) => (
@@ -239,25 +329,40 @@ export function ProfileScreen() {
               ))}
             </View>
           ) : (
-            <Text style={styles.bodyText}>{t('profile.statsEmpty')}</Text>
+            <StateMessage
+              body={t('profile.statsEmpty')}
+              compact
+              iconName="sparkles-outline"
+              title={t('common.nothingYet')}
+              tone="warm"
+            />
           )}
         </ScreenCard>
 
         <ScreenCard title={t('profile.connectionsTitle')}>
+          <Text style={styles.sectionIntro}>{t('profile.connectionsSubtitle')}</Text>
           {connectionsQuery.isPending ? (
             <View style={styles.centeredBlock}>
               <ActivityIndicator color="#183153" />
             </View>
           ) : connectionsQuery.isError ? (
-            <>
-              <Text style={styles.bodyText}>{t('profile.errors.connections')}</Text>
-              <ActionButton
-                label={t('events.common.retry')}
-                onPress={async () => {
-                  await connectionsQuery.refetch();
-                }}
-              />
-            </>
+            <StateMessage
+              action={
+                <ActionButton
+                  iconName="refresh-outline"
+                  label={t('events.common.retry')}
+                  onPress={async () => {
+                    await connectionsQuery.refetch();
+                  }}
+                  variant="secondary"
+                />
+              }
+              body={t('profile.errors.connections')}
+              compact
+              iconName="people-outline"
+              title={t('common.tryAgainTitle')}
+              tone="muted"
+            />
           ) : Object.keys(groupedConnections).length ? (
             <View style={styles.stack}>
               {Object.values(groupedConnections).map((connections) => {
@@ -267,16 +372,28 @@ export function ProfileScreen() {
                   return null;
                 }
 
+                const sportName =
+                  language === 'cs' ? firstConnection.sportNameCs : firstConnection.sportNameEn;
+
                 return (
                   <View
                     key={`connections-${firstConnection.sportId}`}
                     style={styles.connectionGroup}
                   >
-                    <Text style={styles.connectionGroupTitle}>
-                      {language === 'cs'
-                        ? firstConnection.sportNameCs
-                        : firstConnection.sportNameEn}
-                    </Text>
+                    <View style={styles.connectionGroupHeader}>
+                      <SportBadge
+                        colorHex={firstConnection.sportColor}
+                        label={getSportBadgeLabel(firstConnection.sportSlug, sportName)}
+                      />
+                      <View style={styles.connectionGroupCopy}>
+                        <Text style={styles.connectionGroupTitle}>{sportName}</Text>
+                        <Text style={styles.connectionGroupMeta}>
+                          {t('profile.connectionsGroupCount', {
+                            count: connections.length,
+                          })}
+                        </Text>
+                      </View>
+                    </View>
                     {connections.map((connection) => {
                       const connectionName =
                         formatDisplayName(connection.firstName, connection.lastName) ||
@@ -305,9 +422,7 @@ export function ProfileScreen() {
                               })}
                             </Text>
                           </View>
-                          <InfoPill accentColor={connection.sportColor}>
-                            {t('profile.playAgainBadge')}
-                          </InfoPill>
+                          <Ionicons color="#9aacbd" name="chevron-forward" size={18} />
                         </Pressable>
                       );
                     })}
@@ -316,7 +431,13 @@ export function ProfileScreen() {
               })}
             </View>
           ) : (
-            <Text style={styles.bodyText}>{t('profile.connectionsEmpty')}</Text>
+            <StateMessage
+              body={t('profile.connectionsEmpty')}
+              compact
+              iconName="heart-outline"
+              title={t('common.nothingYet')}
+              tone="warm"
+            />
           )}
         </ScreenCard>
       </ScreenShell>
@@ -358,6 +479,20 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
     formatDisplayName(profileQuery.data?.first_name, profileQuery.data?.last_name) ||
     t('common.deletedUser');
   const hasConnection = (statsQuery.data ?? []).some((stat) => stat.isPlayAgainConnection);
+  const playerHighlights = [
+    {
+      label: t('profile.highlights.sports'),
+      value:
+        statsQuery.isPending || statsQuery.isError ? '—' : String(statsQuery.data?.length ?? 0),
+    },
+    {
+      label: t('profile.highlights.games'),
+      value:
+        statsQuery.isPending || statsQuery.isError
+          ? '—'
+          : String((statsQuery.data ?? []).reduce((sum, stat) => sum + stat.gamesPlayed, 0)),
+    },
+  ];
 
   const canReportPlayer = Boolean(
     !profileQuery.isPending && !profileQuery.isError && profileQuery.data,
@@ -401,53 +536,80 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
         title={t('navigation.titles.playerProfile')}
         subtitle={t('playerProfile.subtitle')}
       >
-        <ScreenCard title={t('playerProfile.summaryTitle')}>
+        <ScreenCard>
           <NoticeBanner notice={notice} resolveMessage={t} />
           {profileQuery.isPending ? (
             <View style={styles.centeredBlock}>
               <ActivityIndicator color="#183153" />
             </View>
           ) : profileQuery.isError || !profileQuery.data ? (
-            <>
-              <Text style={styles.bodyText}>{t('playerProfile.errors.summary')}</Text>
-              <ActionButton
-                label={t('events.common.retry')}
-                onPress={async () => {
-                  await profileQuery.refetch();
-                }}
-              />
-            </>
+            <StateMessage
+              action={
+                <ActionButton
+                  iconName="refresh-outline"
+                  label={t('events.common.retry')}
+                  onPress={async () => {
+                    await profileQuery.refetch();
+                  }}
+                  variant="secondary"
+                />
+              }
+              body={t('playerProfile.errors.summary')}
+              compact
+              iconName="person-outline"
+              title={t('playerProfile.summaryTitle')}
+              tone="muted"
+            />
           ) : (
-            <View style={styles.summaryRow}>
-              <AvatarPhoto label={topLineName} size={64} uri={profileQuery.data.photo_url} />
-              <View style={styles.summaryCopy}>
-                <Text style={styles.summaryName}>{topLineName}</Text>
-                <Text style={styles.summaryMeta}>
-                  {profileQuery.data.city ?? t('shell.common.noCity')}
-                </Text>
+            <>
+              <View style={styles.summaryHeader}>
+                <View style={styles.summaryAvatarWrap}>
+                  <AvatarPhoto label={topLineName} size={72} uri={profileQuery.data.photo_url} />
+                </View>
+                <View style={styles.summaryCopy}>
+                  <Text style={styles.summaryEyebrow}>{t('playerProfile.summaryTitle')}</Text>
+                  <Text style={styles.summaryName}>{topLineName}</Text>
+                  <View style={styles.summaryPillRow}>
+                    <InfoPill>{profileQuery.data.city ?? t('shell.common.noCity')}</InfoPill>
+                    {hasConnection ? (
+                      <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
+                    ) : null}
+                  </View>
+                </View>
               </View>
-            </View>
+              <View style={styles.highlightRow}>
+                {playerHighlights.map((item) => (
+                  <SummaryHighlight key={item.label} label={item.label} value={item.value} />
+                ))}
+              </View>
+            </>
           )}
-          {hasConnection ? (
-            <InfoPill accentColor="#183153">{t('profile.playAgainBadge')}</InfoPill>
-          ) : null}
         </ScreenCard>
 
         <ScreenCard title={t('playerProfile.statsTitle')}>
+          <Text style={styles.sectionIntro}>{t('playerProfile.statsSubtitle')}</Text>
           {statsQuery.isPending ? (
             <View style={styles.centeredBlock}>
               <ActivityIndicator color="#183153" />
             </View>
           ) : statsQuery.isError ? (
-            <>
-              <Text style={styles.bodyText}>{t('playerProfile.errors.stats')}</Text>
-              <ActionButton
-                label={t('events.common.retry')}
-                onPress={async () => {
-                  await statsQuery.refetch();
-                }}
-              />
-            </>
+            <StateMessage
+              action={
+                <ActionButton
+                  iconName="refresh-outline"
+                  label={t('events.common.retry')}
+                  onPress={async () => {
+                    await statsQuery.refetch();
+                  }}
+                  variant="secondary"
+                />
+              }
+              body={t('playerProfile.errors.stats')}
+              compact
+              iconName="bar-chart-outline"
+              title={t('common.tryAgainTitle')}
+              tone="muted"
+            />
           ) : statsQuery.data?.length ? (
             <View style={styles.stack}>
               {statsQuery.data.map((stat) => (
@@ -455,7 +617,13 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
               ))}
             </View>
           ) : (
-            <Text style={styles.bodyText}>{t('playerProfile.empty')}</Text>
+            <StateMessage
+              body={t('playerProfile.empty')}
+              compact
+              iconName="sparkles-outline"
+              title={t('common.nothingYet')}
+              tone="warm"
+            />
           )}
         </ScreenCard>
       </ScreenShell>
@@ -484,33 +652,77 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#395065',
   },
-  summaryRow: {
+  summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
   },
+  summaryAvatarWrap: {
+    padding: 5,
+    borderRadius: 999,
+    backgroundColor: '#eef3f8',
+  },
   summaryCopy: {
     flex: 1,
-    gap: 4,
+    gap: 5,
+  },
+  summaryEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#a0603b',
   },
   summaryName: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     color: '#183153',
   },
-  summaryMeta: {
+  summaryPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  highlightRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  highlightCard: {
+    flex: 1,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    backgroundColor: '#f6efe5',
+    borderWidth: 1,
+    borderColor: '#eadfce',
+    gap: 4,
+  },
+  highlightValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  highlightLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: '#6d7f95',
+  },
+  sectionIntro: {
+    marginTop: -2,
     fontSize: 14,
+    lineHeight: 20,
     color: '#5a6475',
   },
   stack: {
     gap: 12,
   },
   statCard: {
-    gap: 8,
+    gap: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#eadfce',
-    backgroundColor: '#fffdf9',
+    backgroundColor: '#fffaf5',
     padding: 14,
   },
   statCardStatic: {
@@ -520,24 +732,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  statIdentity: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statIdentityCopy: {
+    flex: 1,
+    gap: 2,
   },
   statSportName: {
     fontSize: 16,
     fontWeight: '800',
     color: '#183153',
   },
-  statSportNameSecondary: {
+  statMetaSoft: {
     fontSize: 13,
     color: '#6d7f95',
   },
   statPills: {
-    gap: 6,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  statMeta: {
-    fontSize: 14,
+  statSummaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statSummaryCard: {
+    flex: 1,
+    gap: 4,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    backgroundColor: '#f9f3ea',
+  },
+  statSummaryLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#a0603b',
+  },
+  statSummaryValue: {
+    fontSize: 13,
+    lineHeight: 19,
     color: '#395065',
+  },
+  editHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   editHint: {
     fontSize: 12,
@@ -546,22 +794,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   connectionGroup: {
-    gap: 10,
+    gap: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#eadfce',
+    backgroundColor: '#fffaf5',
+    padding: 14,
+  },
+  connectionGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  connectionGroupCopy: {
+    flex: 1,
+    gap: 2,
   },
   connectionGroupTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: '#183153',
   },
+  connectionGroupMeta: {
+    fontSize: 13,
+    color: '#6d7f95',
+  },
   connectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#eadfce',
-    backgroundColor: '#fffdf9',
-    padding: 12,
+    backgroundColor: '#fffcf8',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   connectionCopy: {
     flex: 1,

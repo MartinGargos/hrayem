@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -18,12 +20,14 @@ import {
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
 import { AvatarPhoto, SportBadge } from '../events/EventPrimitives';
 import { isChatChannelReconnectNeeded, shouldRecoverChatOnForeground } from './chat-realtime';
 import { ScreenCard } from '../../components/ScreenShell';
+import { StateMessage } from '../../components/StateMessage';
 import type { RootStackParamList } from '../../navigation/types';
 import {
   EdgeFunctionError,
@@ -44,9 +48,24 @@ import {
 } from '../../utils/dates';
 
 type ChatScreenProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
+type ChatIconName = ComponentProps<typeof Ionicons>['name'];
 
 type MessageFormValues = {
   body: string;
+};
+
+type ChatStateViewProps = {
+  actionLabel?: string;
+  body: string;
+  iconName: ChatIconName;
+  onAction?: () => void | Promise<void>;
+  title: string;
+};
+
+type ChatBannerProps = {
+  iconName: ChatIconName;
+  text: string;
+  tone?: 'default' | 'muted';
 };
 
 function createMessageSchema(t: (key: string, options?: Record<string, unknown>) => string) {
@@ -146,15 +165,56 @@ function upsertChatMessage(
   return [nextMessage, ...currentMessages];
 }
 
+function ChatStateView({ actionLabel, body, iconName, onAction, title }: ChatStateViewProps) {
+  return (
+    <StateMessage
+      action={
+        actionLabel && onAction ? (
+          <ActionButton
+            iconName={iconName === 'cloud-offline-outline' ? 'refresh-outline' : undefined}
+            label={actionLabel}
+            onPress={onAction}
+            variant={iconName === 'cloud-offline-outline' ? 'secondary' : 'primary'}
+          />
+        ) : undefined
+      }
+      body={body}
+      iconName={iconName}
+      title={title}
+      tone={
+        iconName === 'sparkles-outline'
+          ? 'warm'
+          : iconName === 'cloud-offline-outline'
+            ? 'muted'
+            : 'default'
+      }
+    />
+  );
+}
+
+function ChatBanner({ iconName, text, tone = 'default' }: ChatBannerProps) {
+  return (
+    <View style={[styles.banner, tone === 'muted' ? styles.bannerMuted : undefined]}>
+      <View style={[styles.bannerIconWrap, tone === 'muted' ? styles.bannerIconWrapMuted : null]}>
+        <Ionicons color={tone === 'muted' ? '#8a694f' : '#183153'} name={iconName} size={16} />
+      </View>
+      <Text style={styles.bannerText}>{text}</Text>
+    </View>
+  );
+}
+
 export function ChatScreen({ route }: ChatScreenProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isScreenFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
   const language = useUserStore((state) => state.language);
   const userId = useAuthStore((state) => state.userId);
   const eventId = route.params.eventId;
   const [notice, setNotice] = useState<AppNotice | null>(null);
   const [channelReconnectNonce, setChannelReconnectNonce] = useState(0);
+  const footerBottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 14) : 14;
+  const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.top + 44 : 0;
 
   const messageForm = useForm<MessageFormValues>({
     resolver: zodResolver(createMessageSchema(t)),
@@ -299,6 +359,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
   const sendMessageMutation = useMutation({
     mutationFn: sendEventMessage,
     onSuccess: async (message) => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       messageForm.reset({
         body: '',
       });
@@ -309,6 +370,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
       await refetchChatState();
     },
     onError: (error) => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setNotice(mapChatErrorToNotice(error));
     },
   });
@@ -356,13 +418,15 @@ export function ChatScreen({ route }: ChatScreenProps) {
   if (eventQuery.isError || !eventQuery.data) {
     return (
       <View style={styles.screen}>
-        <ScreenCard title={t('events.chat.errorTitle')}>
-          <Text style={styles.bodyText}>{t('events.chat.errorBody')}</Text>
-          <ActionButton
-            label={t('events.common.retry')}
-            onPress={async () => {
+        <ScreenCard>
+          <ChatStateView
+            actionLabel={t('events.common.retry')}
+            body={t('events.chat.errorBody')}
+            iconName="alert-circle-outline"
+            onAction={async () => {
               await eventQuery.refetch();
             }}
+            title={t('events.chat.errorTitle')}
           />
         </ScreenCard>
       </View>
@@ -383,6 +447,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={keyboardVerticalOffset}
       style={styles.keyboardWrap}
     >
       <View style={styles.screen}>
@@ -394,9 +459,21 @@ export function ChatScreen({ route }: ChatScreenProps) {
             />
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>{sportName}</Text>
-              <Text style={styles.heroSubtitle}>{event.venueName}</Text>
-              <Text style={styles.heroMeta}>
-                {formatEventDate(event.startsAt, language)} ·{' '}
+              <Text numberOfLines={1} style={styles.heroSubtitle}>
+                {event.venueName}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.heroMetaRow}>
+            <View style={styles.heroMetaPill}>
+              <Ionicons color="#dbe4ee" name="calendar-clear-outline" size={14} />
+              <Text style={styles.heroMetaPillLabel}>
+                {formatEventDate(event.startsAt, language)}
+              </Text>
+            </View>
+            <View style={styles.heroMetaPill}>
+              <Ionicons color="#dbe4ee" name="time-outline" size={14} />
+              <Text style={styles.heroMetaPillLabel}>
                 {formatEventTime(event.startsAt, language)}
               </Text>
             </View>
@@ -407,170 +484,247 @@ export function ChatScreen({ route }: ChatScreenProps) {
           <NoticeBanner notice={notice} resolveMessage={t} />
 
           {!canOpenChat ? (
-            <ScreenCard title={t('events.chat.forbiddenTitle')}>
-              <Text style={styles.bodyText}>{t('events.chat.forbiddenBody')}</Text>
+            <ScreenCard>
+              <ChatStateView
+                body={t('events.chat.forbiddenBody')}
+                iconName="lock-closed-outline"
+                title={t('events.chat.forbiddenTitle')}
+              />
             </ScreenCard>
           ) : (
             <>
               {event.status === 'cancelled' ? (
-                <View style={[styles.banner, styles.bannerMuted]}>
-                  <Text style={styles.bannerText}>{t('events.chat.cancelledBanner')}</Text>
-                </View>
+                <ChatBanner
+                  iconName="close-circle-outline"
+                  text={t('events.chat.cancelledBanner')}
+                  tone="muted"
+                />
               ) : null}
 
               {finishedCountdownVisible ? (
-                <View style={styles.banner}>
-                  <Text style={styles.bannerText}>
-                    {t('events.chat.finishedBanner', {
-                      remaining: formatRelativeTime(event.chatClosedAt ?? '', language),
-                    })}
-                  </Text>
-                </View>
+                <ChatBanner
+                  iconName="time-outline"
+                  text={t('events.chat.finishedBanner', {
+                    remaining: formatRelativeTime(event.chatClosedAt ?? '', language),
+                  })}
+                />
               ) : null}
 
               {event.status === 'finished' && isReadOnly ? (
-                <View style={[styles.banner, styles.bannerMuted]}>
-                  <Text style={styles.bannerText}>{t('events.chat.readOnlyFinished')}</Text>
-                </View>
+                <ChatBanner
+                  iconName="lock-closed-outline"
+                  text={t('events.chat.readOnlyFinished')}
+                  tone="muted"
+                />
               ) : null}
 
-              {messagesQuery.isError ? (
-                <ScreenCard title={t('events.chat.messagesErrorTitle')}>
-                  <Text style={styles.bodyText}>{t('events.chat.messagesErrorBody')}</Text>
-                  <ActionButton
-                    label={t('events.common.retry')}
-                    onPress={async () => {
+              <View style={styles.messagesPanel}>
+                <View style={styles.messagesPanelHeader}>
+                  <View style={styles.messagesPanelTitleRow}>
+                    <Ionicons color="#183153" name="chatbubble-ellipses-outline" size={16} />
+                    <Text style={styles.messagesPanelTitle}>{t('events.chat.threadTitle')}</Text>
+                  </View>
+                  <View style={styles.messagesPanelSignals}>
+                    {messagesQuery.isFetching && messageRows.length ? (
+                      <View style={styles.syncPill}>
+                        <ActivityIndicator color="#5f7388" size="small" />
+                        <Text style={styles.syncPillLabel}>{t('events.chat.syncing')}</Text>
+                      </View>
+                    ) : null}
+                    <View
+                      style={[
+                        styles.statusPill,
+                        isReadOnly ? styles.statusPillMuted : styles.statusPillLive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusPillLabel,
+                          isReadOnly ? styles.statusPillLabelMuted : undefined,
+                        ]}
+                      >
+                        {isReadOnly ? t('events.chat.readOnlyStatus') : t('events.chat.liveStatus')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {messagesQuery.isError ? (
+                  <ChatStateView
+                    actionLabel={t('events.common.retry')}
+                    body={t('events.chat.messagesErrorBody')}
+                    iconName="cloud-offline-outline"
+                    onAction={async () => {
                       await messagesQuery.refetch();
                     }}
+                    title={t('events.chat.messagesErrorTitle')}
                   />
-                </ScreenCard>
-              ) : (
-                <FlatList
-                  contentContainerStyle={styles.messageListContent}
-                  data={messageRows}
-                  inverted
-                  keyExtractor={(item) => item.id}
-                  keyboardShouldPersistTaps="handled"
-                  ListEmptyComponent={
-                    messagesQuery.isPending ? (
-                      <View style={styles.centeredBlock}>
-                        <ActivityIndicator color="#183153" />
-                      </View>
-                    ) : (
-                      <View style={styles.emptyState}>
-                        <Text style={styles.emptyTitle}>{t('events.chat.emptyTitle')}</Text>
-                        <Text style={styles.emptyBody}>{t('events.chat.emptyBody')}</Text>
-                      </View>
-                    )
-                  }
-                  renderItem={({ item }) => {
-                    const isOwnMessage = item.userId === userId;
-                    const authorName =
-                      [item.authorFirstName, item.authorLastName].filter(Boolean).join(' ') ||
-                      t('events.chat.deletedParticipant');
-                    const body = item.isDeleted ? t('events.chat.deletedBody') : item.body;
+                ) : (
+                  <FlatList
+                    automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                    contentContainerStyle={[
+                      styles.messageListContent,
+                      !messageRows.length ? styles.messageListContentEmpty : undefined,
+                    ]}
+                    data={messageRows}
+                    inverted
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                    keyboardShouldPersistTaps="handled"
+                    keyExtractor={(item) => item.id}
+                    ListEmptyComponent={
+                      messagesQuery.isPending ? (
+                        <View style={styles.centeredBlock}>
+                          <ActivityIndicator color="#183153" />
+                        </View>
+                      ) : (
+                        <ChatStateView
+                          body={t('events.chat.emptyBody')}
+                          iconName="sparkles-outline"
+                          title={t('events.chat.emptyTitle')}
+                        />
+                      )
+                    }
+                    renderItem={({ item }) => {
+                      const isOwnMessage = item.userId === userId;
+                      const authorName =
+                        [item.authorFirstName, item.authorLastName].filter(Boolean).join(' ') ||
+                        t('events.chat.deletedParticipant');
+                      const body = item.isDeleted ? t('events.chat.deletedBody') : item.body;
 
-                    return (
-                      <View
-                        style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : undefined]}
-                      >
-                        <AvatarPhoto label={authorName} uri={item.authorPhotoUrl} size={38} />
+                      return (
                         <View
-                          style={[
-                            styles.messageBubble,
-                            isOwnMessage ? styles.messageBubbleOwn : styles.messageBubbleOther,
-                          ]}
+                          style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
                         >
-                          <View style={styles.messageMetaRow}>
-                            <Text
-                              style={[
-                                styles.messageAuthor,
-                                isOwnMessage ? styles.messageMetaOwn : undefined,
-                              ]}
-                            >
-                              {authorName}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.messageTimestamp,
-                                isOwnMessage ? styles.messageMetaOwn : undefined,
-                              ]}
-                            >
-                              {formatChatTimestamp(item.sentAt, language)}
-                            </Text>
-                          </View>
-                          <Text
+                          {isOwnMessage ? (
+                            <View style={styles.messageAvatarSpacer} />
+                          ) : (
+                            <AvatarPhoto label={authorName} uri={item.authorPhotoUrl} size={34} />
+                          )}
+                          <View
                             style={[
-                              styles.messageBody,
-                              isOwnMessage ? styles.messageBodyOwn : undefined,
+                              styles.messageColumn,
+                              isOwnMessage ? styles.messageColumnOwn : null,
                             ]}
                           >
-                            {body}
-                          </Text>
+                            <View
+                              style={[
+                                styles.messageHeader,
+                                isOwnMessage ? styles.messageHeaderOwn : null,
+                              ]}
+                            >
+                              {!isOwnMessage ? (
+                                <Text numberOfLines={1} style={styles.messageAuthor}>
+                                  {authorName}
+                                </Text>
+                              ) : null}
+                              <Text style={styles.messageTimestamp}>
+                                {formatChatTimestamp(item.sentAt, language)}
+                              </Text>
+                            </View>
+                            <View
+                              style={[
+                                styles.messageBubble,
+                                item.isDeleted
+                                  ? styles.messageBubbleDeleted
+                                  : isOwnMessage
+                                    ? styles.messageBubbleOwn
+                                    : styles.messageBubbleOther,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.messageBody,
+                                  !item.isDeleted && isOwnMessage
+                                    ? styles.messageBodyOwn
+                                    : undefined,
+                                  item.isDeleted ? styles.messageBodyDeleted : undefined,
+                                ]}
+                              >
+                                {body}
+                              </Text>
+                            </View>
+                          </View>
                         </View>
-                      </View>
-                    );
-                  }}
-                  style={styles.messageList}
-                />
-              )}
+                      );
+                    }}
+                    showsVerticalScrollIndicator={false}
+                    style={styles.messageList}
+                  />
+                )}
+              </View>
             </>
           )}
         </View>
 
         {showInput ? (
-          <View style={styles.inputWrap}>
+          <View style={[styles.inputWrap, { paddingBottom: footerBottomPadding }]}>
             <Controller
               control={messageForm.control}
               name="body"
               render={({ field: { onBlur, onChange, value }, fieldState }) => (
-                <View style={styles.inputRow}>
-                  <TextInput
-                    accessibilityLabel={t('events.chat.inputLabel')}
-                    autoCapitalize="sentences"
-                    multiline
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    placeholder={t('events.chat.inputPlaceholder')}
-                    placeholderTextColor="#7a8ca3"
-                    selectionColor="#183153"
-                    style={[styles.input, fieldState.error ? styles.inputError : undefined]}
-                    value={value}
-                  />
-                  <Pressable
-                    accessibilityLabel={t('events.chat.sendAction')}
-                    accessibilityRole="button"
-                    disabled={!messageForm.formState.isValid || sendMessageMutation.isPending}
-                    onPress={() => {
-                      void messageForm.handleSubmit(handleSendMessage)();
-                    }}
-                    style={({ pressed }) => [
-                      styles.sendButton,
-                      (!messageForm.formState.isValid || sendMessageMutation.isPending) &&
-                        styles.sendButtonDisabled,
-                      pressed &&
-                        messageForm.formState.isValid &&
-                        !sendMessageMutation.isPending &&
-                        styles.sendButtonPressed,
+                <>
+                  <View
+                    style={[
+                      styles.composerCard,
+                      fieldState.error ? styles.composerCardError : undefined,
                     ]}
                   >
-                    <Text style={styles.sendButtonLabel}>
-                      {sendMessageMutation.isPending
-                        ? t('events.chat.sendPending')
-                        : t('events.chat.sendAction')}
+                    <TextInput
+                      accessibilityLabel={t('events.chat.inputLabel')}
+                      autoCapitalize="sentences"
+                      maxLength={1_000}
+                      multiline
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      placeholder={t('events.chat.inputPlaceholder')}
+                      placeholderTextColor="#7a8ca3"
+                      selectionColor="#183153"
+                      style={styles.input}
+                      textAlignVertical="top"
+                      value={value}
+                    />
+                    <Pressable
+                      accessibilityLabel={t('events.chat.sendAction')}
+                      accessibilityRole="button"
+                      disabled={!messageForm.formState.isValid || sendMessageMutation.isPending}
+                      onPress={() => {
+                        void messageForm.handleSubmit(handleSendMessage)();
+                      }}
+                      style={({ pressed }) => [
+                        styles.sendButton,
+                        (!messageForm.formState.isValid || sendMessageMutation.isPending) &&
+                          styles.sendButtonDisabled,
+                        pressed &&
+                          messageForm.formState.isValid &&
+                          !sendMessageMutation.isPending &&
+                          styles.sendButtonPressed,
+                      ]}
+                    >
+                      {sendMessageMutation.isPending ? (
+                        <ActivityIndicator color="#fff8f0" size="small" />
+                      ) : (
+                        <Ionicons color="#fff8f0" name="arrow-up" size={20} />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {messageForm.formState.errors.body?.message ? (
+                    <Text style={styles.errorText}>
+                      {messageForm.formState.errors.body.message}
                     </Text>
-                  </Pressable>
-                </View>
+                  ) : (
+                    <View style={styles.helperRow}>
+                      <Ionicons color="#8ea0b4" name="information-circle-outline" size={14} />
+                      <Text style={styles.helperText}>{t('events.chat.inputHelper')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             />
-            {messageForm.formState.errors.body?.message ? (
-              <Text style={styles.errorText}>{messageForm.formState.errors.body.message}</Text>
-            ) : (
-              <Text style={styles.helperText}>{t('events.chat.inputHelper')}</Text>
-            )}
           </View>
         ) : canOpenChat ? (
-          <View style={styles.readOnlyFooter}>
+          <View style={[styles.readOnlyFooter, { paddingBottom: footerBottomPadding }]}>
+            <Ionicons color="#8ea0b4" name="lock-closed-outline" size={16} />
             <Text style={styles.helperText}>
               {event.status === 'cancelled'
                 ? t('events.chat.cancelledBanner')
@@ -593,10 +747,12 @@ const styles = StyleSheet.create({
   },
   hero: {
     marginHorizontal: 18,
-    marginTop: 18,
+    marginTop: 14,
     borderRadius: 26,
-    padding: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     backgroundColor: '#183153',
+    gap: 14,
   },
   heroIdentity: {
     flexDirection: 'row',
@@ -608,7 +764,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   heroTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: '#fff8f0',
   },
@@ -616,110 +772,206 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#d2dde8',
   },
-  heroMeta: {
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 248, 240, 0.12)',
+  },
+  heroMetaPillLabel: {
     fontSize: 13,
-    color: '#d2dde8',
+    fontWeight: '700',
+    color: '#dbe4ee',
   },
   content: {
     flex: 1,
     paddingHorizontal: 18,
-    paddingTop: 14,
-    gap: 12,
+    paddingTop: 12,
+    gap: 10,
   },
   centeredBlock: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
-  },
-  bodyText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#395065',
+    paddingVertical: 28,
   },
   banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#eadfce',
     backgroundColor: '#fffaf3',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
   bannerMuted: {
-    backgroundColor: '#f1e6d6',
+    backgroundColor: '#f4eadb',
+  },
+  bannerIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#edf3f8',
+  },
+  bannerIconWrapMuted: {
+    backgroundColor: '#f8efe3',
   },
   bannerText: {
+    flex: 1,
     fontSize: 14,
     lineHeight: 20,
     color: '#395065',
+  },
+  messagesPanel: {
+    flex: 1,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#eadfce',
+    backgroundColor: '#fffaf5',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 6,
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 1,
+  },
+  messagesPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+  },
+  messagesPanelTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  messagesPanelTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  messagesPanelSignals: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  syncPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#eef2f7',
+  },
+  syncPillLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5f7388',
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusPillLive: {
+    backgroundColor: '#e6f3ec',
+  },
+  statusPillMuted: {
+    backgroundColor: '#f0e7d9',
+  },
+  statusPillLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#2f8154',
+  },
+  statusPillLabelMuted: {
+    color: '#8a694f',
   },
   messageList: {
     flex: 1,
   },
   messageListContent: {
-    paddingBottom: 8,
+    paddingHorizontal: 4,
     paddingTop: 4,
+    paddingBottom: 12,
   },
-  emptyState: {
-    alignItems: 'center',
+  messageListContentEmpty: {
+    flexGrow: 1,
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 36,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#183153',
-  },
-  emptyBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    color: '#5a6475',
   },
   messageRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   messageRowOwn: {
-    flexDirection: 'row-reverse',
+    justifyContent: 'flex-end',
   },
-  messageBubble: {
+  messageAvatarSpacer: {
+    width: 34,
+  },
+  messageColumn: {
     flex: 1,
     maxWidth: '82%',
+    gap: 5,
+  },
+  messageColumnOwn: {
+    alignItems: 'flex-end',
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 6,
+  },
+  messageHeaderOwn: {
+    justifyContent: 'flex-end',
+  },
+  messageAuthor: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#395065',
+  },
+  messageTimestamp: {
+    fontSize: 11,
+    color: '#8393a4',
+  },
+  messageBubble: {
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
   },
   messageBubbleOther: {
-    backgroundColor: '#fffaf3',
+    backgroundColor: '#fffdf9',
     borderColor: '#eadfce',
   },
   messageBubbleOwn: {
     backgroundColor: '#183153',
     borderColor: '#183153',
   },
-  messageMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 6,
-  },
-  messageAuthor: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#183153',
-  },
-  messageTimestamp: {
-    fontSize: 11,
-    color: '#6d7f95',
-  },
-  messageMetaOwn: {
-    color: '#d2dde8',
+  messageBubbleDeleted: {
+    backgroundColor: '#f4eee5',
+    borderColor: '#e7dbca',
   },
   messageBody: {
     fontSize: 15,
@@ -729,43 +981,52 @@ const styles = StyleSheet.create({
   messageBodyOwn: {
     color: '#fff8f0',
   },
+  messageBodyDeleted: {
+    fontStyle: 'italic',
+    color: '#6f7c8b',
+  },
   inputWrap: {
     borderTopWidth: 1,
     borderTopColor: '#eadfce',
     backgroundColor: '#fffaf3',
     paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 14,
+    paddingTop: 10,
     gap: 8,
   },
-  inputRow: {
+  composerCard: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#e2d4c3',
+    backgroundColor: '#fffdf9',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 1,
+  },
+  composerCardError: {
+    borderColor: '#d15b5b',
   },
   input: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 46,
     maxHeight: 140,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#d4c2af',
-    backgroundColor: '#fffdf9',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 2,
+    paddingBottom: 2,
     fontSize: 15,
     lineHeight: 22,
     color: '#183153',
   },
-  inputError: {
-    borderColor: '#d15b5b',
-  },
   sendButton: {
-    minWidth: 82,
-    borderRadius: 18,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#183153',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -775,12 +1036,13 @@ const styles = StyleSheet.create({
   sendButtonPressed: {
     opacity: 0.9,
   },
-  sendButtonLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#fff8f0',
+  helperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   helperText: {
+    flex: 1,
     fontSize: 12,
     lineHeight: 18,
     color: '#6d7f95',
@@ -791,11 +1053,13 @@ const styles = StyleSheet.create({
     color: '#d15b5b',
   },
   readOnlyFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderTopWidth: 1,
     borderTopColor: '#eadfce',
     backgroundColor: '#fffaf3',
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 14,
   },
 });

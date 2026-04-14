@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -139,6 +140,7 @@ type ActionButtonProps = {
   accessibilityHint?: string;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
+  iconName?: React.ComponentProps<typeof Ionicons>['name'];
 };
 
 export function ActionButton({
@@ -147,6 +149,7 @@ export function ActionButton({
   accessibilityHint,
   disabled = false,
   variant = 'primary',
+  iconName,
 }: ActionButtonProps) {
   return (
     <Pressable
@@ -164,14 +167,23 @@ export function ActionButton({
         pressed && !disabled ? styles.buttonPressed : undefined,
       ]}
     >
-      <Text
-        style={[
-          styles.buttonLabel,
-          variant === 'primary' ? styles.primaryButtonLabel : styles.secondaryButtonLabel,
-        ]}
-      >
-        {label}
-      </Text>
+      <View style={styles.buttonContent}>
+        {iconName ? (
+          <Ionicons
+            color={variant === 'primary' ? '#fff9f1' : '#183153'}
+            name={iconName}
+            size={16}
+          />
+        ) : null}
+        <Text
+          style={[
+            styles.buttonLabel,
+            variant === 'primary' ? styles.primaryButtonLabel : styles.secondaryButtonLabel,
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -349,6 +361,7 @@ export function PickerSheet<TValue extends string>({
         style={styles.sheetBackdrop}
       >
         <Pressable style={styles.sheetCard}>
+          <View style={styles.sheetHandle} />
           <Text style={styles.sheetTitle}>{title}</Text>
           {options.map((option) => {
             const selected = option.value === selectedValue;
@@ -403,50 +416,56 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 32,
-    gap: 18,
+    gap: 16,
     backgroundColor: '#f7f0e6',
   },
   hero: {
-    borderRadius: 28,
-    padding: 22,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     backgroundColor: '#183153',
   },
   eyebrow: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: '#f4cf8c',
   },
   title: {
     marginTop: 8,
-    fontSize: 30,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 33,
     fontWeight: '800',
     color: '#fff8f0',
   },
   subtitle: {
-    marginTop: 10,
+    marginTop: 8,
     fontSize: 15,
-    lineHeight: 24,
-    color: '#d2dde8',
+    lineHeight: 22,
+    color: '#dbe4ee',
   },
   card: {
-    borderRadius: 24,
-    padding: 20,
-    backgroundColor: '#fff9f1',
-    gap: 16,
+    borderRadius: 20,
+    padding: 18,
+    backgroundColor: '#fffbf6',
+    gap: 14,
     borderWidth: 1,
-    borderColor: '#eedfca',
+    borderColor: '#eee1d2',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1,
   },
   footer: {
     gap: 12,
   },
   notice: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -454,24 +473,24 @@ const styles = StyleSheet.create({
   noticeText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#183153',
+    color: '#2b4156',
   },
   field: {
     gap: 8,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#183153',
+    color: '#28445d',
   },
   input: {
-    minHeight: 52,
-    borderRadius: 16,
+    minHeight: 50,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#c8d5e4',
+    borderColor: '#d4dee9',
     paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: '#fbfdff',
+    paddingVertical: 13,
+    backgroundColor: '#fffefe',
     fontSize: 16,
     color: '#183153',
   },
@@ -485,14 +504,14 @@ const styles = StyleSheet.create({
     borderColor: '#cc5f58',
   },
   selectionField: {
-    minHeight: 52,
-    borderRadius: 16,
+    minHeight: 50,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#c8d5e4',
+    borderColor: '#d4dee9',
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 13,
     justifyContent: 'center',
-    backgroundColor: '#fbfdff',
+    backgroundColor: '#fffefe',
   },
   selectionValue: {
     fontSize: 16,
@@ -508,10 +527,10 @@ const styles = StyleSheet.create({
     color: '#b44740',
   },
   button: {
-    minHeight: 52,
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 15,
     paddingHorizontal: 16,
   },
   buttonDisabled: {
@@ -525,12 +544,26 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#d4c2ad',
-    backgroundColor: '#fff3e1',
+    borderColor: '#e3d2bf',
+    backgroundColor: '#fffdf8',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
   },
   buttonLabel: {
     fontSize: 16,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   primaryButtonLabel: {
     color: '#fff9f1',
@@ -542,7 +575,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '700',
-    color: '#225b88',
+    color: '#1d557f',
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -578,12 +611,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#d7c8b5',
-    backgroundColor: '#fffdf9',
+    borderColor: '#dfd1bf',
+    backgroundColor: '#fffdf8',
   },
   chipSelected: {
     backgroundColor: '#183153',
@@ -605,17 +638,26 @@ const styles = StyleSheet.create({
   sheetCard: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 30,
-    backgroundColor: '#fff9f1',
+    backgroundColor: '#fffbf6',
     gap: 8,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#d6c9b7',
+    marginBottom: 2,
   },
   sheetTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: '#183153',
     marginBottom: 8,
+    textAlign: 'center',
   },
   sheetOption: {
     borderRadius: 16,

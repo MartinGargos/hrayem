@@ -260,7 +260,7 @@ function getDisplayName(input: { firstName: string | null; lastName: string | nu
 }
 
 function buildEventDetailUrl(eventId: string): string {
-  return `https://hrayem.cz/event/${eventId}`;
+  return `https://www.hrayem.cz/event/${eventId}`;
 }
 
 async function loadEventSummary(

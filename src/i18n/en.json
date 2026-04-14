@@ -134,7 +134,10 @@
     "logoutPartial": "You were logged out on this device. Remote cleanup may take a moment."
   },
   "common": {
-    "deletedUser": "Deleted User"
+    "deletedUser": "Deleted User",
+    "nothingYet": "Nothing here yet",
+    "allSet": "All set",
+    "tryAgainTitle": "Let's try again"
   },
   "foundation": {
     "eyebrow": "Milestone 0",
@@ -222,7 +225,7 @@
     },
     "home": {
       "title": "Home feed",
-      "subtitle": "Browse upcoming games in your city, adjust filters, and jump into event detail without leaving the main shell.",
+      "subtitle": "See the best matches in your city and open the details in one tap.",
       "tabs": {
         "upcoming": "Upcoming games",
         "availablePlayers": "Available players"
@@ -264,7 +267,7 @@
     },
     "createEvent": {
       "title": "Create event",
-      "subtitle": "Set the sport, schedule, venue, and skill range in one scrollable form before publishing the game.",
+      "subtitle": "Pick the sport, time, and venue, then publish the game in a minute.",
       "stubTitle": "Create event stub",
       "placeholder": "The final create-event form will add sport, date, time, venue, player count, and skill range in the next milestone.",
       "openAddVenue": "Open add venue stub",
@@ -284,7 +287,7 @@
     },
     "myGames": {
       "title": "My games",
-      "subtitle": "Track the games you organize or play, and revisit finished games for no-show reporting and post-game feedback.",
+      "subtitle": "Keep upcoming plans in view and return to finished games for quick post-game follow-up.",
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
@@ -316,7 +319,7 @@
     },
     "profile": {
       "title": "Profile",
-      "subtitle": "Track your sport stats, update your skill levels, and review players you'd gladly play with again.",
+      "subtitle": "Keep your stats, skill levels, and favorite players in one place.",
       "stubTitle": "Profile summary",
       "nameLabel": "Name",
       "languageLabel": "Language",
@@ -325,7 +328,7 @@
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Manage notification preferences, account actions, and core app preferences in one place.",
+      "subtitle": "Manage preferences, notifications, and account actions in one clean place.",
       "stubTitle": "Settings stub",
       "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
       "openAccountDeletion": "Delete account"
@@ -353,19 +356,29 @@
   "profile": {
     "summaryTitle": "Profile summary",
     "statsTitle": "Your sport stats",
+    "statsSubtitle": "Your levels and match history update here as you keep playing.",
     "statsEmpty": "Add or finish more games to build your sport stats here.",
     "connectionsTitle": "Play again connections",
+    "connectionsSubtitle": "Players you clicked with most show up here for the next invite.",
     "connectionsEmpty": "Mutual thumbs up will start surfacing here after finished games.",
+    "connectionsGroupCount": "{{count}} players ready for another game",
     "playAgainBadge": "Play again",
     "skillEditHint": "Tap to update your level for this sport.",
     "skillModalSubtitle": "Update your current level for this sport so future games use the right expectations.",
     "skillUpdated": "Your skill level was updated.",
     "skillUpdateFailed": "Your skill level could not be updated. Please try again.",
+    "highlights": {
+      "sports": "Sports",
+      "games": "Games",
+      "connections": "Play again"
+    },
     "errors": {
       "stats": "We couldn't load your sport stats right now.",
       "connections": "We couldn't load your play-again connections right now."
     },
     "stats": {
+      "reliabilityLabel": "Reliability",
+      "feedbackLabel": "Feedback",
       "gamesAndHours": "{{games}} games · {{hours}} h",
       "noShows": "{{count}} no-shows",
       "thumbsHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
@@ -376,6 +389,7 @@
     "subtitle": "Review this player's visible sport stats and shared play-again signals.",
     "summaryTitle": "Player summary",
     "statsTitle": "Sport stats",
+    "statsSubtitle": "Visible levels and finished-game signals appear here.",
     "empty": "This player has no visible sport stats yet.",
     "errors": {
       "summary": "We couldn't load this player's profile summary right now.",
@@ -384,6 +398,8 @@
   },
   "settings": {
     "profileTitle": "App preferences",
+    "accountTitle": "Account",
+    "accountSubtitle": "Session and privacy-sensitive actions live here.",
     "languageLabel": "Language",
     "cityLabel": "City",
     "profileSaved": "Your app preferences were saved.",
@@ -397,6 +413,12 @@
     "closeCityPicker": "Close city picker",
     "validation": {
       "city": "Choose one of the supported cities."
+    },
+    "account": {
+      "logoutTitle": "Log out",
+      "logoutSubtitle": "Sign out on this device and stop using this session here.",
+      "deleteTitle": "Delete account",
+      "deleteSubtitle": "Open the permanent account deletion flow."
     },
     "notifications": {
       "permissionTitle": "Push permission",
@@ -431,7 +453,7 @@
   },
   "availability": {
     "title": "I'm available",
-    "subtitle": "Post the days you can play so people in your city can create the right game around you.",
+    "subtitle": "Share your next free slots so nearby players can build the right game around you.",
     "availablePlayersTitle": "Available players",
     "allSports": "All sports",
     "openFormAction": "I'm available",
@@ -581,6 +603,10 @@
       "messagesErrorBody": "Please try again. If the problem keeps happening, check your connection and reopen the chat once you're back online.",
       "emptyTitle": "No messages yet",
       "emptyBody": "Say hi to the group once you're ready.",
+      "threadTitle": "Conversation",
+      "syncing": "Updating",
+      "liveStatus": "Live",
+      "readOnlyStatus": "Read-only",
       "deletedParticipant": "Deleted player",
       "deletedBody": "This message was removed.",
       "inputLabel": "Message",
@@ -649,7 +675,7 @@
       "playerCountTotal": "Total player count",
       "skillMin": "Minimum skill",
       "skillMax": "Maximum skill",
-      "skillHelper": "This range helps set expectations. Players outside it can still join in later milestones.",
+      "skillHelper": "This range helps players quickly gauge the level of the game. Joining outside it is still allowed.",
       "description": "Description",
       "descriptionPlaceholder": "Optional note about format, level, or what players should bring.",
       "descriptionCounter": "{{count}}/{{max}} characters",
@@ -675,7 +701,7 @@
     },
     "edit": {
       "title": "Edit event",
-      "subtitle": "Adjust the venue, schedule, player count, and notes for this game before it starts.",
+      "subtitle": "Fine-tune the time, venue, and player count before the game starts.",
       "submit": "Save changes",
       "loadingTitle": "Loading event details",
       "loadingBody": "We're filling the current event values into the form now.",
@@ -737,7 +763,7 @@
     },
     "organizerTools": {
       "title": "Organizer tools",
-      "body": "Keep the game accurate, remove a player if needed, or cancel the event before it starts.",
+      "body": "Keep the game up to date and cancel it before it starts if plans change.",
       "editAction": "Edit event",
       "cancelAction": "Cancel event",
       "errors": {
