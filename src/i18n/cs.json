@@ -139,6 +139,91 @@
     "allSet": "Hotovo",
     "tryAgainTitle": "Zkusme to znovu"
   },
+  "home": {
+    "topBar": {
+      "brandName": "Hrayem",
+      "helloName": "Čau, {{name}} 👋",
+      "tagline": "Další hra začíná tady",
+      "setCity": "Vyberte město",
+      "openCity": "Vybrat město",
+      "pickerTitle": "Vyberte město",
+      "openProfile": "Otevřít profil",
+      "defaultIdentity": "Váš profil",
+      "greetings": {
+        "explore": "Podívejte se, co se dnes hraje.",
+        "nearby": "Nejbližší termíny čekají níže.",
+        "pickup": "Stačí jedna volná hodina a můžete hrát.",
+        "matchDay": "Mrkněte na hry, které se teď skládají."
+      }
+    },
+    "actions": {
+      "create": "Vytvořit hru",
+      "openPlayers": "Kdo je k dispozici",
+      "backToGames": "Zpět na hry",
+      "detailShort": "Detail",
+      "openDetail": "Otevřít detail",
+      "openSettings": "Vybrat město",
+      "resetFilters": "Vyčistit",
+      "viewAll": "Vše",
+      "loadMore": "Načíst další hry"
+    },
+    "hero": {
+      "upcomingEyebrow": "Další hra",
+      "upcomingHeadline": "Další hra startuje",
+      "organizingBadge": "Organizujete",
+      "confirmedBadge": "Jdete hrát",
+      "moreGames": "+{{count}} další",
+      "openSpots": "Volná místa {{count}}",
+      "lookingForPlayers": "Hledají se {{count}} hráči",
+      "noCityTitle": "Vyberte si město",
+      "noCityBody": "Jakmile nastavíte město, Hrayem ukáže hry i hráče kolem vás.",
+      "feedReadyTitle": "V okolí jsou volné hry",
+      "feedReadyBody": "Právě teď tu čekají {{count}} otevřené hry. Když vám některá sedne, stačí otevřít detail.",
+      "emptyFilteredTitle": "Nic přesně pro tenhle výběr",
+      "emptyFilteredBody": "Zkuste jiný sport nebo termín. Nové hry se tu objeví hned, jakmile přibudou.",
+      "emptyOpenTitle": "Dnes je tu zatím klid",
+      "emptyOpenBody": "Jakmile přibude nový termín, uvidíte ho tady jako první. Mezitím můžete dát ostatním vědět, že máte volno."
+    },
+    "filters": {
+      "today": "Dnes",
+      "thisWeek": "Tento týden",
+      "nextWeek": "Příští týden",
+      "custom": "Vlastní termín",
+      "summary": {
+        "today": "dnes",
+        "thisWeek": "tento týden",
+        "nextWeek": "příští týden",
+        "custom": "ve vybraném termínu"
+      }
+    },
+    "feed": {
+      "eyebrow": "V okolí tě hledají",
+      "title": "Otevřené hry",
+      "soon": "Brzy",
+      "emptyTitle": "Zatím žádná hra",
+      "emptyBodyDefault": "Zatím žádné hry {{period}}. Buďte první — založte hru a hráči se přidají.",
+      "emptyBodyFiltered": "Pro tenhle výběr teď žádnou hru nevidíme. Buďte první — založte hru a hráči se přidají.",
+      "noMoreGamesTitle": "Žádné další hry v okolí",
+      "noMoreGamesBody": "Vaši nejbližší hru už vidíte nahoře. Další termíny se objeví tady, jakmile přibudou.",
+      "venueFallback": "Sportoviště v okolí",
+      "allLevels": "Všechny úrovně",
+      "organizerBy": "Organizuje {{name}}",
+      "organizerMeta": "{{count}} odehraných her"
+    },
+    "players": {
+      "teaserTitle": "Kdo je k dispozici",
+      "teaserBody": "{{count}} hráčů má v tomto termínu volno.",
+      "teaserEmpty": "Zatím tu nikdo nemá zveřejněnou dostupnost.",
+      "teaserAction": "Zobrazit hráče",
+      "postAction": "Jsem k dispozici",
+      "inlineCta": "Ukažte ostatním, že jste k dispozici",
+      "inlineCount": "{{count}} volných hráčů",
+      "sectionTitle": "Dostupní hráči",
+      "sectionSubtitle": "Hráči, kteří mají volno ve zvoleném termínu.",
+      "emptyTitle": "Nikdo zatím nemá volno",
+      "emptyBody": "Zkuste jiné datum nebo buďte první, kdo zveřejní svou dostupnost."
+    }
+  },
   "foundation": {
     "eyebrow": "Milestone 0",
     "title": "Projektový základ je připravený",
@@ -200,6 +285,7 @@
       "create": "Vytvořit",
       "createPlus": "+",
       "myGames": "Moje hry",
+      "discover": "Objevit",
       "profile": "Profil"
     },
     "titles": {
@@ -207,6 +293,7 @@
       "createEvent": "Vytvořit hru",
       "editEvent": "Upravit hru",
       "myGames": "Moje hry",
+      "discover": "Objevit",
       "profile": "Profil",
       "eventDetail": "Detail hry",
       "chat": "Chat",
@@ -288,6 +375,16 @@
     "myGames": {
       "title": "Moje hry",
       "subtitle": "Mějte své nadcházející hry po ruce a k dokončeným se vracejte kvůli rychlým akcím po hře.",
+      "headline": {
+        "upcomingLead": "Hraješ",
+        "upcomingTail": "tento týden.",
+        "upcomingEmptyLead": "Tento týden",
+        "upcomingEmptyTail": "zatím volno."
+      },
+      "day": {
+        "today": "Dnes",
+        "tomorrow": "Zítra"
+      },
       "tabs": {
         "upcoming": "Nadcházející",
         "past": "Minulé"
@@ -295,6 +392,19 @@
       "role": {
         "organizing": "Organizuji",
         "playing": "Hraji"
+      },
+      "card": {
+        "role": {
+          "organizer": "Organizátor",
+          "player": "Hráč"
+        },
+        "organizedBy": "Organizuje {{name}}",
+        "organizedByYou": "Organizujete vy",
+        "needsPlayers_one": "Chybí {{count}} hráč",
+        "needsPlayers_few": "Chybí {{count}} hráči",
+        "needsPlayers_other": "Chybí {{count}} hráčů",
+        "occupancy": "{{current}}/{{total}}",
+        "openHint": "Otevřít detail hry {{sport}}"
       },
       "upcomingTitle": "Nadcházející hry",
       "upcomingPlaceholder": "Tato sekce bude zobrazovat hry, které organizujete nebo jste se k nim přidali, jakmile se doplní tok dat událostí.",
@@ -660,6 +770,17 @@
     },
     "create": {
       "submit": "Vytvořit hru",
+      "hero": {
+        "eyebrow": "Nová hra · krok 1 ze 1",
+        "title": "Pojďme si zahrát.",
+        "subtitle": "Vyber sport, termín a místo. Hráče ti pomůžeme najít automaticky.",
+        "steps": {
+          "sport": "Sport",
+          "schedule": "Termín",
+          "venue": "Místo",
+          "skill": "Úroveň"
+        }
+      },
       "previewTitle": "Náhled",
       "previewSportFallback": "Vyberte sport",
       "previewVenueFallback": "Vyberte sportoviště",
@@ -673,13 +794,61 @@
       "venueSearchPlaceholder": "Hledejte sportoviště ve svém městě",
       "reservationType": "Stav kurtu",
       "playerCountTotal": "Celkový počet hráčů",
+      "playerCountCompact": "Kolik hráčů?",
       "skillMin": "Minimální skill",
       "skillMax": "Maximální skill",
+      "skillUnset": "Vyber úroveň",
       "skillHelper": "Rozsah pomáhá hráčům rychle odhadnout úroveň hry. Přidání mimo rozsah je stále možné.",
+      "skillRangeMin": "Od · {{level}}",
+      "skillRangeMax": "Do · {{level}}",
+      "skillRangeMinLabel": "Od",
+      "skillRangeMaxLabel": "Do",
+      "clearSkillSelection": "Vymazat",
+      "skillSummaryEmpty": "Klepni na úroveň, která ti sedí. Druhým klepnutím můžeš rozsah rozšířit.",
+      "skillSummarySingle": "Hra míří hlavně na úroveň {{level}}.",
+      "skillSummaryRange": "Hra je otevřená pro hráče od {{min}} do {{max}}.",
+      "durationAuto": "{{minutes}} min",
       "description": "Popis",
       "descriptionPlaceholder": "Volitelná poznámka k formátu, úrovni nebo tomu, co si mají hráči vzít s sebou.",
       "descriptionCounter": "{{count}}/{{max}} znaků",
+      "hideKeyboard": "Hotovo",
+      "submitting": "Vytvářím hru...",
+      "successTitle": "Hra vytvořena",
+      "successBody": "Všechno je připraveno. Pozvi hráče a těš se na skvělou hru.",
+      "successInviteAction": "Pozvat hráče",
+      "successCloseAction": "Zavřít",
       "skillRequired": "Než půjde hru vytvořit, vyberte si pro tento sport svou výkonnost.",
+      "showAllVenues": "Zobrazit všechna sportoviště",
+      "venueFilters": {
+        "all": "Vše",
+        "verified": "Ověřená",
+        "community": "Komunitní",
+        "mine": "Moje"
+      },
+      "venueMeta": {
+        "selected": "Vybráno",
+        "verified": "Ověřené",
+        "community": "Komunitní"
+      },
+      "sportNotes": {
+        "padel": "Nejčastěji 4 hráči",
+        "badminton": "Singles nebo doubles",
+        "squash": "Singles",
+        "tennis": "Singles nebo doubles"
+      },
+      "noteSuggestions": {
+        "balls": "Míček",
+        "tips": "Tipy",
+        "parking": "Parkování"
+      },
+      "noteSuggestionBodies": {
+        "balls": "Vezměte si vlastní míčky.",
+        "tips": "Přijďte aspoň o 10 minut dřív.",
+        "parking": "Parkování je nejblíž u hlavního vstupu."
+      },
+      "summary": {
+        "players": "{{count}} hráči"
+      },
       "errors": {
         "validation": "Detaily hry potřebují ještě upravit, než je půjde odeslat."
       },
@@ -688,12 +857,23 @@
         "schedule": "Termín",
         "venue": "Sportoviště",
         "rules": "Nastavení hry",
-        "description": "Poznámky"
+        "description": "Poznámky",
+        "sportQuestion": "Jaký sport?",
+        "sportDescription": "Vyber, co chceš hrát.",
+        "scheduleQuestion": "Kdy?",
+        "scheduleDescription": "Datum a čas začátku. Konec můžeš upravit ručně nebo zvolit délku.",
+        "venueQuestion": "Kde?",
+        "venueDescription": "Vyber sportoviště. Zobrazujeme místa v nastaveném městě.",
+        "skillQuestion": "Úroveň hráčů",
+        "skillDescription": "Klepni na úroveň, která hře sedí. Druhým klepnutím můžeš rozsah rozšířit.",
+        "detailsQuestion": "Detaily",
+        "detailsDescription": "Volitelná poznámka a poslední doladění."
       },
       "validation": {
         "sport": "Vyberte sport.",
         "venue": "Vyberte sportoviště.",
         "description": "Popis musí zůstat do 500 znaků.",
+        "skillRequired": "Vyberte úroveň hráčů.",
         "skillRange": "Minimální skill musí být menší nebo stejný jako maximální skill.",
         "endTime": "Čas konce musí být později než čas začátku.",
         "futureStart": "Hra musí začínat v budoucnu."
@@ -703,6 +883,7 @@
       "title": "Upravit hru",
       "subtitle": "Dolaďte termín, sportoviště a kapacitu ještě před začátkem hry.",
       "submit": "Uložit změny",
+      "submitting": "Ukládám změny...",
       "loadingTitle": "Načítám detail hry",
       "loadingBody": "Právě doplňujeme aktuální hodnoty hry do formuláře.",
       "sportLocked": "Sport po vytvoření zůstává zamčený, aby statistiky hráčů i historie hry zůstaly konzistentní.",

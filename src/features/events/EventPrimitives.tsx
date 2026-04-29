@@ -118,18 +118,33 @@ type FilterChipProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
+  tone?: 'default' | 'dark';
 };
 
-export function FilterChip({ label, selected, onPress }: FilterChipProps) {
+export function FilterChip({ label, selected, onPress, tone = 'default' }: FilterChipProps) {
+  const isDark = tone === 'dark';
+
   return (
     <Pressable
       accessibilityHint={label}
       accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.filterChip, selected ? styles.filterChipSelected : undefined]}
+      style={[
+        styles.filterChip,
+        isDark ? styles.filterChipDark : undefined,
+        selected ? styles.filterChipSelected : undefined,
+        selected && isDark ? styles.filterChipDarkSelected : undefined,
+      ]}
     >
-      <Text style={[styles.filterChipLabel, selected ? styles.filterChipLabelSelected : undefined]}>
+      <Text
+        style={[
+          styles.filterChipLabel,
+          isDark ? styles.filterChipLabelDark : undefined,
+          selected ? styles.filterChipLabelSelected : undefined,
+          selected && isDark ? styles.filterChipLabelDarkSelected : undefined,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -316,6 +331,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#183153',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 248, 240, 0.18)',
   },
   avatarFallbackText: {
     fontSize: 16,
@@ -325,22 +342,43 @@ const styles = StyleSheet.create({
   filterChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#ddcfbd',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fffdf8',
+    borderColor: '#d7e2ee',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    backgroundColor: '#ffffff',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 1,
+  },
+  filterChipDark: {
+    borderColor: 'rgba(235, 243, 251, 0.12)',
+    backgroundColor: 'rgba(241, 247, 252, 0.09)',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   filterChipSelected: {
     backgroundColor: '#183153',
     borderColor: '#183153',
   },
+  filterChipDarkSelected: {
+    backgroundColor: '#f2f6fb',
+    borderColor: 'rgba(242, 246, 251, 0.92)',
+  },
   filterChipLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#586676',
+    color: '#43576d',
+  },
+  filterChipLabelDark: {
+    color: '#dbe6f1',
   },
   filterChipLabelSelected: {
     color: '#fff8f0',
+  },
+  filterChipLabelDarkSelected: {
+    color: '#17314f',
   },
   sportChoiceChip: {
     flexDirection: 'row',
@@ -348,10 +386,10 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#dfd1bf',
+    borderColor: '#dbe4ee',
     paddingHorizontal: 12,
     paddingVertical: 9,
-    backgroundColor: '#fffdf8',
+    backgroundColor: '#ffffff',
   },
   sportChoiceChipSelected: {
     borderColor: '#183153',
@@ -366,11 +404,18 @@ const styles = StyleSheet.create({
     color: '#fff8f0',
   },
   sportBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.24)',
+    shadowColor: '#0b1a2c',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 2,
   },
   sportBadgeLabel: {
     fontSize: 12,
@@ -392,8 +437,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#dfd1bf',
-    backgroundColor: '#fffdf8',
+    borderColor: '#dbe4ee',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -421,15 +466,15 @@ const styles = StyleSheet.create({
   infoPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#e7dbcb',
-    backgroundColor: '#faf3e9',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    borderColor: '#dce5ef',
+    backgroundColor: '#f6f9fc',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   infoPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#435a6d',
+    color: '#456078',
   },
   cardPressable: {
     borderRadius: 20,
@@ -439,14 +484,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderLeftWidth: 4,
     borderWidth: 1,
-    borderColor: '#ece0d1',
-    backgroundColor: '#fffbf6',
+    borderColor: '#dde6ef',
+    backgroundColor: '#ffffff',
     padding: 16,
     shadowColor: '#10233f',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 1,
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 2,
   },
   eventCardHeader: {
     flexDirection: 'row',
@@ -481,9 +526,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    backgroundColor: '#f6efe5',
+    backgroundColor: '#f5f8fb',
     borderWidth: 1,
-    borderColor: '#eadfce',
+    borderColor: '#dce5ef',
   },
   scheduleIconWrap: {
     width: 34,
@@ -505,7 +550,7 @@ const styles = StyleSheet.create({
   venueText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#617184',
+    color: '#566d82',
   },
   dateText: {
     fontSize: 17,

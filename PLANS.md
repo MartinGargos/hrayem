@@ -1,3 +1,190 @@
+## Create Event Success Overlay Fidelity Pass
+
+### Problem
+The current create-game success overlay is still too far from the approved reference, especially in the top half where the background, glowing check, centered composition, and summary card should feel much more exact and premium.
+
+### Approach
+Keep the existing create-game success flow and animation timing, but refine only the overlay presentation so it matches the supplied screenshot much more closely: richer navy gradient background, cleaner lime check ring, centered stacked summary card, softer layered depth, and tighter CTA composition.
+
+### Steps
+1. Rebuild the overlay background and top composition to better match the reference, using the existing animation stack and the already-installed gradient support.
+2. Refine the summary card, close button, and CTA area so the whole overlay reads like the supplied design rather than a loose approximation.
+3. Re-run formatting and validation, then report exactly what changed and how to test it.
+
+### Open questions / risks
+- This is a high-fidelity visual pass, so the remaining difference after code changes may still need one more real-device screenshot iteration.
+- The overlay must stay performant and avoid heavy new dependencies, so the design needs to be matched using the current component structure and animation primitives.
+
+## Create Event Success Overlay Pass
+
+### Problem
+The current create-game flow still jumps too abruptly from successful submit into event detail and lacks the premium in-flow success moment the current UI now deserves.
+
+### Approach
+Keep the existing `Vytvořit hru` screen and submit flow intact, but add a reusable animated success overlay above the current screen that shows real created-game data, supports share/invite as the primary CTA, and only then continues to event detail.
+
+### Steps
+1. Add a reusable create-event success overlay component with animated check, subtle floating particles, summary card, and primary/secondary actions.
+2. Wire the real create-event success path to build summary data from the successful response and current form state, show the overlay, and prevent duplicate interaction while it is visible.
+3. Remove the now-misplaced detail-screen success celebration, preserve detail navigation after overlay actions, and rerun validation.
+
+### Open questions / risks
+- There is no dedicated invite flow today, so the primary CTA should safely reuse the existing native share capability before continuing to event detail.
+- The overlay should stay smooth without new heavy dependencies, so this pass should rely on React Native's existing animated primitives and keep the motion disciplined.
+
+## Home Follow-up Fix Pass
+
+### Problem
+The current Home redesign still has the wrong list direction, rough top-area spacing/copy, an indirect city switcher, oversized bottom navigation, and pull-to-refresh overscroll that loses the premium top pattern.
+
+### Approach
+Keep the new branded Home direction, but tighten it into a more practical real-app screen: vertical game list, inline city picker sheet, cleaner Czech copy, better hero spacing, smaller bottom nav, and a persistent branded top backdrop during overscroll.
+
+### Steps
+1. Replace the sideways games rail with a vertical stacked list while preserving the new card treatment and the existing empty-state box.
+2. Add a direct city picker from the top-right chip using the currently supported curated city set, then improve the Home hero copy and spacing.
+3. Reduce bottom-nav height, retune create-button alignment, preserve the dark patterned overscroll backdrop, and rerun validation.
+
+### Open questions / risks
+- The repo currently enforces a curated backend city whitelist, so the quick Home picker should stay on the currently supported city set unless a later backend pass expands that contract.
+- The patterned overscroll treatment is inherently visual, so even after code validation it still benefits from one more real iPhone gut-check.
+
+## Create Event iPhone Fix Pass
+
+### Problem
+The new Create Event redesign still has real-device issues around the sticky footer, tab bar overlap, stale summary date rendering, noisy hero content, an irrelevant push notice, cramped detail chips, and a clumsy skill-level selection flow.
+
+### Approach
+Keep the approved Create Event redesign, but tighten it for real iPhone use: hide the tab bar on the create tab, simplify the hero, filter out unrelated auth notices, make the sticky summary use the actual selected date, and replace the skill-range rail with a cleaner range selection summary that starts unselected.
+
+### Steps
+1. Simplify the create hero, remove the progress tiles, and hide the bottom tab bar while the create screen is active.
+2. Filter the notice banner to event-related notices only, fix the sticky summary date/time composition, and clean up the detail suggestion/counter layout.
+3. Redesign the skill section to start empty, support a more intuitive tap-to-build range flow, rerun validation, and verify the create screen still exports cleanly.
+
+### Open questions / risks
+- The improved skill selector will still be a single-screen range picker over the current 1–4 skill model, not a larger rating-system redesign.
+- Hiding the tab bar on the create tab changes the feel of that screen flow, so the final UX still deserves one more real-device check.
+
+## Create Event Keyboard and Feedback Pass
+
+### Problem
+The latest iPhone review still shows duplicate skill copy, misaligned clear action, poor keyboard handling in the details field, and weak create-event feedback while the submit request and success state are happening.
+
+### Approach
+Keep the new create layout, but refine the interaction layer: remove redundant skill helper text, align the clear action, auto-scroll and add a keyboard dismiss affordance for the description field, and add visible loading plus a lightweight success celebration when a game is created.
+
+### Steps
+1. Clean up the skill summary empty state so only the section-level helper remains and retune the clear button alignment.
+2. Improve the description-field keyboard experience with focused scrolling, a dismiss control, and less interference from the sticky footer while typing.
+3. Add clearer submit-pending feedback and a short success overlay with mini confetti before routing to the created event detail.
+
+### Open questions / risks
+- The success celebration should stay intentionally lightweight; this pass is not adding a heavier animation library.
+- Keyboard handling is tuned primarily for the iPhone path the user reported, so Android can stay on the simpler fallback behavior for now.
+
+## Create Event Screenshot Redesign Pass
+
+### Problem
+The current Create Event screen still feels like a conventional form and does not match the approved screenshot direction for hierarchy, pacing, section presentation, or sticky submit treatment.
+
+### Approach
+Keep the existing create-event data contract intact, remove the now-rejected private-game and format toggles, and rebuild the screen around a custom top bar, stronger hero, step-based sections, redesigned sport/venue/skill presentation, and a sticky bottom summary card.
+
+### Steps
+1. Rework the Create Event shell with a custom header, dark hero card, step labels, and a cleaner section rhythm that mirrors the supplied screenshots.
+2. Replace the generic form controls with screen-specific sport cards, schedule cards plus duration shortcuts, honest venue cards with the currently supported metadata, and a more visual skill-range selector.
+3. Move the final summary/submit area into a sticky footer, rerun formatting and validation, and call out any screenshot elements that still cannot be reproduced honestly from current backend data.
+
+### Open questions / risks
+- The current venue model does not expose distance, court count, live availability, or pricing, so the redesign should not fake those screenshot details.
+- Edit Event shares the same file, so the create-focused redesign should avoid destabilizing edit-mode gating or backend behavior while still keeping the shared form maintainable.
+
+## My Games Screenshot Redesign Pass
+
+### Problem
+The current My Games screen still reads like a functional section list and does not match the approved screenshot direction for weekly context, hierarchy, or card presentation.
+
+### Approach
+Keep the existing upcoming and past data flows intact, skip waitlist as requested, and redesign the screen around a stronger weekly overview, simpler tab pills, and dedicated My Games cards instead of the generic event summary card.
+
+### Steps
+1. Rebuild the top of My Games with the approved month headline, weekly date strip, and tab treatment while keeping it grounded in current data only.
+2. Replace the current grouped section list presentation with a custom schedule-style list and new cards that surface sport, venue, role, occupancy, and organizer more clearly.
+3. Preserve past-game follow-up actions, then rerun formatting and validation and report any remaining visual risks honestly.
+
+### Open questions / risks
+- The weekly strip can safely filter already loaded upcoming items by day, but it should not pretend to be a broader calendar backend until such support exists.
+- The screenshot direction is strongly optimized for upcoming games, so the past tab may need a lighter adaptation of the top weekly area rather than a perfectly identical layout.
+
+## Home Screenshot Match Pass
+
+### Problem
+The current Home screen is directionally better, but it still does not match the supplied reference closely enough in top-area composition, game-card treatment, bottom navigation, or pull-to-refresh behavior.
+
+### Approach
+Keep the real Hrayem data flow and the existing city switcher, but reshape Home much more directly around the screenshot: branded dark top zone, stronger headline/hero layout, horizontal open-game cards, screenshot-like floating bottom navigation, and a dark overscroll background during pull-to-refresh.
+
+### Steps
+1. Rebuild the Home top area and next-game card so they visually follow the supplied screenshot while preserving real event data and removing the unwanted search/notification buttons.
+2. Replace the current lower game list presentation with screenshot-style horizontal game cards, while keeping the existing empty-state box and organizer information.
+3. Rework the bottom navigation to match the screenshot as closely as possible using existing destinations, then validate the Home pull-to-refresh dark background behavior and rerun checks.
+
+### Open questions / risks
+- The screenshot includes a broader bottom-nav information architecture than the current app shell, so the implementation should reuse existing surfaces instead of inventing fake new product behavior.
+- The more exact the Home screen gets to the screenshot, the more visually different it may become from the rest of the app until later screens catch up.
+
+## Home Design Reset Pass
+
+### Problem
+The current Home direction leans too far into a flashy concept-style aesthetic and no longer feels like a grounded premium product screen users would trust every day.
+
+### Approach
+Keep the Home information architecture and live product logic, but rebuild the presentation in a calmer real-app direction: restrained dark top section, softer materials, cleaner typography, simpler hero, and less gimmicky navigation emphasis.
+
+### Steps
+1. Strip back the over-stylized Home atmosphere and redesign the top/header/hero composition so it feels more native, premium, and believable.
+2. Rework Home feed cards, filters, and supporting surfaces toward cleaner hierarchy and more practical scanning rather than concept-shot energy.
+3. Retune the bottom navigation and create emphasis so it supports the calmer direction, then rerun validation and a quick visual sanity check.
+
+### Open questions / risks
+- This pass can fix the direction, but final aesthetic judgment still benefits from a real iPhone check because Home is presentation-heavy.
+- If the calmer direction lands well, some previous Home-specific copy or accent choices may still deserve a later cleanup pass to fully align the rest of the app.
+
+## Home Corrective Polish Pass
+
+### Problem
+The current Home redesign is directionally stronger, but the top safe-area treatment, status-bar contrast, identity header, create navigation emphasis, and no-featured-game copy still lower perceived quality.
+
+### Approach
+Keep the new dark/light Home structure, then correct the rough edges only: extend the dark surface into the safe area, switch Home to a personal avatar-first header, simplify bottom navigation to the three core destinations, and improve the no-featured-game states with better Czech product copy.
+
+### Steps
+1. Rework the Home top area so the dark branded surface reaches behind the status bar, shows a readable light status bar, and uses an avatar plus rotating greeting instead of the logo block.
+2. Remove `Profil` from the bottom tab bar while preserving profile access through the Home avatar, and redesign the central create action so it feels intentional and premium.
+3. Tighten the Home background atmosphere, no-featured-game copy, and obvious spacing/alignment issues, then rerun validation.
+
+### Open questions / risks
+- Removing the profile tab changes global navigation muscle memory, so profile must stay easy to reach from Home and the rest of the shell must remain type-safe.
+- This pass can prove the navigation wiring and build safety, but final judgment on the header/status-bar look still needs a real iPhone review.
+
+## Home Visual Reference Pass
+
+### Problem
+Home needs a more premium, energetic, and product-like first impression while keeping the current data flow and feature set intact.
+
+### Approach
+Use the uploaded screenshot as art-direction input only, then redesign the Home top zone, primary state card, filter presentation, and game-feed surfaces inside the existing shell with Czech-first copy and stronger action hierarchy.
+
+### Steps
+1. Rework the Home top area so it carries a darker branded identity, stronger headline hierarchy, and a more confident upcoming-game or next-step state.
+2. Tighten filters and open-game cards so the screen feels lighter, more premium, and easier to scan without changing Home business logic.
+3. Adjust the bottom navigation emphasis only as far as needed to make Create feel like the primary action while keeping the rest of the app shell stable.
+
+### Open questions / risks
+- The current app shell still exposes Profile as a primary destination; fully collapsing the bottom navigation to three tabs would be a broader navigation decision and should only happen if Profile remains equally accessible.
+- This pass can prove layout, typing, linting, and export safety, but final visual quality still needs a real iPhone check because Home is highly presentation-sensitive.
+
 Milestone 0 still needs later real-device proof for iOS dev-build install, offline banner verification on device, CZ/EN switch on device, React Query dummy cache proof on device, Sentry dashboard capture, and deep-link opening on a real install.
 
 ## Milestone 4
@@ -546,3 +733,122 @@ Keep this pass tightly scoped: improve only the real user-facing Czech copy on c
 ### Open questions / risks
 - LIKELY SOON: a few English-first skill or rating terms may still deserve a dedicated terminology pass later, but that stays intentionally out of scope for this request.
 - RARE EDGE CASE: very long localized status strings may wrap in tighter stat rows after the Czech clarity cleanup, though the risk should stay cosmetic and easy to trim in a later pass if it appears.
+
+## Home Screen Redesign
+
+### Problem
+Home still reads like a polished MVP feed instead of a premium product start screen: the hierarchy is flat, the hero is generic, the players surface is too equal to games, and the create action is not emphasized enough.
+
+### Approach
+Keep this pass focused on Home only: hide the generic stack header, rebuild Home around a branded top bar plus a real next-game hero, keep games as the primary surface, and demote players into a softer secondary mode and preview without changing backend contracts or event logic.
+
+### Steps
+1. Rebuild the Home layout with a custom top bar, a conditional hero that prioritizes the user's next upcoming game, and lighter chip-based filters that feel less like a form.
+2. Replace the current Home feed card treatment with a more premium, scannable Home-specific event card and add a softer secondary players preview or mode instead of an equal tab split.
+3. Re-run validation, keep Create prominent through Home-level actions, and leave any remaining non-Home design debt explicit for later passes.
+
+### Open questions / risks
+- LIKELY SOON: real-device testing may still suggest one more pass on vertical rhythm or hero density once the redesigned Home is seen on smaller iPhones.
+- RARE EDGE CASE: if the players feed grows much larger later, the lighter secondary players treatment may need a stronger dedicated browsing surface, but that is a product-supply problem rather than a blocker for the current Home redesign.
+
+## Design-First Home Upgrade
+
+### Problem
+Home now works structurally, but it still feels too much like a tidy MVP because the atmosphere, material language, depth, and visual identity are not strong enough yet.
+
+### Approach
+Keep the product structure intact, but push the Home art direction further: add a richer dark atmospheric top zone, selective matte-glass surfaces, more premium card depth, and a stronger Create presence while keeping games readable and players secondary.
+
+### Steps
+1. Rework the Home top zone with stronger atmosphere, softer glass chips, and a more emotionally compelling hero without making it theatrical.
+2. Upgrade the Home event-card material, chips, and supporting surfaces so the feed feels more premium and tactile while staying highly scannable.
+3. Give the bottom navigation and Create action a more premium emphasis, rerun validation, and leave any remaining cross-screen art-direction debt explicit for later passes.
+
+### Open questions / risks
+- LIKELY SOON: after this pass, the rest of the app may feel flatter than Home, but that is intentional and should be handled as a later broader design-language pass rather than watered down here.
+- RARE EDGE CASE: subtle matte-glass styling can look slightly different across iPhone brightness or transparency settings, so final tuning still benefits from another real-device check.
+
+## Home Atmosphere Direction Upgrade
+
+### Problem
+Home is stronger now, but the top section still relies on generic circular decoration and does not yet feel distinctive or premium enough to create a memorable first impression.
+
+### Approach
+Keep the current Home product structure, but replace the generic background treatment with a more art-directed atmosphere: layered navy and petrol planes, a restrained warm highlight, a subtle sports-texture signature, and more cohesive hero integration.
+
+### Steps
+1. Remove the current generic circle-led top decoration and replace it with a more deliberate upper-background system built from layered shapes and low-opacity texture.
+2. Rework the hero surface and top controls so they feel integrated into the new premium top atmosphere instead of sitting on top of it.
+3. Keep the rest of Home readable and practical, rerun validation, and leave any remaining cross-screen art-direction gaps explicit for later passes.
+
+### Open questions / risks
+- LIKELY SOON: even after the new atmosphere lands, the final balance between “premium” and “too stylized” is best judged on a real iPhone, especially in the upper area.
+- RARE EDGE CASE: very long city names or future extra top controls could compete with the stronger background composition, though the risk should stay visual rather than structural.
+
+## Home Layout Priority Pass
+
+### Problem
+Home now looks better, but it still makes users work too hard before they reach real games because the filters, section headers, and availability surface take too much vertical space above the feed.
+
+### Approach
+Keep the premium top atmosphere intact, but compress the flow: shorten the path from hero to games, replace the filter card with a compact chip toolbar, simplify section headings, move availability below the game list, and surface the empty state much earlier.
+
+### Steps
+1. Replace the heavy filter block with a compact chip toolbar that preserves sport and time filtering without the form-like card treatment.
+2. Simplify the games section to a single title row, remove the stacked preamble text, and make the empty state appear immediately after filters when there are no games.
+3. Move or collapse the availability teaser below the game list, reduce game-card pill noise, rerun validation, and leave any remaining non-Home hierarchy debt explicit for later passes.
+
+### Open questions / risks
+- LIKELY SOON: the custom-date path may still deserve a dedicated micro-UX pass later if users rely on it heavily, but the basic functionality should stay intact in this pass.
+- RARE EDGE CASE: long localized skill-range text could wrap in tighter game cards once the pill content becomes more human-readable, though that risk should stay cosmetic and easy to tune later.
+
+## Home Visual Design Polish Pass
+
+### Problem
+Home now gets users to the right content quickly, but it still looks too much like a tidy prototype because the palette is too warm, the atmosphere texture feels generic, and the Home-specific surfaces still lack premium material quality.
+
+### Approach
+Keep the current Home layout and hierarchy intact, but upgrade the visual language through the shared palette sources Home depends on plus a tighter Home-specific atmosphere: cool the base surfaces, replace the generic top decoration with a more branded layered treatment, integrate the hero more cleanly, and fold in the current Home copy and duplication bugs without changing product logic.
+
+### Steps
+1. Update the real shared visual sources that Home depends on first: navigation/base surfaces, shared filter or info primitives, and shared empty-state styling where safe.
+2. Rework the Home top atmosphere, hero materials, filter anchoring, event-card depth, empty-state treatment, and Create emphasis while preserving the current structure and content order.
+3. Fix the current Home bugs in the same pass: avoid the Czech city-grammar trap, stop showing the hero game twice, reduce duplicate no-games messaging, and make horizontal filter overflow feel intentional.
+
+### Open questions / risks
+- LIKELY SOON: the rest of the app may still carry more warmth than Home after this pass because only the shared primitives Home directly depends on are being cooled now.
+- RARE EDGE CASE: filtering out the upcoming hero game from the feed could make the games list look empty more often for users with only one relevant event, so the resulting empty state must explicitly explain that there are no additional nearby games rather than looking broken.
+
+## Home Visual Direction Reset
+
+### Problem
+Home has the right structure now, but the current visual treatment still feels like a careful prototype instead of a premium sports product, so the screen needs a more decisive redesign of its atmosphere, hero materials, and card character without changing the content order.
+
+### Approach
+Preserve the existing hierarchy exactly, but rebuild the visual language much more deliberately: stronger branded top atmosphere, richer dark hero integration, premium floating filter rail, more art-directed event cards, and a custom empty-state treatment that feels product-level rather than generic.
+
+### Steps
+1. Rework the Home top area and hero materials around a stronger sports-branded atmosphere that feels premium on iPhone without becoming flashy.
+2. Redesign the filters, event cards, and supporting Home surfaces so they look more elevated, tactile, and intentional while keeping the same information structure.
+3. Replace the generic Home empty-state feel with a more bespoke visual treatment, rerun validation, and keep the carried Home logic fixes intact.
+
+### Open questions / risks
+- LIKELY SOON: this pass can make Home substantially stronger than the rest of the app, so the next cross-screen pass may still need to pull other screens up to the same level.
+- RARE EDGE CASE: stronger decorative atmosphere layers can feel slightly different across real-device brightness or transparency settings, so final tuning still benefits from another iPhone check.
+
+## Home Shape Cleanup Pass
+
+### Problem
+Home still carries decorative blob and bubble layers that make the screen feel like a prototype, and one live next-game venue string can expose test-like data instead of a trustworthy venue label.
+
+### Approach
+Keep the current Home structure exactly as-is, but remove every decorative shape from the Home top area, hero, event cards, and empty state, replace them with clean gradient and flat-surface treatments, and add a small Home-side venue-label guard so obviously test/debug venue text does not leak into the main entry screen.
+
+### Steps
+1. Remove all Home-only decorative atmosphere, hero, event-card, and empty-state shape layers and replace them with a simple gradient-led top zone plus flat white cards.
+2. Tighten the Home hero and card styling so they stay premium through typography, border, shadow, and color only, without changing layout or content hierarchy.
+3. Add the smallest safe venue-label fallback for suspicious debug/test venue names on Home, verify Czech city phrasing stays neutral/correct, and rerun validation.
+
+### Open questions / risks
+- LIKELY SOON: if the suspicious venue name is coming from real backend seed data rather than a client fallback, the broader data cleanup may still be worth doing later even after Home stops surfacing it prominently.
+- RARE EDGE CASE: a legitimate venue with an unusual test-like name could trip the conservative Home-only label guard, so the heuristic should stay narrow and only replace clearly bad debug-style names.

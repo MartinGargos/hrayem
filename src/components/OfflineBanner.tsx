@@ -3,6 +3,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUIStore } from '../store/ui-store';
 
@@ -13,6 +14,7 @@ function deriveOfflineState(isConnected: boolean | null, isInternetReachable: bo
 export function OfflineBanner() {
   const isOffline = useUIStore((state) => state.isOffline);
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const applyNetworkState = (
@@ -41,7 +43,14 @@ export function OfflineBanner() {
   }
 
   return (
-    <View style={styles.banner}>
+    <View
+      style={[
+        styles.banner,
+        {
+          paddingTop: insets.top + 12,
+        },
+      ]}
+    >
       <Text style={styles.text}>{t('offline.banner')}</Text>
     </View>
   );
@@ -51,7 +60,7 @@ const styles = StyleSheet.create({
   banner: {
     width: '100%',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
     backgroundColor: '#d45d37',
   },
   text: {

@@ -15,6 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CURATED_CITIES } from '../../constants/cities';
 import { useAuthStore } from '../../store/auth-store';
@@ -112,6 +113,7 @@ type FoundationScreenProps = {
 export function FoundationScreen({ topSlot }: FoundationScreenProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const authErrorKey = useAuthStore((state) => state.errorMessageKey);
   const authStatus = useAuthStore((state) => state.status);
   const isOffline = useUIStore((state) => state.isOffline);
@@ -155,7 +157,15 @@ export function FoundationScreen({ topSlot }: FoundationScreenProps) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: insets.top + 18,
+        },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
       {topSlot}
       <View style={styles.heroCard}>
         <Image

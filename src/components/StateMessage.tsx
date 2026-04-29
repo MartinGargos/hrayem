@@ -57,9 +57,14 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 18,
     paddingVertical: 18,
-    backgroundColor: '#fff8f0',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#efe1d0',
+    borderColor: '#dde6f0',
+    shadowColor: '#10233f',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 2,
   },
   wrapCompact: {
     alignItems: 'flex-start',
@@ -67,12 +72,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   wrapWarm: {
-    backgroundColor: '#fff5e9',
-    borderColor: '#ecd9c1',
+    backgroundColor: '#f8fbff',
+    borderColor: '#d8e3ef',
   },
   wrapMuted: {
-    backgroundColor: '#f7f1e8',
-    borderColor: '#eadfce',
+    backgroundColor: '#f5f8fb',
+    borderColor: '#dce5ef',
   },
   iconWrap: {
     width: 48,
@@ -80,13 +85,13 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#edf3f8',
+    backgroundColor: '#eef4fa',
   },
   iconWrapWarm: {
-    backgroundColor: '#f8ecde',
+    backgroundColor: '#e9f2fb',
   },
   iconWrapMuted: {
-    backgroundColor: '#ece7de',
+    backgroundColor: '#eaf0f6',
   },
   copy: {
     alignItems: 'center',
@@ -106,7 +111,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
-    color: '#5a6475',
+    color: '#5a6f84',
   },
   bodyCompact: {
     textAlign: 'left',

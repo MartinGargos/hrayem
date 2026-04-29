@@ -444,7 +444,7 @@ export default Sentry.wrap(function RootApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+        <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
           <StatusBar style="dark" />
           <OfflineBanner />
           <View style={styles.appBody}>
@@ -468,7 +468,7 @@ export default Sentry.wrap(function RootApp() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f7f0e6',
+    backgroundColor: '#f4f7fb',
   },
   appBody: {
     flex: 1,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    backgroundColor: '#f7f0e6',
+    backgroundColor: '#f4f7fb',
   },
   errorTitle: {
     fontSize: 24,

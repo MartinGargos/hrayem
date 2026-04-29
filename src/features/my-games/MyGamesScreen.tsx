@@ -1,10 +1,20 @@
-import { useState } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
+import { addDays, format, isSameWeek, isToday, isTomorrow, startOfWeek } from 'date-fns';
+import { cs, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 
 import { ActionButton } from '../auth/AuthPrimitives';
@@ -12,9 +22,8 @@ import {
   getLifecycleRefetchInterval,
   hasEnoughConfirmedPlayersForNoShow,
 } from '../events/event-eligibility';
-import { AvatarPhoto, EventSummaryCard } from '../events/EventPrimitives';
-import { ScreenCard, SegmentedTabs } from '../../components/ScreenShell';
-import { StateMessage } from '../../components/StateMessage';
+import { AvatarPhoto, SportBadge } from '../events/EventPrimitives';
+import { ScreenCard } from '../../components/ScreenShell';
 import type { RootStackParamList } from '../../navigation/types';
 import {
   fetchConfirmedEventPlayers,
@@ -24,21 +33,89 @@ import {
 } from '../../services/events';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
+import type { AppLanguage } from '../../types/app';
 import type {
   EventConfirmedPlayer,
   MyGamesPastItem,
   MyGamesUpcomingItem,
 } from '../../types/events';
-import { formatRelativeTime } from '../../utils/dates';
+import { formatEventTime, formatRelativeTime } from '../../utils/dates';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type MyGamesListItem = MyGamesUpcomingItem | MyGamesPastItem;
-type MyGamesSection = {
-  data: MyGamesListItem[];
-  iconName: React.ComponentProps<typeof Ionicons>['name'];
-  key: 'organizing' | 'playing';
-  title: string;
-};
+type MyGamesTab = 'upcoming' | 'past';
+
+const localeMap = {
+  cs,
+  en: enUS,
+} as const;
+
+const weekdayChipMap = {
+  cs: ['PO', 'ÚT', 'ST', 'ČT', 'PÁ', 'SO', 'NE'],
+  en: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'],
+} as const;
+
+function getDateFnsLocale(language: AppLanguage) {
+  return localeMap[language];
+}
+
+function formatMonthLabel(input: Date, language: AppLanguage) {
+  return format(input, language === 'cs' ? 'LLLL · yyyy' : 'MMMM · yyyy', {
+    locale: getDateFnsLocale(language),
+  }).toUpperCase();
+}
+
+function formatShortDate(input: Date, language: AppLanguage) {
+  return format(input, language === 'cs' ? 'EEE d. M.' : 'EEE, MMM d', {
+    locale: getDateFnsLocale(language),
+  });
+}
+
+function formatDayHeading(
+  input: Date,
+  language: AppLanguage,
+  t: ReturnType<typeof useTranslation>['t'],
+  isPast: boolean,
+) {
+  if (!isPast && isToday(input)) {
+    return t('shell.myGames.day.today').toUpperCase();
+  }
+
+  if (!isPast && isTomorrow(input)) {
+    return t('shell.myGames.day.tomorrow').toUpperCase();
+  }
+
+  return format(input, 'EEEE', {
+    locale: getDateFnsLocale(language),
+  }).toUpperCase();
+}
+
+function getOccupancySegments(current: number, total: number) {
+  if (!total) {
+    return 0;
+  }
+
+  const ratio = current / total;
+  return Math.min(4, Math.max(current > 0 ? 1 : 0, Math.round(ratio * 4)));
+}
+
+function getSportBadgeLabel(input: { slug?: string | null; name: string }) {
+  const slug = input.slug?.toLowerCase() ?? '';
+
+  if (slug === 'badminton') {
+    return 'BD';
+  }
+
+  if (slug === 'padel') {
+    return 'PD';
+  }
+
+  if (slug === 'squash') {
+    return 'SQ';
+  }
+
+  return input.name.slice(0, 2).toUpperCase();
+}
 
 function PastEventActions({ event }: { event: MyGamesPastItem }) {
   const { t } = useTranslation();
@@ -98,7 +175,7 @@ function PastEventActions({ event }: { event: MyGamesPastItem }) {
         );
       }
     },
-    onSuccess: async (result, variables) => {
+    onSuccess: async (_result, variables) => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -110,8 +187,6 @@ function PastEventActions({ event }: { event: MyGamesPastItem }) {
           queryKey: ['profile', 'player', variables.toUserId],
         }),
       ]);
-
-      return result;
     },
   });
 
@@ -229,24 +304,23 @@ function MyGamesStateCard({
   title: string;
 }) {
   return (
-    <ScreenCard>
-      <StateMessage
-        action={
-          actionLabel && onPress ? (
-            <ActionButton
-              iconName={activeIconName(iconName)}
-              label={actionLabel}
-              onPress={onPress}
-              variant={iconName === 'cloud-offline-outline' ? 'secondary' : 'primary'}
-            />
-          ) : undefined
-        }
-        body={body}
-        iconName={iconName}
-        title={title}
-        tone={iconName === 'cloud-offline-outline' ? 'muted' : 'warm'}
-      />
-    </ScreenCard>
+    <View style={styles.stateCard}>
+      <View style={styles.stateIconWrap}>
+        <Ionicons color="#183153" name={iconName} size={24} />
+      </View>
+      <Text style={styles.stateTitle}>{title}</Text>
+      <Text style={styles.stateBody}>{body}</Text>
+      {actionLabel && onPress ? (
+        <View style={styles.stateAction}>
+          <ActionButton
+            iconName={activeIconName(iconName)}
+            label={actionLabel}
+            onPress={onPress}
+            variant={iconName === 'cloud-offline-outline' ? 'secondary' : 'primary'}
+          />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -264,13 +338,124 @@ function activeIconName(
   return 'add-outline';
 }
 
+function MyGamesEventCard({
+  event,
+  language,
+  onPress,
+}: {
+  event: MyGamesListItem;
+  language: AppLanguage;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
+  const organizerName = event.organizerFirstName ?? t('events.common.organizerFallback');
+  const roleKey = event.viewerMembershipStatus === 'organizer' ? 'organizer' : 'player';
+  const openSpots = Math.max(event.playerCountTotal - event.spotsTaken, 0);
+  const showNeedPlayers = event.viewerMembershipStatus === 'organizer' && openSpots > 0;
+  const activeSegments = getOccupancySegments(event.spotsTaken, event.playerCountTotal);
+
+  return (
+    <Pressable
+      accessibilityHint={t('events.detail.openEventHint', {
+        sport: sportName,
+        venue: event.venueName,
+      })}
+      accessibilityLabel={t('shell.myGames.card.openHint', { sport: sportName })}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.eventCard,
+        showNeedPlayers ? styles.eventCardHighlighted : undefined,
+        pressed ? styles.eventCardPressed : undefined,
+      ]}
+    >
+      {showNeedPlayers ? (
+        <View style={styles.needPlayersBadge}>
+          <Text style={styles.needPlayersBadgeLabel}>
+            {t('shell.myGames.card.needsPlayers', { count: openSpots })}
+          </Text>
+        </View>
+      ) : null}
+
+      <View style={styles.eventCardTopRow}>
+        <View style={styles.eventCardIdentity}>
+          <SportBadge
+            colorHex={event.sportColor}
+            label={getSportBadgeLabel({
+              slug: event.sportSlug,
+              name: sportName,
+            })}
+          />
+          <Text numberOfLines={1} style={styles.eventCardSportLabel}>
+            {sportName}
+          </Text>
+        </View>
+        <Text
+          style={[
+            styles.eventCardRole,
+            roleKey === 'organizer' ? styles.eventCardRoleOrganizer : styles.eventCardRolePlayer,
+          ]}
+        >
+          {t(`shell.myGames.card.role.${roleKey}`)}
+        </Text>
+      </View>
+
+      <View style={styles.eventCardVenueRow}>
+        <Ionicons color="#7d8ca1" name="location-outline" size={15} />
+        <Text numberOfLines={1} style={styles.eventCardVenueText}>
+          {event.venueName}
+        </Text>
+      </View>
+
+      <View style={styles.eventCardOrganizerRow}>
+        <AvatarPhoto label={organizerName} uri={event.organizerPhotoUrl} size={36} />
+        <View style={styles.eventCardOrganizerCopy}>
+          <Text numberOfLines={1} style={styles.eventCardOrganizerLabel}>
+            {event.viewerMembershipStatus === 'organizer'
+              ? t('shell.myGames.card.organizedByYou')
+              : t('shell.myGames.card.organizedBy', { name: organizerName })}
+          </Text>
+          <Text numberOfLines={1} style={styles.eventCardOrganizerMeta}>
+            {event.city}
+            {' · '}
+            {t(`events.reservationType.${event.reservationType}`)}
+          </Text>
+        </View>
+        <Ionicons color="#132b4f" name="chevron-forward-outline" size={18} />
+      </View>
+
+      <View style={styles.occupancyRow}>
+        <View style={styles.occupancyTrack}>
+          {Array.from({ length: 4 }).map((_, index) => (
+            <View
+              key={`${event.id}-segment-${index}`}
+              style={[
+                styles.occupancySegment,
+                index < activeSegments ? styles.occupancySegmentActive : undefined,
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={styles.occupancyLabel}>
+          {t('shell.myGames.card.occupancy', {
+            current: event.spotsTaken,
+            total: event.playerCountTotal,
+          })}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export function MyGamesScreen() {
   const { t } = useTranslation();
   const isScreenFocused = useIsFocused();
   const navigation = useNavigation<RootNavigation>();
   const language = useUserStore((state) => state.language);
   const userId = useAuthStore((state) => state.userId);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [activeTab, setActiveTab] = useState<MyGamesTab>('upcoming');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const upcomingGamesQuery = useQuery({
     queryKey: ['events', 'my-games', 'upcoming', userId],
@@ -291,303 +476,647 @@ export function MyGamesScreen() {
     staleTime: 30_000,
   });
 
+  const upcomingItems = useMemo(
+    () =>
+      [...(upcomingGamesQuery.data ?? [])].sort(
+        (left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+      ),
+    [upcomingGamesQuery.data],
+  );
+  const pastItems = useMemo(
+    () =>
+      [...(pastGamesQuery.data ?? [])].sort(
+        (left, right) => new Date(right.startsAt).getTime() - new Date(left.startsAt).getTime(),
+      ),
+    [pastGamesQuery.data],
+  );
   const activeQuery = activeTab === 'upcoming' ? upcomingGamesQuery : pastGamesQuery;
-  const activeItems =
-    activeTab === 'upcoming' ? (upcomingGamesQuery.data ?? []) : (pastGamesQuery.data ?? []);
-  const organizingItems = activeItems.filter((item) => item.viewerMembershipStatus === 'organizer');
-  const playingItems = activeItems.filter((item) => item.viewerMembershipStatus === 'confirmed');
-  const sections: MyGamesSection[] = [
-    {
-      key: 'organizing' as const,
-      title: t('shell.myGames.role.organizing'),
-      iconName: 'flag-outline' as const,
-      data: organizingItems,
-    },
-    {
-      key: 'playing' as const,
-      title: t('shell.myGames.role.playing'),
-      iconName: 'people-outline' as const,
-      data: playingItems,
-    },
-  ].filter((section) => section.data.length > 0);
+  const activeItems = activeTab === 'upcoming' ? upcomingItems : pastItems;
+  const currentWeekUpcomingCount = useMemo(
+    () =>
+      upcomingItems.filter((item) =>
+        isSameWeek(new Date(item.startsAt), new Date(), { weekStartsOn: 1 }),
+      ).length,
+    [upcomingItems],
+  );
+  const currentWeekDays = useMemo(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const nextUpcomingThisWeek = upcomingItems.find((item) =>
+      isSameWeek(new Date(item.startsAt), new Date(), { weekStartsOn: 1 }),
+    );
+    const highlightedKey = format(
+      nextUpcomingThisWeek ? new Date(nextUpcomingThisWeek.startsAt) : new Date(),
+      'yyyy-MM-dd',
+    );
+
+    return Array.from({ length: 7 }).map((_, index) => {
+      const date = addDays(weekStart, index);
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const hasGame = upcomingItems.some(
+        (item) => format(new Date(item.startsAt), 'yyyy-MM-dd') === dateKey,
+      );
+
+      return {
+        date,
+        dateKey,
+        dayLabel: weekdayChipMap[language][index],
+        dayNumber: format(date, 'd', { locale: getDateFnsLocale(language) }),
+        highlighted: dateKey === highlightedKey,
+        hasGame,
+      };
+    });
+  }, [language, upcomingItems]);
+  const headerMonthLabel = useMemo(() => {
+    if (activeTab === 'past' && pastItems.length) {
+      return formatMonthLabel(new Date(pastItems[0].startsAt), language);
+    }
+
+    return formatMonthLabel(new Date(), language);
+  }, [activeTab, language, pastItems]);
+
+  async function handleRefresh() {
+    setIsRefreshing(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await activeQuery.refetch();
+    setIsRefreshing(false);
+  }
+
+  async function handleTabChange(nextTab: MyGamesTab) {
+    if (nextTab === activeTab) {
+      return;
+    }
+
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveTab(nextTab);
+  }
 
   function renderHeader() {
     return (
       <View style={styles.headerWrap}>
-        <View style={styles.hero}>
-          <View style={styles.heroMetaRow}>
-            <View style={styles.heroPill}>
-              <Ionicons
-                color="#dbe4ee"
-                name={activeTab === 'past' ? 'time-outline' : 'calendar-clear-outline'}
-                size={14}
-              />
-              <Text style={styles.heroPillLabel}>
-                {activeTab === 'past'
-                  ? t('shell.myGames.tabs.past')
-                  : t('shell.myGames.tabs.upcoming')}
+        <Text style={styles.monthLabel}>{headerMonthLabel}</Text>
+
+        {activeTab === 'upcoming' ? (
+          <>
+            {currentWeekUpcomingCount > 0 ? (
+              <Text style={styles.headline}>
+                {t('shell.myGames.headline.upcomingLead')}{' '}
+                <Text style={styles.headlineHighlight}>{`${currentWeekUpcomingCount}×`}</Text>
+                {'\n'}
+                {t('shell.myGames.headline.upcomingTail')}
               </Text>
+            ) : (
+              <Text style={styles.headline}>
+                {t('shell.myGames.headline.upcomingEmptyLead')}
+                {'\n'}
+                {t('shell.myGames.headline.upcomingEmptyTail')}
+              </Text>
+            )}
+
+            <View style={styles.weekStrip}>
+              {currentWeekDays.map((day) => (
+                <View
+                  key={day.dateKey}
+                  style={[
+                    styles.weekDayCard,
+                    day.highlighted ? styles.weekDayCardActive : undefined,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.weekDayLabel,
+                      day.highlighted ? styles.weekDayLabelActive : undefined,
+                    ]}
+                  >
+                    {day.dayLabel}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.weekDayNumber,
+                      day.highlighted ? styles.weekDayNumberActive : undefined,
+                    ]}
+                  >
+                    {day.dayNumber}
+                  </Text>
+                  <View
+                    style={[
+                      styles.weekDayDot,
+                      day.hasGame ? styles.weekDayDotVisible : undefined,
+                      day.highlighted ? styles.weekDayDotActive : undefined,
+                    ]}
+                  />
+                </View>
+              ))}
             </View>
-            <View style={styles.heroPill}>
-              <Ionicons color="#dbe4ee" name="layers-outline" size={14} />
-              <Text style={styles.heroPillLabel}>{activeItems.length}</Text>
-            </View>
-          </View>
-          <Text style={styles.heroTitle}>{t('shell.myGames.title')}</Text>
-          <Text style={styles.heroSubtitle}>{t('shell.myGames.subtitle')}</Text>
-        </View>
-        <SegmentedTabs
-          onChange={setActiveTab}
-          options={[
-            { label: t('shell.myGames.tabs.upcoming'), value: 'upcoming' },
-            { label: t('shell.myGames.tabs.past'), value: 'past' },
-          ]}
-          value={activeTab}
-        />
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>{t('shell.myGames.role.organizing')}</Text>
-            <Text style={styles.summaryValue}>{organizingItems.length}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>{t('shell.myGames.role.playing')}</Text>
-            <Text style={styles.summaryValue}>{playingItems.length}</Text>
-          </View>
+          </>
+        ) : (
+          <Text style={styles.headlinePast}>{t('shell.myGames.pastTitle')}</Text>
+        )}
+
+        <View style={styles.tabRow}>
+          <Pressable
+            accessibilityLabel={t('shell.myGames.tabs.upcoming')}
+            accessibilityRole="button"
+            onPress={() => {
+              void handleTabChange('upcoming');
+            }}
+            style={[styles.tabPill, activeTab === 'upcoming' ? styles.tabPillActive : undefined]}
+          >
+            <Text
+              style={[
+                styles.tabPillLabel,
+                activeTab === 'upcoming' ? styles.tabPillLabelActive : undefined,
+              ]}
+            >
+              {`${t('shell.myGames.tabs.upcoming')} · ${upcomingItems.length}`}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={t('shell.myGames.tabs.past')}
+            accessibilityRole="button"
+            onPress={() => {
+              void handleTabChange('past');
+            }}
+            style={[styles.tabPill, activeTab === 'past' ? styles.tabPillActive : undefined]}
+          >
+            <Text
+              style={[
+                styles.tabPillLabel,
+                activeTab === 'past' ? styles.tabPillLabelActive : undefined,
+              ]}
+            >
+              {`${t('shell.myGames.tabs.past')} · ${pastItems.length}`}
+            </Text>
+          </Pressable>
         </View>
       </View>
     );
   }
 
+  function renderTimeline() {
+    if (activeQuery.isPending && !activeItems.length) {
+      return (
+        <View style={styles.loadingBlock}>
+          <ActivityIndicator color="#183153" size="large" />
+        </View>
+      );
+    }
+
+    if (activeQuery.isError) {
+      return (
+        <MyGamesStateCard
+          actionLabel={t('events.common.retry')}
+          body={
+            activeTab === 'upcoming'
+              ? t('shell.myGames.errorBody')
+              : t('shell.myGames.pastErrorBody')
+          }
+          iconName="cloud-offline-outline"
+          onPress={async () => {
+            await activeQuery.refetch();
+          }}
+          title={
+            activeTab === 'upcoming'
+              ? t('shell.myGames.errorTitle')
+              : t('shell.myGames.pastErrorTitle')
+          }
+        />
+      );
+    }
+
+    if (!activeItems.length) {
+      return (
+        <MyGamesStateCard
+          actionLabel={activeTab === 'upcoming' ? t('shell.myGames.openCreate') : undefined}
+          body={
+            activeTab === 'upcoming'
+              ? t('shell.myGames.emptyBody')
+              : t('shell.myGames.pastEmptyBody')
+          }
+          iconName={activeTab === 'upcoming' ? 'calendar-outline' : 'trophy-outline'}
+          onPress={
+            activeTab === 'upcoming'
+              ? () =>
+                  navigation.navigate('MainTabs', {
+                    screen: 'CreateEventTab',
+                    params: { screen: 'CreateEvent' },
+                  })
+              : undefined
+          }
+          title={
+            activeTab === 'upcoming'
+              ? t('shell.myGames.emptyTitle')
+              : t('shell.myGames.pastEmptyTitle')
+          }
+        />
+      );
+    }
+
+    return (
+      <View style={styles.timelineList}>
+        {activeItems.map((item) => {
+          const eventDate = new Date(item.startsAt);
+
+          return (
+            <View key={item.id} style={styles.timelineRow}>
+              <View style={styles.timelineRail}>
+                <Text style={styles.timelineDayLabel}>
+                  {formatDayHeading(eventDate, language, t, activeTab === 'past')}
+                </Text>
+                <Text style={styles.timelineTimeLabel}>
+                  {formatEventTime(item.startsAt, language)}
+                </Text>
+                <Text style={styles.timelineDateLabel}>{formatShortDate(eventDate, language)}</Text>
+              </View>
+
+              <View style={styles.timelineCardWrap}>
+                <MyGamesEventCard
+                  event={item}
+                  language={language}
+                  onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+                />
+                {activeTab === 'past' ? <PastEventActions event={item as MyGamesPastItem} /> : null}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
-    <SectionList
+    <ScrollView
       contentContainerStyle={styles.listContent}
-      sections={sections}
-      keyExtractor={(item) => item.id}
-      ListEmptyComponent={
-        activeQuery.isPending ? (
-          <View style={styles.centeredBlock}>
-            <ActivityIndicator color="#183153" />
-          </View>
-        ) : activeQuery.isError ? (
-          <MyGamesStateCard
-            actionLabel={t('events.common.retry')}
-            body={
-              activeTab === 'upcoming'
-                ? t('shell.myGames.errorBody')
-                : t('shell.myGames.pastErrorBody')
-            }
-            iconName="cloud-offline-outline"
-            onPress={async () => {
-              await activeQuery.refetch();
-            }}
-            title={
-              activeTab === 'upcoming'
-                ? t('shell.myGames.errorTitle')
-                : t('shell.myGames.pastErrorTitle')
-            }
-          />
-        ) : (
-          <MyGamesStateCard
-            actionLabel={activeTab === 'upcoming' ? t('shell.myGames.openCreate') : undefined}
-            body={
-              activeTab === 'upcoming'
-                ? t('shell.myGames.emptyBody')
-                : t('shell.myGames.pastEmptyBody')
-            }
-            iconName={activeTab === 'upcoming' ? 'calendar-outline' : 'trophy-outline'}
-            onPress={
-              activeTab === 'upcoming'
-                ? () =>
-                    navigation.navigate('MainTabs', {
-                      screen: 'CreateEventTab',
-                      params: { screen: 'CreateEvent' },
-                    })
-                : undefined
-            }
-            title={
-              activeTab === 'upcoming'
-                ? t('shell.myGames.emptyTitle')
-                : t('shell.myGames.pastEmptyTitle')
-            }
-          />
-        )
+      refreshControl={
+        <RefreshControl
+          onRefresh={() => {
+            void handleRefresh();
+          }}
+          progressViewOffset={12}
+          refreshing={isRefreshing}
+          tintColor="#183153"
+        />
       }
-      ListHeaderComponent={renderHeader}
-      SectionSeparatorComponent={() => <View style={styles.sectionSpacer} />}
-      ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-      renderSectionHeader={({ section }) => (
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderTitleRow}>
-            <Ionicons color="#183153" name={section.iconName} size={16} />
-            <Text style={styles.sectionHeaderTitle}>{section.title}</Text>
-          </View>
-          <View style={styles.sectionCountPill}>
-            <Text style={styles.sectionCountLabel}>{section.data.length}</Text>
-          </View>
-        </View>
-      )}
-      renderItem={({ item }) => (
-        <View style={styles.itemWrap}>
-          <EventSummaryCard
-            event={item}
-            language={language}
-            onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
-          />
-          {activeTab === 'past' ? <PastEventActions event={item as MyGamesPastItem} /> : null}
-        </View>
-      )}
       showsVerticalScrollIndicator={false}
-    />
+      style={styles.screen}
+    >
+      {renderHeader()}
+      {renderTimeline()}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 32,
-    gap: 14,
+  screen: {
+    flex: 1,
     backgroundColor: '#f7f0e6',
   },
-  headerWrap: {
-    gap: 14,
-    marginBottom: 14,
-  },
-  hero: {
-    borderRadius: 24,
+  listContent: {
     paddingHorizontal: 20,
-    paddingVertical: 18,
-    backgroundColor: '#183153',
+    paddingTop: 18,
+    paddingBottom: 40,
   },
-  heroMetaRow: {
+  headerWrap: {
+    gap: 16,
+    marginBottom: 22,
+  },
+  monthLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.8,
+    color: '#b09a7b',
+  },
+  headline: {
+    fontSize: 28,
+    lineHeight: 33,
+    fontWeight: '900',
+    color: '#10233f',
+  },
+  headlinePast: {
+    fontSize: 28,
+    lineHeight: 33,
+    fontWeight: '900',
+    color: '#10233f',
+  },
+  headlineHighlight: {
+    backgroundColor: '#d8ff39',
+    color: '#10233f',
+  },
+  weekStrip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 10,
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#eee0ce',
+    shadowColor: '#10233f',
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
-  heroPill: {
-    flexDirection: 'row',
+  weekDayCard: {
+    flex: 1,
+    minHeight: 84,
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255, 248, 240, 0.12)',
+    justifyContent: 'center',
+    borderRadius: 20,
+    paddingVertical: 8,
+    gap: 4,
   },
-  heroPillLabel: {
+  weekDayCardActive: {
+    backgroundColor: '#132b4f',
+  },
+  weekDayLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#dbe4ee',
+    color: '#8897aa',
   },
-  heroTitle: {
-    fontSize: 26,
-    lineHeight: 31,
-    fontWeight: '800',
-    color: '#fff8f0',
+  weekDayLabelActive: {
+    color: '#f3f7fb',
   },
-  heroSubtitle: {
-    marginTop: 8,
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#dbe4ee',
+  weekDayNumber: {
+    fontSize: 32,
+    lineHeight: 34,
+    fontWeight: '900',
+    color: '#132b4f',
   },
-  summaryRow: {
+  weekDayNumberActive: {
+    color: '#ffffff',
+  },
+  weekDayDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
+  },
+  weekDayDotVisible: {
+    backgroundColor: '#132b4f',
+  },
+  weekDayDotActive: {
+    backgroundColor: '#d8ff39',
+  },
+  tabRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
-  summaryCard: {
-    flex: 1,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#fffbf6',
+  tabPill: {
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    backgroundColor: '#fbf7f1',
     borderWidth: 1,
-    borderColor: '#ece0d1',
+    borderColor: '#eadccc',
   },
-  summaryLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+  tabPillActive: {
+    backgroundColor: '#132b4f',
+    borderColor: '#132b4f',
+  },
+  tabPillLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#6f6251',
+  },
+  tabPillLabelActive: {
+    color: '#ffffff',
+  },
+  loadingBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 56,
+  },
+  timelineList: {
+    gap: 18,
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  timelineRail: {
+    width: 86,
+    paddingTop: 10,
+  },
+  timelineDayLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    color: '#9a8b77',
     textTransform: 'uppercase',
-    color: '#aa6d44',
   },
-  summaryValue: {
-    marginTop: 6,
+  timelineTimeLabel: {
+    marginTop: 4,
     fontSize: 24,
+    lineHeight: 27,
+    fontWeight: '900',
+    color: '#10233f',
+  },
+  timelineDateLabel: {
+    marginTop: 3,
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#8a98a9',
+  },
+  timelineCardWrap: {
+    flex: 1,
+    gap: 10,
+  },
+  eventCard: {
+    position: 'relative',
+    borderRadius: 26,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#efe3d4',
+    shadowColor: '#10233f',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+    gap: 14,
+  },
+  eventCardHighlighted: {
+    borderColor: '#d8ff39',
+    borderWidth: 2,
+  },
+  eventCardPressed: {
+    transform: [{ scale: 0.99 }],
+  },
+  needPlayersBadge: {
+    position: 'absolute',
+    top: -12,
+    right: 16,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#d8ff39',
+  },
+  needPlayersBadgeLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#183153',
+    textTransform: 'uppercase',
+  },
+  eventCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  eventCardIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  eventCardSportLabel: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '800',
     color: '#183153',
+  },
+  eventCardRole: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  eventCardRoleOrganizer: {
+    color: '#ff6f4d',
+  },
+  eventCardRolePlayer: {
+    color: '#8a98a9',
+  },
+  eventCardVenueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventCardVenueText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#4c5d74',
+  },
+  eventCardOrganizerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  eventCardOrganizerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  eventCardOrganizerLabel: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#183153',
+  },
+  eventCardOrganizerMeta: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: '#8090a6',
+  },
+  occupancyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  occupancyTrack: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  occupancySegment: {
+    flex: 1,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: '#e6ebf0',
+  },
+  occupancySegmentActive: {
+    backgroundColor: '#132b4f',
+  },
+  occupancyLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#4c5d74',
+  },
+  stateCard: {
+    alignItems: 'center',
+    borderRadius: 28,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#efe3d4',
+    shadowColor: '#10233f',
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  stateIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  stateTitle: {
+    marginTop: 16,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '900',
+    color: '#10233f',
+    textAlign: 'center',
+  },
+  stateBody: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  stateAction: {
+    marginTop: 20,
+    width: '100%',
+  },
+  actionBlock: {
+    gap: 14,
+  },
+  actionBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#4c5d74',
   },
   centeredBlock: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
-  },
-  itemWrap: {
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 10,
-  },
-  sectionHeaderTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#183153',
-  },
-  sectionCountPill: {
-    minWidth: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#efe4d5',
-  },
-  sectionCountLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#183153',
-  },
-  sectionSpacer: {
-    height: 20,
-  },
-  itemSeparator: {
-    height: 12,
-  },
-  actionBlock: {
-    gap: 10,
-  },
-  actionBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#395065',
-  },
-  helperText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#6d7f95',
+    minHeight: 80,
   },
   promptRow: {
-    gap: 10,
+    gap: 12,
   },
   promptPlayerCard: {
+    borderRadius: 20,
+    padding: 14,
     gap: 10,
-    borderRadius: 16,
+    backgroundColor: '#f7fafc',
     borderWidth: 1,
-    borderColor: '#ece0d1',
-    backgroundColor: '#fffdf8',
-    padding: 12,
+    borderColor: '#e2e8f0',
   },
   promptPlayerName: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#183153',
+  },
+  helperText: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#64748b',
   },
 });

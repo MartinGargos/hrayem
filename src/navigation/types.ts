@@ -4,6 +4,10 @@ export type HomeStackParamList = {
   HomeFeed: undefined;
 };
 
+export type DiscoverStackParamList = {
+  DiscoverFeed: undefined;
+};
+
 export type CreateStackParamList = {
   CreateEvent: undefined;
 };
@@ -13,18 +17,20 @@ export type MyGamesStackParamList = {
 };
 
 export type ProfileStackParamList = {
-  Profile: undefined;
+  ProfileHome: undefined;
 };
 
 export type MainTabParamList = {
   HomeTab: NavigatorScreenParams<HomeStackParamList>;
-  CreateEventTab: NavigatorScreenParams<CreateStackParamList>;
   MyGamesTab: NavigatorScreenParams<MyGamesStackParamList>;
+  CreateEventTab: NavigatorScreenParams<CreateStackParamList>;
+  DiscoverTab: NavigatorScreenParams<DiscoverStackParamList>;
   ProfileTab: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList>;
+  Profile: undefined;
   EventDetail: { eventId: string };
   EditEvent: { eventId: string };
   Chat: { eventId: string };

@@ -139,6 +139,91 @@
     "allSet": "All set",
     "tryAgainTitle": "Let's try again"
   },
+  "home": {
+    "topBar": {
+      "brandName": "Hrayem",
+      "helloName": "Hey, {{name}} 👋",
+      "tagline": "Your next game starts here",
+      "setCity": "Choose city",
+      "openCity": "Choose city",
+      "pickerTitle": "Choose city",
+      "openProfile": "Open profile",
+      "defaultIdentity": "Your profile",
+      "greetings": {
+        "explore": "Take a look at what's being played today.",
+        "nearby": "The closest open games are just below.",
+        "pickup": "One free hour can turn into a game.",
+        "matchDay": "See which nearby games are filling up."
+      }
+    },
+    "actions": {
+      "create": "Create game",
+      "openPlayers": "Who is available",
+      "backToGames": "Back to games",
+      "detailShort": "Detail",
+      "openDetail": "Open detail",
+      "openSettings": "Choose city",
+      "resetFilters": "Clear",
+      "viewAll": "All",
+      "loadMore": "Load more games"
+    },
+    "hero": {
+      "upcomingEyebrow": "Next game",
+      "upcomingHeadline": "Your next game starts",
+      "organizingBadge": "You're organizing",
+      "confirmedBadge": "You're in",
+      "moreGames": "+{{count}} more",
+      "openSpots": "Open spots {{count}}",
+      "lookingForPlayers": "Looking for {{count}} players",
+      "noCityTitle": "Choose your city",
+      "noCityBody": "As soon as you set your city, Hrayem will show games and players around you.",
+      "feedReadyTitle": "Open games are nearby",
+      "feedReadyBody": "There are {{count}} open games nearby right now. If one fits, just open the detail and join in.",
+      "emptyFilteredTitle": "Nothing exact for this selection",
+      "emptyFilteredBody": "Try a different sport or time window. New games will appear here as soon as they are added.",
+      "emptyOpenTitle": "It's quiet here for now",
+      "emptyOpenBody": "As soon as a new game appears, you'll see it here first. In the meantime, you can let other players know you're free."
+    },
+    "filters": {
+      "today": "Today",
+      "thisWeek": "This week",
+      "nextWeek": "Next week",
+      "custom": "Custom dates",
+      "summary": {
+        "today": "today",
+        "thisWeek": "this week",
+        "nextWeek": "next week",
+        "custom": "in the selected dates"
+      }
+    },
+    "feed": {
+      "eyebrow": "Nearby players are waiting",
+      "title": "Open games",
+      "soon": "Soon",
+      "emptyTitle": "No game yet",
+      "emptyBodyDefault": "No games {{period}} yet. Be the first — create one and players will join.",
+      "emptyBodyFiltered": "We don't see a game for this filter set right now. Be the first — create one and players will join.",
+      "noMoreGamesTitle": "No more games nearby",
+      "noMoreGamesBody": "Your closest game is already highlighted above. New nearby games will appear here as they are added.",
+      "venueFallback": "Nearby venue",
+      "allLevels": "All levels",
+      "organizerBy": "Organized by {{name}}",
+      "organizerMeta": "{{count}} games played"
+    },
+    "players": {
+      "teaserTitle": "Who is available",
+      "teaserBody": "{{count}} players are free in this time window.",
+      "teaserEmpty": "No one has posted availability here yet.",
+      "teaserAction": "Show players",
+      "postAction": "I'm available",
+      "inlineCta": "Show others that you're available",
+      "inlineCount": "{{count}} available players",
+      "sectionTitle": "Available players",
+      "sectionSubtitle": "Players who are free in the selected time range.",
+      "emptyTitle": "No one is free yet",
+      "emptyBody": "Try a different date or be the first to post your availability."
+    }
+  },
   "foundation": {
     "eyebrow": "Milestone 0",
     "title": "Project foundation is ready",
@@ -200,6 +285,7 @@
       "create": "Create",
       "createPlus": "+",
       "myGames": "My games",
+      "discover": "Discover",
       "profile": "Profile"
     },
     "titles": {
@@ -207,6 +293,7 @@
       "createEvent": "Create event",
       "editEvent": "Edit event",
       "myGames": "My games",
+      "discover": "Discover",
       "profile": "Profile",
       "eventDetail": "Event detail",
       "chat": "Chat",
@@ -288,6 +375,16 @@
     "myGames": {
       "title": "My games",
       "subtitle": "Keep upcoming plans in view and return to finished games for quick post-game follow-up.",
+      "headline": {
+        "upcomingLead": "You're playing",
+        "upcomingTail": "this week.",
+        "upcomingEmptyLead": "This week is",
+        "upcomingEmptyTail": "still clear."
+      },
+      "day": {
+        "today": "Today",
+        "tomorrow": "Tomorrow"
+      },
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
@@ -295,6 +392,18 @@
       "role": {
         "organizing": "Organizing",
         "playing": "Playing"
+      },
+      "card": {
+        "role": {
+          "organizer": "Organizer",
+          "player": "Player"
+        },
+        "organizedBy": "Organized by {{name}}",
+        "organizedByYou": "Organized by you",
+        "needsPlayers_one": "{{count}} player needed",
+        "needsPlayers_other": "{{count}} players needed",
+        "occupancy": "{{current}}/{{total}}",
+        "openHint": "Open {{sport}} details"
       },
       "upcomingTitle": "Upcoming games",
       "upcomingPlaceholder": "This section will list games you organize or joined once the event data flow is implemented.",
@@ -660,6 +769,17 @@
     },
     "create": {
       "submit": "Create event",
+      "hero": {
+        "eyebrow": "New game · step 1 of 1",
+        "title": "Let's play.",
+        "subtitle": "Pick the sport, time, and venue. We'll help you find players automatically.",
+        "steps": {
+          "sport": "Sport",
+          "schedule": "Schedule",
+          "venue": "Place",
+          "skill": "Level"
+        }
+      },
       "previewTitle": "Preview",
       "previewSportFallback": "Pick a sport",
       "previewVenueFallback": "Pick a venue",
@@ -673,13 +793,61 @@
       "venueSearchPlaceholder": "Search venues in your city",
       "reservationType": "Court status",
       "playerCountTotal": "Total player count",
+      "playerCountCompact": "How many players?",
       "skillMin": "Minimum skill",
       "skillMax": "Maximum skill",
+      "skillUnset": "Choose level",
       "skillHelper": "This range helps players quickly gauge the level of the game. Joining outside it is still allowed.",
+      "skillRangeMin": "From · {{level}}",
+      "skillRangeMax": "To · {{level}}",
+      "skillRangeMinLabel": "From",
+      "skillRangeMaxLabel": "To",
+      "clearSkillSelection": "Clear",
+      "skillSummaryEmpty": "Tap the level that fits you. A second tap can widen the range.",
+      "skillSummarySingle": "This game is mainly aimed at {{level}} players.",
+      "skillSummaryRange": "This game is open to players from {{min}} to {{max}}.",
+      "durationAuto": "{{minutes}} min",
       "description": "Description",
       "descriptionPlaceholder": "Optional note about format, level, or what players should bring.",
       "descriptionCounter": "{{count}}/{{max}} characters",
+      "hideKeyboard": "Done",
+      "submitting": "Creating game...",
+      "successTitle": "Game created",
+      "successBody": "Everything is ready. Invite players and get excited for a great game.",
+      "successInviteAction": "Invite players",
+      "successCloseAction": "Close",
       "skillRequired": "Choose your skill level for this sport before the event can be created.",
+      "showAllVenues": "Show all venues",
+      "venueFilters": {
+        "all": "All",
+        "verified": "Verified",
+        "community": "Community",
+        "mine": "Mine"
+      },
+      "venueMeta": {
+        "selected": "Selected",
+        "verified": "Verified",
+        "community": "Community"
+      },
+      "sportNotes": {
+        "padel": "Usually 4 players",
+        "badminton": "Singles or doubles",
+        "squash": "Singles",
+        "tennis": "Singles or doubles"
+      },
+      "noteSuggestions": {
+        "balls": "Balls",
+        "tips": "Tips",
+        "parking": "Parking"
+      },
+      "noteSuggestionBodies": {
+        "balls": "Bring your own balls.",
+        "tips": "Try to arrive at least 10 minutes early.",
+        "parking": "Parking is closest to the main entrance."
+      },
+      "summary": {
+        "players": "{{count}} players"
+      },
       "errors": {
         "validation": "The event details need another look before they can be sent."
       },
@@ -688,12 +856,23 @@
         "schedule": "Schedule",
         "venue": "Venue",
         "rules": "Game setup",
-        "description": "Notes"
+        "description": "Notes",
+        "sportQuestion": "Which sport?",
+        "sportDescription": "Choose what you want to play.",
+        "scheduleQuestion": "When?",
+        "scheduleDescription": "Start date and time. You can adjust the end manually or use a quick duration.",
+        "venueQuestion": "Where?",
+        "venueDescription": "Choose a venue. We only show places in your selected city.",
+        "skillQuestion": "Player level",
+        "skillDescription": "Tap the level that fits the game. A second tap can widen the range.",
+        "detailsQuestion": "Details",
+        "detailsDescription": "Optional note and the final polish before publishing."
       },
       "validation": {
         "sport": "Choose a sport.",
         "venue": "Choose a venue.",
         "description": "Keep the description under 500 characters.",
+        "skillRequired": "Choose the player level.",
         "skillRange": "The minimum skill must be lower than or equal to the maximum skill.",
         "endTime": "The end time must be later than the start time.",
         "futureStart": "The game must start in the future."
@@ -703,6 +882,7 @@
       "title": "Edit event",
       "subtitle": "Fine-tune the time, venue, and player count before the game starts.",
       "submit": "Save changes",
+      "submitting": "Saving changes...",
       "loadingTitle": "Loading event details",
       "loadingBody": "We're filling the current event values into the form now.",
       "sportLocked": "Sport stays locked after creation so player stats and event history remain consistent.",

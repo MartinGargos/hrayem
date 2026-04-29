@@ -1,11 +1,20 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function LoadingScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+        },
+      ]}
+    >
       <Text style={styles.eyebrow}>Hrayem</Text>
       <Text style={styles.title}>{t('auth.loading.title')}</Text>
       <Text style={styles.subtitle}>{t('auth.loading.subtitle')}</Text>

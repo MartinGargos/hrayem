@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -49,7 +47,6 @@ import type {
 import { formatEventDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
 import { formatDisplayName } from '../../utils/people';
 
-type RootNavigation = NavigationProp<RootStackParamList>;
 type EventDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
 
 function getSportBadgeLabel(slug: string, fallbackName: string): string {
@@ -295,9 +292,8 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
   };
 }
 
-export function EventDetailScreen({ route }: EventDetailScreenProps) {
+export function EventDetailScreen({ route, navigation }: EventDetailScreenProps) {
   const { t } = useTranslation();
-  const navigation = useNavigation<RootNavigation>();
   const queryClient = useQueryClient();
   const language = useUserStore((state) => state.language);
   const profile = useUserStore((state) => state.profile);

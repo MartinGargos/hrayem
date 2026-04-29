@@ -9,7 +9,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AddVenueScreen, SkillLevelScreen } from '../features/shell/StubScreens';
@@ -28,6 +28,7 @@ import { getPendingDeepLinkReplayAction } from './pending-deep-link';
 import { useUIStore } from '../store/ui-store';
 import type {
   CreateStackParamList,
+  DiscoverStackParamList,
   HomeStackParamList,
   MainTabParamList,
   MyGamesStackParamList,
@@ -38,6 +39,7 @@ import type {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const DiscoverStack = createNativeStackNavigator<DiscoverStackParamList>();
 const CreateStack = createNativeStackNavigator<CreateStackParamList>();
 const MyGamesStack = createNativeStackNavigator<MyGamesStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
@@ -49,9 +51,9 @@ const navigationTheme: Theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: '#f7f0e6',
-    card: '#fffaf3',
-    border: '#eadfce',
+    background: '#f4f7fb',
+    card: '#ffffff',
+    border: '#dde6ef',
     primary: '#183153',
     text: '#183153',
   },
@@ -59,12 +61,12 @@ const navigationTheme: Theme = {
 
 const baseStackScreenOptions = {
   contentStyle: {
-    backgroundColor: '#f7f0e6',
+    backgroundColor: '#f4f7fb',
   },
   gestureEnabled: Platform.OS === 'ios',
   headerTintColor: '#183153',
   headerStyle: {
-    backgroundColor: '#fffaf3',
+    backgroundColor: '#ffffff',
   },
   headerShadowVisible: false,
   headerBackButtonDisplayMode: 'minimal' as const,
@@ -78,12 +80,14 @@ function getTabIconName(routeName: keyof MainTabParamList, focused: boolean): Io
   switch (routeName) {
     case 'HomeTab':
       return focused ? 'home' : 'home-outline';
-    case 'CreateEventTab':
-      return focused ? 'add-circle' : 'add-circle-outline';
     case 'MyGamesTab':
       return focused ? 'calendar' : 'calendar-outline';
+    case 'DiscoverTab':
+      return focused ? 'compass' : 'compass-outline';
     case 'ProfileTab':
       return focused ? 'person' : 'person-outline';
+    case 'CreateEventTab':
+      return 'add';
   }
 }
 
@@ -96,6 +100,7 @@ function HomeStackNavigator() {
         component={HomeFeedScreen}
         name="HomeFeed"
         options={{
+          headerShown: false,
           title: t('navigation.titles.home'),
         }}
       />
@@ -112,10 +117,32 @@ function CreateStackNavigator() {
         component={CreateEventScreen}
         name="CreateEvent"
         options={{
+          headerShown: false,
           title: t('navigation.titles.createEvent'),
         }}
       />
     </CreateStack.Navigator>
+  );
+}
+
+function DiscoverFeedScreen() {
+  return <HomeFeedScreen initialSurface="players" lockedSurface="players" />;
+}
+
+function DiscoverStackNavigator() {
+  const { t } = useTranslation();
+
+  return (
+    <DiscoverStack.Navigator screenOptions={baseStackScreenOptions}>
+      <DiscoverStack.Screen
+        component={DiscoverFeedScreen}
+        name="DiscoverFeed"
+        options={{
+          headerShown: false,
+          title: t('navigation.titles.discover'),
+        }}
+      />
+    </DiscoverStack.Navigator>
   );
 }
 
@@ -142,7 +169,7 @@ function ProfileStackNavigator() {
     <ProfileStack.Navigator screenOptions={baseStackScreenOptions}>
       <ProfileStack.Screen
         component={ProfileScreen}
-        name="Profile"
+        name="ProfileHome"
         options={{
           title: t('navigation.titles.profile'),
         }}
@@ -164,28 +191,45 @@ function MainTabNavigator() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#183153',
-        tabBarInactiveTintColor: '#8795a5',
-        tabBarIcon: ({ color, focused }) => (
-          <Ionicons
-            color={color}
-            name={getTabIconName(route.name, focused)}
-            size={route.name === 'CreateEventTab' ? 28 : 22}
-          />
-        ),
+        tabBarInactiveTintColor: '#9aa7b6',
+        tabBarShowLabel: route.name !== 'CreateEventTab',
+        tabBarIcon: ({ color, focused }) =>
+          route.name === 'CreateEventTab' ? (
+            <View
+              style={[
+                styles.createTabIconWrap,
+                focused ? styles.createTabIconWrapFocused : undefined,
+              ]}
+            >
+              <Ionicons color="#10233f" name="add" size={28} />
+            </View>
+          ) : (
+            <Ionicons color={color} name={getTabIconName(route.name, focused)} size={22} />
+          ),
+        tabBarIconStyle: route.name === 'CreateEventTab' ? { marginTop: -12 } : undefined,
+        tabBarItemStyle:
+          route.name === 'CreateEventTab'
+            ? { marginTop: -10, overflow: 'visible' }
+            : { paddingTop: 2 },
         tabBarStyle: {
-          height: 74,
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: Platform.OS === 'ios' ? 10 : 12,
+          height: 80,
           paddingTop: 8,
-          paddingBottom: 12,
-          backgroundColor: '#fffaf3',
-          borderTopColor: '#eadfce',
+          paddingBottom: 10,
+          borderTopWidth: 0,
+          borderRadius: 26,
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
           shadowColor: '#10233f',
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.04,
-          shadowRadius: 10,
-          elevation: 8,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.1,
+          shadowRadius: 24,
+          elevation: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '700',
           marginTop: 2,
         },
@@ -199,18 +243,28 @@ function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        component={CreateStackNavigator}
-        name="CreateEventTab"
-        options={{
-          title: t('navigation.tabs.create'),
-          tabBarAccessibilityLabel: t('navigation.tabs.create'),
-        }}
-      />
-      <Tab.Screen
         component={MyGamesStackNavigator}
         name="MyGamesTab"
         options={{
           title: t('navigation.tabs.myGames'),
+        }}
+      />
+      <Tab.Screen
+        component={CreateStackNavigator}
+        name="CreateEventTab"
+        options={{
+          title: '',
+          tabBarAccessibilityLabel: t('navigation.tabs.create'),
+          tabBarStyle: {
+            display: 'none',
+          },
+        }}
+      />
+      <Tab.Screen
+        component={DiscoverStackNavigator}
+        name="DiscoverTab"
+        options={{
+          title: t('navigation.tabs.discover'),
         }}
       />
       <Tab.Screen
@@ -223,6 +277,27 @@ function MainTabNavigator() {
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  createTabIconWrap: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d8ff45',
+    borderWidth: 4,
+    borderColor: '#f7f4eb',
+    shadowColor: '#92a74a',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 7,
+  },
+  createTabIconWrapFocused: {
+    transform: [{ translateY: -4 }, { scale: 1.02 }],
+  },
+});
 
 export function AppNavigator() {
   const { t } = useTranslation();
@@ -291,6 +366,13 @@ export function AppNavigator() {
           name="MainTabs"
           options={{
             headerShown: false,
+          }}
+        />
+        <RootStack.Screen
+          component={ProfileScreen}
+          name="Profile"
+          options={{
+            title: t('navigation.titles.profile'),
           }}
         />
         <RootStack.Screen

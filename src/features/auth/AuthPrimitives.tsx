@@ -13,6 +13,7 @@ import {
   type KeyboardTypeOptions,
   type TextInputProps,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppNotice, NoticeTone } from '../../types/app';
 
@@ -24,6 +25,8 @@ type AuthScaffoldProps = {
 };
 
 export function AuthScaffold({ title, subtitle, children, footer }: AuthScaffoldProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -31,7 +34,12 @@ export function AuthScaffold({ title, subtitle, children, footer }: AuthScaffold
     >
       <ScrollView
         bounces={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 16,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
