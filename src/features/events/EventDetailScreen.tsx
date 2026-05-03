@@ -1,10 +1,20 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
 import {
@@ -13,11 +23,10 @@ import {
   canOrganizerRemovePlayers,
   hasEnoughConfirmedPlayersForNoShow,
 } from './event-eligibility';
-import { AvatarPhoto, InfoPill, SportBadge } from './EventPrimitives';
+import { AvatarPhoto } from './EventPrimitives';
 import { SkillLevelModal } from './SkillLevelModal';
 import { ReportSheet } from '../reports/ReportSheet';
-import { HeaderOverflowButton } from '../../components/HeaderOverflowButton';
-import { DetailRow, ScreenCard, ScreenShell } from '../../components/ScreenShell';
+import { ScreenCard } from '../../components/ScreenShell';
 import { StateMessage } from '../../components/StateMessage';
 import { buildEventWebUrl } from '../../navigation/deep-links';
 import type { RootStackParamList } from '../../navigation/types';
@@ -36,7 +45,7 @@ import {
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
-import type { AppNotice } from '../../types/app';
+import type { AppLanguage, AppNotice } from '../../types/app';
 import type {
   EventConfirmedPlayer,
   EventDetail,
@@ -44,26 +53,15 @@ import type {
   JoinEventResponse,
   LeaveEventResponse,
 } from '../../types/events';
-import { formatEventDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
+import {
+  formatEventCompactDate,
+  formatEventDate,
+  formatEventTime,
+  formatRelativeTime,
+} from '../../utils/dates';
 import { formatDisplayName } from '../../utils/people';
 
 type EventDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
-
-function getSportBadgeLabel(slug: string, fallbackName: string): string {
-  if (slug === 'badminton') {
-    return 'BD';
-  }
-
-  if (slug === 'padel') {
-    return 'PD';
-  }
-
-  if (slug === 'squash') {
-    return 'SQ';
-  }
-
-  return fallbackName.slice(0, 2).toUpperCase();
-}
 
 function getOptimisticJoinResult(event: EventDetail): JoinEventResponse {
   const canConfirmImmediately = event.spotsTaken < event.playerCountTotal;
@@ -292,8 +290,459 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
   };
 }
 
+function buildEventCode(eventId: string): string {
+  return `#H-${eventId.replace(/-/g, '').slice(0, 4).toUpperCase()}`;
+}
+
+function formatHeroRelativeTime(input: string, language: AppLanguage): string {
+  return formatRelativeTime(input, language).replace(
+    language === 'cs' ? /^přibližně\s+/i : /^about\s+/i,
+    '',
+  );
+}
+
+function DetailFrame({
+  bottomInset,
+  children,
+  menuLabel,
+  onBack,
+  onMenu,
+  title,
+  topInset,
+}: {
+  bottomInset: number;
+  children: ReactNode;
+  menuLabel: string;
+  onBack: () => void;
+  onMenu?: () => void;
+  title: string;
+  topInset: number;
+}) {
+  return (
+    <View style={styles.detailRoot}>
+      <View style={[styles.detailTopBar, { paddingTop: topInset + 8 }]}>
+        <Pressable
+          accessibilityLabel={title}
+          accessibilityRole="button"
+          onPress={onBack}
+          style={styles.detailTopButton}
+        >
+          <Ionicons color="#071426" name="chevron-back-outline" size={24} />
+        </Pressable>
+        <Text style={styles.detailTopTitle}>{title}</Text>
+        {onMenu ? (
+          <Pressable
+            accessibilityLabel={menuLabel}
+            accessibilityRole="button"
+            onPress={onMenu}
+            style={styles.detailTopButton}
+          >
+            <Ionicons color="#071426" name="ellipsis-horizontal" size={22} />
+          </Pressable>
+        ) : (
+          <View style={styles.detailTopButton} />
+        )}
+      </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.detailContent,
+          {
+            paddingBottom: Math.max(bottomInset, 18) + 34,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </ScrollView>
+    </View>
+  );
+}
+
+function OrganizerHeroCard({
+  event,
+  language,
+  sportName,
+  t,
+}: {
+  event: EventDetail;
+  language: AppLanguage;
+  sportName: string;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  return (
+    <View style={styles.organizerHeroCard}>
+      <View pointerEvents="none" style={styles.organizerHeroGrid}>
+        <View style={styles.organizerHeroGridVertical} />
+        <View style={styles.organizerHeroGridHorizontal} />
+      </View>
+
+      <View style={styles.organizerHeroTopRow}>
+        <View style={styles.organizerSportPill}>
+          <Ionicons color="#071426" name="tennisball-outline" size={14} />
+          <Text numberOfLines={1} style={styles.organizerSportPillLabel}>
+            {sportName}
+          </Text>
+        </View>
+        <Text numberOfLines={1} style={styles.organizerHeroMeta}>
+          {t('events.detail.organizerHeroMeta', { code: buildEventCode(event.id) })}
+        </Text>
+      </View>
+
+      <Text numberOfLines={2} style={styles.organizerHeroTitle}>
+        {event.venueName}
+      </Text>
+      <View style={styles.organizerHeroLocationRow}>
+        <Ionicons color="#9fb0c8" name="location-outline" size={15} />
+        <Text numberOfLines={1} style={styles.organizerHeroLocation}>
+          {event.venueAddress ?? event.city}
+        </Text>
+      </View>
+
+      <View style={styles.organizerHeroDivider} />
+
+      <Text style={styles.organizerHeroLabel}>{t('events.detail.dateTimeLabel')}</Text>
+      <View style={styles.organizerHeroDateRow}>
+        <Text numberOfLines={1} style={styles.organizerHeroDate}>
+          {formatEventCompactDate(event.startsAt, language)} ·{' '}
+          {formatEventTime(event.startsAt, language)}
+        </Text>
+        <View style={styles.organizerHeroTimePill}>
+          <Text numberOfLines={1} style={styles.organizerHeroTimePillLabel}>
+            {formatHeroRelativeTime(event.startsAt, language)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function SectionTitle({
+  eyebrow,
+  rightLabel,
+  title,
+}: {
+  eyebrow: string;
+  rightLabel?: string;
+  title: string;
+}) {
+  return (
+    <View style={styles.sectionTitleBlock}>
+      <View style={styles.sectionEyebrowRow}>
+        <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
+        {rightLabel ? <Text style={styles.sectionRightLabel}>{rightLabel}</Text> : null}
+      </View>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+function OrganizerToolButton({
+  disabled,
+  iconName,
+  label,
+  onPress,
+  tone,
+}: {
+  disabled?: boolean;
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+  tone: 'dark' | 'light';
+}) {
+  const isDark = tone === 'dark';
+
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        styles.organizerToolButton,
+        isDark ? styles.organizerToolButtonDark : styles.organizerToolButtonLight,
+        disabled ? styles.organizerToolButtonDisabled : undefined,
+      ]}
+    >
+      <Ionicons color={isDark ? '#ffffff' : '#071426'} name={iconName} size={21} />
+      <Text
+        style={[
+          styles.organizerToolButtonLabel,
+          isDark ? styles.organizerToolButtonLabelDark : undefined,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ConfirmedPlayersCard({
+  canInvite,
+  canRemovePlayers,
+  event,
+  isLoading,
+  onInvite,
+  onOpenPlayer,
+  onRemovePlayer,
+  players,
+  removingUserId,
+  t,
+}: {
+  canInvite: boolean;
+  canRemovePlayers: boolean;
+  event: EventDetail;
+  isLoading: boolean;
+  onInvite: () => void;
+  onOpenPlayer: (playerId: string) => void;
+  onRemovePlayer: (playerId: string, playerName: string) => void;
+  players: EventConfirmedPlayer[];
+  removingUserId: string | null;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const openSlotCount = Math.max(event.playerCountTotal - players.length, 0);
+  const visibleOpenSlots = Math.min(openSlotCount, 3);
+
+  return (
+    <View style={styles.playersPanel}>
+      {isLoading ? (
+        <View style={styles.centeredBlock}>
+          <ActivityIndicator color="#071426" />
+        </View>
+      ) : (
+        <>
+          {players.map((player, index) => (
+            <ConfirmedPlayerRow
+              canRemove={canRemovePlayers && player.userId !== event.organizerId}
+              isLast={index === players.length - 1 && visibleOpenSlots === 0}
+              isOrganizer={player.userId === event.organizerId}
+              key={player.userId}
+              onOpenPlayer={onOpenPlayer}
+              onRemovePlayer={onRemovePlayer}
+              player={player}
+              removingUserId={removingUserId}
+              t={t}
+            />
+          ))}
+          {Array.from({ length: visibleOpenSlots }).map((_, index) => (
+            <OpenPlayerSlotRow
+              canInvite={canInvite}
+              isLast={index === visibleOpenSlots - 1}
+              key={`open-slot-${index}`}
+              onInvite={onInvite}
+              t={t}
+            />
+          ))}
+          {openSlotCount > visibleOpenSlots ? (
+            <View style={styles.moreSlotsRow}>
+              <Text style={styles.moreSlotsText}>
+                {t('events.detail.moreOpenSlots', { count: openSlotCount - visibleOpenSlots })}
+              </Text>
+            </View>
+          ) : null}
+        </>
+      )}
+    </View>
+  );
+}
+
+function ConfirmedPlayerRow({
+  canRemove,
+  isLast,
+  isOrganizer,
+  onOpenPlayer,
+  onRemovePlayer,
+  player,
+  removingUserId,
+  t,
+}: {
+  canRemove: boolean;
+  isLast: boolean;
+  isOrganizer: boolean;
+  onOpenPlayer: (playerId: string) => void;
+  onRemovePlayer: (playerId: string, playerName: string) => void;
+  player: EventConfirmedPlayer;
+  removingUserId: string | null;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const playerName =
+    formatDisplayName(player.firstName, player.lastName) ||
+    (player.userId.startsWith('deleted-') ? t('common.deletedUser') : t('auth.home.defaultName'));
+  const canOpenPlayerProfile = !player.userId.startsWith('deleted-');
+  const isRemoving = removingUserId === player.userId;
+
+  return (
+    <View style={[styles.playerSlotRow, isLast ? styles.playerSlotRowLast : undefined]}>
+      <Pressable
+        accessibilityLabel={playerName}
+        accessibilityRole={canOpenPlayerProfile ? 'button' : undefined}
+        disabled={!canOpenPlayerProfile}
+        onPress={() => {
+          if (canOpenPlayerProfile) {
+            onOpenPlayer(player.userId);
+          }
+        }}
+        style={styles.playerSlotIdentity}
+      >
+        <AvatarPhoto label={playerName} size={40} uri={player.photoUrl} />
+        <View style={styles.playerSlotCopy}>
+          <View style={styles.playerNameRow}>
+            <Text numberOfLines={1} style={styles.playerSlotName}>
+              {playerName}
+            </Text>
+            {isOrganizer ? <Text style={styles.organizerMiniLabel}>· ORG</Text> : null}
+          </View>
+          <Text numberOfLines={1} style={styles.playerSlotMeta}>
+            {t('events.detail.playerStats', {
+              games: player.gamesPlayed,
+              noShows: player.noShows,
+            })}
+          </Text>
+        </View>
+      </Pressable>
+      <View style={styles.playerSlotActions}>
+        <View style={styles.confirmedPill}>
+          <Text style={styles.confirmedPillLabel}>{t('events.detail.confirmedBadge')}</Text>
+        </View>
+        {canRemove ? (
+          <Pressable
+            accessibilityLabel={t('events.removePlayer.action')}
+            accessibilityRole="button"
+            disabled={isRemoving}
+            onPress={() => onRemovePlayer(player.userId, playerName)}
+            style={styles.removePlayerIconButton}
+          >
+            <Ionicons color="#ff503f" name={isRemoving ? 'hourglass-outline' : 'close'} size={15} />
+          </Pressable>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function OpenPlayerSlotRow({
+  canInvite,
+  isLast,
+  onInvite,
+  t,
+}: {
+  canInvite: boolean;
+  isLast: boolean;
+  onInvite: () => void;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  return (
+    <View style={[styles.playerSlotRow, isLast ? styles.playerSlotRowLast : undefined]}>
+      <View style={styles.openSlotIcon}>
+        <Ionicons color="#b4b7bc" name="add" size={20} />
+      </View>
+      <Text numberOfLines={1} style={styles.openSlotText}>
+        {t('events.detail.lookingForPlayer')}
+      </Text>
+      {canInvite ? (
+        <Pressable
+          accessibilityLabel={t('events.detail.inviteAction')}
+          accessibilityRole="button"
+          onPress={onInvite}
+          style={styles.inviteButton}
+        >
+          <Text style={styles.inviteButtonLabel}>{t('events.detail.inviteAction')}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function CompactDetailsCard({
+  event,
+  eventDescription,
+  t,
+}: {
+  event: EventDetail;
+  eventDescription: string;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const rows = [
+    {
+      label: t('events.detail.addressLabel'),
+      value: event.venueAddress ?? t('events.detail.addressFallback'),
+    },
+    {
+      label: t('events.detail.waitlistLabel'),
+      value: t('events.detail.waitlistPlayers', { count: event.waitlistCount }),
+    },
+    {
+      label: t('events.detail.skillTitle'),
+      value: t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax }),
+    },
+    {
+      label: t('events.detail.courtStatusLabel'),
+      value: t(`events.reservationType.${event.reservationType}`),
+    },
+  ];
+
+  return (
+    <View style={styles.detailsPanel}>
+      {rows.map((row, index) => (
+        <View
+          key={row.label}
+          style={[styles.detailsRow, index === rows.length - 1 ? styles.detailsRowLast : undefined]}
+        >
+          <Text style={styles.detailsLabel}>{row.label}</Text>
+          <Text numberOfLines={2} style={styles.detailsValue}>
+            {row.value}
+          </Text>
+        </View>
+      ))}
+      {event.description ? (
+        <View style={[styles.detailsRow, styles.detailsRowLast, styles.descriptionDetailsRow]}>
+          <Text style={styles.detailsLabel}>{t('events.detail.descriptionTitle')}</Text>
+          <Text style={styles.detailsValue}>{eventDescription}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function ChatShortcutCard({
+  canOpenChat,
+  onPress,
+  subtitle,
+  t,
+}: {
+  canOpenChat: boolean;
+  onPress: () => void;
+  subtitle: string;
+  t: ReturnType<typeof useTranslation>['t'];
+}) {
+  if (!canOpenChat) {
+    return null;
+  }
+
+  return (
+    <Pressable
+      accessibilityLabel={t('events.chat.openAction')}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.chatShortcutCard}
+    >
+      <View style={styles.chatShortcutIcon}>
+        <Ionicons color="#d8ff45" name="chatbubble-outline" size={22} />
+      </View>
+      <View style={styles.chatShortcutCopy}>
+        <Text style={styles.chatShortcutTitle}>{t('events.detail.chatShortcutTitle')}</Text>
+        <Text numberOfLines={1} style={styles.chatShortcutSubtitle}>
+          {subtitle}
+        </Text>
+      </View>
+      <Ionicons color="#9aa1ab" name="arrow-forward-outline" size={19} />
+    </Pressable>
+  );
+}
+
 export function EventDetailScreen({ route, navigation }: EventDetailScreenProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const language = useUserStore((state) => state.language);
   const profile = useUserStore((state) => state.profile);
@@ -989,53 +1438,36 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
     ]);
   }, [t]);
 
-  useLayoutEffect(() => {
-    if (eventQuery.isPending || eventQuery.isError || !eventQuery.data) {
-      navigation.setOptions({
-        headerRight: undefined,
-      });
-      return;
-    }
-
-    navigation.setOptions({
-      headerRight: () => (
-        <HeaderOverflowButton
-          accessibilityHint={t('reports.reportEventAction')}
-          accessibilityLabel={t('reports.overflowLabel')}
-          onPress={handleOpenReportMenu}
-        />
-      ),
-    });
-  }, [
-    eventQuery.data,
-    eventQuery.isError,
-    eventQuery.isPending,
-    handleOpenReportMenu,
-    navigation,
-    t,
-  ]);
-
   if (eventQuery.isPending) {
     return (
-      <ScreenShell
+      <DetailFrame
+        bottomInset={insets.bottom}
+        menuLabel={t('reports.overflowLabel')}
+        onBack={() => navigation.goBack()}
         title={t('shell.eventDetail.title')}
-        subtitle={t('events.detail.loadingSubtitle')}
+        topInset={insets.top}
       >
-        <ScreenCard>
+        <View style={styles.statePanel}>
           <StateMessage
             body={t('events.detail.loadingSubtitle')}
             iconName="calendar-clear-outline"
             title={t('events.detail.loadingTitle')}
           />
-        </ScreenCard>
-      </ScreenShell>
+        </View>
+      </DetailFrame>
     );
   }
 
   if (eventQuery.isError || !eventQuery.data) {
     return (
-      <ScreenShell title={t('shell.eventDetail.title')} subtitle={t('events.detail.errorSubtitle')}>
-        <ScreenCard>
+      <DetailFrame
+        bottomInset={insets.bottom}
+        menuLabel={t('reports.overflowLabel')}
+        onBack={() => navigation.goBack()}
+        title={t('shell.eventDetail.title')}
+        topInset={insets.top}
+      >
+        <View style={styles.statePanel}>
           <StateMessage
             action={
               <ActionButton
@@ -1052,22 +1484,14 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
             title={t('events.detail.errorTitle')}
             tone="muted"
           />
-        </ScreenCard>
-      </ScreenShell>
+        </View>
+      </DetailFrame>
     );
   }
 
   const event = eventQuery.data;
   const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
-  const resolvedOrganizerName =
-    formatDisplayName(event.organizerFirstName, event.organizerLastName) ||
-    (event.organizerId ? t('events.common.organizerFallback') : t('common.deletedUser'));
   const confirmedPlayers = playersQuery.data ?? [];
-  const organizerPlayer = confirmedPlayers.find((player) => player.userId === event.organizerId);
-  const canOpenOrganizerProfile = Boolean(
-    event.organizerId &&
-    (event.organizerFirstName || event.organizerLastName || event.organizerPhotoUrl),
-  );
   const joinOrLeaveBusy = joinMutation.isPending || leaveMutation.isPending;
   const viewerMembershipStatus = event.viewerMembershipStatus;
   const currentSkillLevel = currentSportSkillLevel();
@@ -1075,8 +1499,10 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
   const canEditEvent = canOrganizerEditEvent(event);
   const canRemovePlayers = canOrganizerRemovePlayers(event);
   const canManageEvent = canCancelEvent;
+  const canShowOrganizerTools = canManageEvent || canEditEvent;
   const canOpenChat =
     event.viewerMembershipStatus === 'organizer' || event.viewerMembershipStatus === 'confirmed';
+  const canInvitePlayers = event.viewerMembershipStatus === 'organizer' && canManageEvent;
   const removePlayerTargetUserId = removePlayerMutation.variables?.targetUserId ?? null;
   const reportNoShowTargetUserId = reportNoShowMutation.variables?.reportedUserId ?? null;
   const thumbsUpTargetUserId = thumbsUpMutation.variables?.toUserId ?? null;
@@ -1124,12 +1550,13 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
     colorHex: event.sportColor,
     sortOrder: 0,
   };
-  const formattedDateTime = `${formatEventDate(event.startsAt, language)} · ${formatEventTime(
-    event.startsAt,
-    language,
-  )} - ${formatEventTime(event.endsAt, language)}`;
-  const formattedVenue = `${event.venueName} · ${event.city}`;
   const eventDescription = event.description ?? t('events.detail.noDescription');
+  const chatSubtitle =
+    event.status === 'cancelled'
+      ? t('events.chat.cancelledBanner')
+      : event.chatClosedAt && new Date(event.chatClosedAt).getTime() <= Date.now()
+        ? t('events.chat.readOnlyFinished')
+        : t('events.detail.chatShortcutSubtitle');
 
   let stateTitle = t('events.detail.state.joinTitle');
   let stateBody =
@@ -1199,72 +1626,20 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
 
   return (
     <>
-      <ScreenShell title={sportName} subtitle={event.venueName}>
-        <ScreenCard>
-          <View style={styles.heroHeader}>
-            <View style={styles.heroIdentity}>
-              <SportBadge
-                colorHex={event.sportColor}
-                label={getSportBadgeLabel(event.sportSlug, sportName)}
-              />
-              <View style={styles.heroCopy}>
-                <Text style={styles.heroTitle}>{sportName}</Text>
-                <Text numberOfLines={2} style={styles.heroSubtitle}>
-                  {event.venueName}
-                </Text>
-              </View>
-            </View>
-            <ActionButton
-              iconName="share-social-outline"
-              label={t('events.detail.shareAction')}
-              onPress={handleShare}
-              variant="secondary"
-            />
-          </View>
+      <DetailFrame
+        bottomInset={insets.bottom}
+        menuLabel={t('reports.overflowLabel')}
+        onBack={() => navigation.goBack()}
+        onMenu={handleOpenReportMenu}
+        title={t('shell.eventDetail.title')}
+        topInset={insets.top}
+      >
+        <OrganizerHeroCard event={event} language={language} sportName={sportName} t={t} />
 
-          <View style={styles.summaryHighlightList}>
-            <View style={styles.summaryHighlightCard}>
-              <View style={styles.summaryHighlightIcon}>
-                <Ionicons color="#183153" name="calendar-clear-outline" size={16} />
-              </View>
-              <View style={styles.summaryHighlightCopy}>
-                <Text style={styles.summaryHighlightLabel}>{t('events.detail.dateTimeLabel')}</Text>
-                <Text style={styles.summaryHighlightValue}>{formattedDateTime}</Text>
-              </View>
-            </View>
-            <View style={styles.summaryHighlightCard}>
-              <View style={styles.summaryHighlightIcon}>
-                <Ionicons color="#183153" name="location-outline" size={16} />
-              </View>
-              <View style={styles.summaryHighlightCopy}>
-                <Text style={styles.summaryHighlightLabel}>{t('events.detail.venueLabel')}</Text>
-                <Text style={styles.summaryHighlightValue}>{formattedVenue}</Text>
-                <Text style={styles.summaryHighlightMeta}>
-                  {event.venueAddress ?? t('events.detail.addressFallback')}
-                </Text>
-              </View>
-            </View>
-          </View>
+        <NoticeBanner notice={notice} resolveMessage={t} />
 
-          <View style={styles.pillRow}>
-            <InfoPill accentColor={event.sportColor}>
-              {t(`events.reservationType.${event.reservationType}`)}
-            </InfoPill>
-            <InfoPill>
-              {t('events.feed.spotsTaken', {
-                current: event.spotsTaken,
-                total: event.playerCountTotal,
-              })}
-            </InfoPill>
-            <InfoPill>
-              {t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax })}
-            </InfoPill>
-          </View>
-        </ScreenCard>
-
-        <ScreenCard title={t('events.detail.yourStatusTitle')}>
-          <NoticeBanner notice={notice} resolveMessage={t} />
-          <View style={styles.statusPanel}>
+        {viewerMembershipStatus !== 'organizer' ? (
+          <View style={styles.statusInfoCard}>
             <Text style={styles.statusTitle}>{stateTitle}</Text>
             <Text style={styles.bodyText}>{stateBody}</Text>
             {currentSkillLevel ? (
@@ -1274,50 +1649,52 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
                 })}
               </Text>
             ) : null}
+            {primaryAction || canOpenChat ? (
+              <View style={styles.inlineActions}>
+                {primaryAction ? (
+                  <View style={styles.inlineAction}>
+                    <ActionButton
+                      disabled={primaryAction.disabled}
+                      iconName={primaryAction.iconName}
+                      label={primaryAction.label}
+                      onPress={primaryAction.onPress}
+                      variant={primaryAction.variant}
+                    />
+                  </View>
+                ) : null}
+                {canOpenChat ? (
+                  <View style={styles.inlineAction}>
+                    <ActionButton
+                      iconName="chatbubble-ellipses-outline"
+                      label={t('events.chat.openAction')}
+                      onPress={handleOpenChatPress}
+                      variant={primaryAction ? 'secondary' : 'primary'}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-          {primaryAction || canOpenChat ? (
-            <View style={styles.inlineActions}>
-              {primaryAction ? (
-                <View style={styles.inlineAction}>
-                  <ActionButton
-                    disabled={primaryAction.disabled}
-                    iconName={primaryAction.iconName}
-                    label={primaryAction.label}
-                    onPress={primaryAction.onPress}
-                    variant={primaryAction.variant}
-                  />
-                </View>
-              ) : null}
-              {canOpenChat ? (
-                <View style={styles.inlineAction}>
-                  <ActionButton
-                    iconName="chatbubble-ellipses-outline"
-                    label={t('events.chat.openAction')}
-                    onPress={handleOpenChatPress}
-                    variant={primaryAction ? 'secondary' : 'primary'}
-                  />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </ScreenCard>
+        ) : null}
 
-        {canManageEvent ? (
-          <ScreenCard title={t('events.organizerTools.title')}>
-            <Text style={styles.helperText}>{t('events.organizerTools.body')}</Text>
-            <View style={styles.inlineActions}>
+        {canShowOrganizerTools ? (
+          <View style={styles.organizerToolsSection}>
+            <SectionTitle
+              eyebrow={t('events.detail.organizerToolsEyebrow')}
+              title={t('events.organizerTools.title')}
+            />
+            <View style={styles.organizerToolGrid}>
               {canEditEvent ? (
-                <View style={styles.inlineAction}>
-                  <ActionButton
-                    disabled={cancelMutation.isPending || removePlayerMutation.isPending}
-                    iconName="create-outline"
-                    label={t('events.organizerTools.editAction')}
-                    onPress={handleEditPress}
-                  />
-                </View>
+                <OrganizerToolButton
+                  disabled={cancelMutation.isPending || removePlayerMutation.isPending}
+                  iconName="calendar-clear-outline"
+                  label={t('events.organizerTools.editAction')}
+                  onPress={handleEditPress}
+                  tone="dark"
+                />
               ) : null}
-              <View style={styles.inlineAction}>
-                <ActionButton
+              {canManageEvent ? (
+                <OrganizerToolButton
                   disabled={cancelMutation.isPending || removePlayerMutation.isPending}
                   iconName="close-outline"
                   label={
@@ -1326,172 +1703,47 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
                       : t('events.organizerTools.cancelAction')
                   }
                   onPress={handleCancelPress}
-                  variant="secondary"
+                  tone="light"
                 />
-              </View>
+              ) : null}
             </View>
-          </ScreenCard>
+          </View>
         ) : null}
 
-        <ScreenCard title={t('events.detail.whenWhereTitle')}>
-          <DetailRow label={t('events.detail.dateTimeLabel')} value={formattedDateTime} />
-          <DetailRow label={t('events.detail.venueLabel')} value={formattedVenue} />
-          <DetailRow
-            label={t('events.detail.addressLabel')}
-            value={event.venueAddress ?? t('events.detail.addressFallback')}
+        <View style={styles.sectionStack}>
+          <SectionTitle
+            eyebrow={t('events.detail.playersEyebrow')}
+            rightLabel={`${event.spotsTaken}/${event.playerCountTotal}`}
+            title={t('events.detail.confirmedPlayersTitle')}
           />
-          <DetailRow
-            label={t('events.detail.waitlistLabel')}
-            value={t('events.feed.waitlistCount', { count: event.waitlistCount })}
+          <ConfirmedPlayersCard
+            canInvite={canInvitePlayers}
+            canRemovePlayers={canRemovePlayers}
+            event={event}
+            isLoading={playersQuery.isPending}
+            onInvite={handleShare}
+            onOpenPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
+            onRemovePlayer={handleRemovePlayerPress}
+            players={confirmedPlayers}
+            removingUserId={removePlayerTargetUserId}
+            t={t}
           />
-          <View style={styles.detailSectionDivider} />
-          <View style={styles.compactSection}>
-            <Text style={styles.compactSectionTitle}>{t('events.detail.skillTitle')}</Text>
-            <Text style={styles.bodyText}>
-              {t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax })}
-            </Text>
-            <Text style={styles.helperText}>{t('events.detail.skillRangeNote')}</Text>
-          </View>
-          <View style={styles.compactSection}>
-            <Text style={styles.compactSectionTitle}>{t('events.detail.descriptionTitle')}</Text>
-            <Text style={styles.bodyText}>{eventDescription}</Text>
-          </View>
-        </ScreenCard>
+        </View>
 
-        <ScreenCard title={t('events.detail.organizerTitle')}>
-          <View style={styles.organizerRow}>
-            <AvatarPhoto label={resolvedOrganizerName} uri={event.organizerPhotoUrl} size={54} />
-            <View style={styles.organizerTextWrap}>
-              <Text style={styles.organizerName}>{resolvedOrganizerName}</Text>
-              <Text style={styles.bodyText}>
-                {t('events.detail.organizerStats', {
-                  games: event.organizerGamesPlayed,
-                  noShows: event.organizerNoShows,
-                })}
-              </Text>
-              {organizerPlayer && organizerPlayer.thumbsUpPercentage !== null ? (
-                <Text style={styles.helperText}>
-                  {t('events.detail.thumbsUpPercentage', {
-                    percentage: organizerPlayer.thumbsUpPercentage,
-                  })}
-                </Text>
-              ) : (
-                <Text style={styles.helperText}>{t('events.detail.thumbsUpPercentageHidden')}</Text>
-              )}
-            </View>
-          </View>
-          {organizerPlayer?.isPlayAgainConnection ? (
-            <View style={styles.organizerPillRow}>
-              <InfoPill accentColor="#183153">{t('events.detail.playAgainBadge')}</InfoPill>
-            </View>
-          ) : null}
-          {canOpenOrganizerProfile ? (
-            <ActionButton
-              iconName="person-circle-outline"
-              label={t('events.detail.openOrganizerProfile')}
-              onPress={() => navigation.navigate('PlayerProfile', { playerId: event.organizerId! })}
-              variant="secondary"
-            />
-          ) : null}
-        </ScreenCard>
+        <View style={styles.sectionStack}>
+          <SectionTitle
+            eyebrow={t('events.detail.whenWhereEyebrow')}
+            title={t('events.detail.whenWhereTitle')}
+          />
+          <CompactDetailsCard event={event} eventDescription={eventDescription} t={t} />
+        </View>
 
-        <ScreenCard title={t('events.detail.confirmedPlayersTitle')}>
-          {playersQuery.isPending ? (
-            <View style={styles.centeredBlock}>
-              <ActivityIndicator color="#183153" />
-            </View>
-          ) : confirmedPlayers.length ? (
-            <View style={styles.playerList}>
-              {confirmedPlayers.map((player) => {
-                const playerName =
-                  formatDisplayName(player.firstName, player.lastName) ||
-                  (player.userId.startsWith('deleted-')
-                    ? t('common.deletedUser')
-                    : t('auth.home.defaultName'));
-                const canOpenPlayerProfile = !player.userId.startsWith('deleted-');
-
-                return (
-                  <View key={player.userId} style={styles.playerCard}>
-                    <Pressable
-                      accessibilityHint={
-                        canOpenPlayerProfile ? t('events.detail.openPlayerProfileHint') : undefined
-                      }
-                      accessibilityLabel={playerName}
-                      accessibilityRole={canOpenPlayerProfile ? 'button' : undefined}
-                      disabled={!canOpenPlayerProfile}
-                      onPress={() =>
-                        canOpenPlayerProfile
-                          ? navigation.navigate('PlayerProfile', { playerId: player.userId })
-                          : undefined
-                      }
-                      style={styles.playerIdentityPressable}
-                    >
-                      <AvatarPhoto label={playerName} uri={player.photoUrl} />
-                      <View style={styles.playerCopy}>
-                        <Text style={styles.playerName}>{playerName}</Text>
-                        <Text style={styles.playerMeta}>
-                          {player.skillLevel
-                            ? t(`events.skillLevel.label.${player.skillLevel}`)
-                            : t('events.detail.skillUnknown')}
-                        </Text>
-                        <Text style={styles.playerMeta}>
-                          {t('events.detail.playerStats', {
-                            games: player.gamesPlayed,
-                            noShows: player.noShows,
-                          })}
-                        </Text>
-                        {player.thumbsUpPercentage !== null ? (
-                          <Text style={styles.playerMeta}>
-                            {t('events.detail.thumbsUpPercentage', {
-                              percentage: player.thumbsUpPercentage,
-                            })}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                    {player.skillLevel || player.isPlayAgainConnection ? (
-                      <View style={styles.playerPills}>
-                        {player.skillLevel ? (
-                          <InfoPill>{t(`events.skillLevel.short.${player.skillLevel}`)}</InfoPill>
-                        ) : null}
-                        {player.isPlayAgainConnection ? (
-                          <InfoPill accentColor="#183153">
-                            {t('events.detail.playAgainBadge')}
-                          </InfoPill>
-                        ) : null}
-                      </View>
-                    ) : null}
-                    {canRemovePlayers && player.userId !== event.organizerId ? (
-                      <ActionButton
-                        disabled={
-                          removePlayerMutation.isPending &&
-                          removePlayerTargetUserId === player.userId
-                        }
-                        iconName="person-remove-outline"
-                        label={
-                          removePlayerMutation.isPending &&
-                          removePlayerTargetUserId === player.userId
-                            ? t('events.removePlayer.pending')
-                            : t('events.removePlayer.action')
-                        }
-                        onPress={() => handleRemovePlayerPress(player.userId, playerName)}
-                        variant="secondary"
-                      />
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <StateMessage
-              body={t('events.detail.confirmedPlayersEmpty')}
-              compact
-              iconName="people-outline"
-              title={t('common.nothingYet')}
-              tone="warm"
-            />
-          )}
-        </ScreenCard>
+        <ChatShortcutCard
+          canOpenChat={canOpenChat}
+          onPress={handleOpenChatPress}
+          subtitle={chatSubtitle}
+          t={t}
+        />
 
         {event.status === 'finished' ? (
           <ScreenCard title={t('events.noShow.title')}>
@@ -1637,7 +1889,7 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
             )}
           </ScreenCard>
         ) : null}
-      </ScreenShell>
+      </DetailFrame>
 
       <SkillLevelModal
         language={language}
@@ -1668,6 +1920,462 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  detailRoot: {
+    flex: 1,
+    backgroundColor: '#f4f0e8',
+  },
+  detailTopBar: {
+    minHeight: 74,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailTopButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    shadowColor: '#071426',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  detailTopTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '900',
+    color: '#071426',
+  },
+  detailContent: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  statePanel: {
+    borderRadius: 22,
+    padding: 18,
+    backgroundColor: '#ffffff',
+    shadowColor: '#071426',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  organizerHeroCard: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 24,
+    backgroundColor: '#071426',
+    shadowColor: '#071426',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 22,
+    elevation: 7,
+  },
+  organizerHeroGrid: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 214,
+    height: 166,
+    opacity: 0.32,
+  },
+  organizerHeroGridVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 92,
+    width: 1,
+    backgroundColor: 'rgba(148, 164, 187, 0.32)',
+  },
+  organizerHeroGridHorizontal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 88,
+    height: 1,
+    backgroundColor: 'rgba(148, 164, 187, 0.32)',
+  },
+  organizerHeroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  organizerSportPill: {
+    minHeight: 27,
+    maxWidth: 128,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#d8ff45',
+  },
+  organizerSportPillLabel: {
+    flexShrink: 1,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#071426',
+    textTransform: 'uppercase',
+  },
+  organizerHeroMeta: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#9fb0c8',
+    textTransform: 'uppercase',
+  },
+  organizerHeroTitle: {
+    marginTop: 24,
+    fontSize: 27,
+    lineHeight: 32,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  organizerHeroLocationRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  organizerHeroLocation: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 19,
+    color: '#a9bbd5',
+  },
+  organizerHeroDivider: {
+    marginTop: 18,
+    marginBottom: 18,
+    height: 1,
+    backgroundColor: 'rgba(160, 177, 202, 0.18)',
+  },
+  organizerHeroLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#8e9bb0',
+    textTransform: 'uppercase',
+  },
+  organizerHeroDateRow: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  organizerHeroDate: {
+    flex: 1,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  organizerHeroTimePill: {
+    minHeight: 25,
+    maxWidth: 132,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(216, 255, 69, 0.22)',
+  },
+  organizerHeroTimePillLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#d8ff45',
+  },
+  statusInfoCard: {
+    borderRadius: 22,
+    padding: 16,
+    gap: 10,
+    backgroundColor: '#ffffff',
+    shadowColor: '#071426',
+    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  organizerToolsSection: {
+    gap: 12,
+  },
+  organizerToolGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  organizerToolButton: {
+    flex: 1,
+    minHeight: 78,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  organizerToolButtonDark: {
+    backgroundColor: '#071426',
+  },
+  organizerToolButtonLight: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#eee9df',
+  },
+  organizerToolButtonDisabled: {
+    opacity: 0.55,
+  },
+  organizerToolButtonLabel: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: '#071426',
+    textAlign: 'center',
+  },
+  organizerToolButtonLabelDark: {
+    color: '#ffffff',
+  },
+  sectionStack: {
+    gap: 10,
+  },
+  sectionTitleBlock: {
+    gap: 2,
+    paddingHorizontal: 4,
+  },
+  sectionEyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#9a948a',
+    textTransform: 'uppercase',
+  },
+  sectionRightLabel: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '900',
+    color: '#071426',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '900',
+    color: '#071426',
+  },
+  playersPanel: {
+    overflow: 'hidden',
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+  },
+  playerSlotRow: {
+    minHeight: 64,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee9df',
+  },
+  playerSlotRowLast: {
+    borderBottomWidth: 0,
+  },
+  playerSlotIdentity: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  playerSlotCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  playerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  playerSlotName: {
+    flexShrink: 1,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '900',
+    color: '#071426',
+  },
+  organizerMiniLabel: {
+    flexShrink: 0,
+    marginLeft: 4,
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: '#ff503f',
+    textTransform: 'uppercase',
+  },
+  playerSlotMeta: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#8d9299',
+  },
+  playerSlotActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  confirmedPill: {
+    minHeight: 23,
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#c9ffe4',
+  },
+  confirmedPillLabel: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '900',
+    color: '#00864f',
+    textTransform: 'uppercase',
+  },
+  removePlayerIconButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff1ef',
+  },
+  openSlotIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#d4d6da',
+  },
+  openSlotText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    lineHeight: 18,
+    color: '#989da4',
+  },
+  inviteButton: {
+    minHeight: 28,
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#071426',
+  },
+  inviteButtonLabel: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '900',
+    color: '#ffffff',
+  },
+  moreSlotsRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fbfaf7',
+  },
+  moreSlotsText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#8d9299',
+  },
+  detailsPanel: {
+    overflow: 'hidden',
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+  },
+  detailsRow: {
+    minHeight: 40,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee9df',
+  },
+  detailsRowLast: {
+    borderBottomWidth: 0,
+  },
+  descriptionDetailsRow: {
+    alignItems: 'flex-start',
+  },
+  detailsLabel: {
+    width: 104,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '900',
+    color: '#ff503f',
+    textTransform: 'uppercase',
+  },
+  detailsValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '800',
+    color: '#071426',
+  },
+  chatShortcutCard: {
+    minHeight: 72,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    backgroundColor: '#ffffff',
+    shadowColor: '#071426',
+    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 2,
+  },
+  chatShortcutIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#071426',
+  },
+  chatShortcutCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  chatShortcutTitle: {
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '900',
+    color: '#071426',
+  },
+  chatShortcutSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#8d9299',
   },
   heroHeader: {
     gap: 14,
@@ -1719,7 +2427,6 @@ const styles = StyleSheet.create({
   summaryHighlightLabel: {
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.6,
     textTransform: 'uppercase',
     color: '#a16a42',
   },

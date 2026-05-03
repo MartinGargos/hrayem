@@ -4,19 +4,23 @@ import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useState, type ComponentProps } from 'react';
+import { Image } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   AppState,
   type AppStateStatus,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
+  type KeyboardEvent,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +28,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { ActionButton, NoticeBanner } from '../auth/AuthPrimitives';
-import { AvatarPhoto, SportBadge } from '../events/EventPrimitives';
 import { isChatChannelReconnectNeeded, shouldRecoverChatOnForeground } from './chat-realtime';
 import { ScreenCard } from '../../components/ScreenShell';
 import { StateMessage } from '../../components/StateMessage';
@@ -38,17 +41,14 @@ import {
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
-import type { AppNotice } from '../../types/app';
+import type { AppLanguage, AppNotice } from '../../types/app';
 import type { ChatMessage, EventDetail } from '../../types/events';
-import {
-  formatChatTimestamp,
-  formatEventDate,
-  formatEventTime,
-  formatRelativeTime,
-} from '../../utils/dates';
+import { formatEventCompactDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
 
 type ChatScreenProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 type ChatIconName = ComponentProps<typeof Ionicons>['name'];
+
+const CHAT_KEYBOARD_GAP = 8;
 
 type MessageFormValues = {
   body: string;
@@ -68,6 +68,18 @@ type ChatBannerProps = {
   tone?: 'default' | 'muted';
 };
 
+type ChatTimelineItem =
+  | {
+      id: string;
+      label: string;
+      type: 'divider';
+    }
+  | {
+      id: string;
+      message: ChatMessage;
+      type: 'message';
+    };
+
 function createMessageSchema(t: (key: string, options?: Record<string, unknown>) => string) {
   return z.object({
     body: z
@@ -78,20 +90,54 @@ function createMessageSchema(t: (key: string, options?: Record<string, unknown>)
   });
 }
 
-function getSportBadgeLabel(slug: string, fallbackName: string): string {
-  if (slug === 'badminton') {
-    return 'BD';
-  }
+function getLocalDateKey(input: string): string {
+  const date = new Date(input);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
 
-  if (slug === 'padel') {
-    return 'PD';
-  }
+function isToday(input: string): boolean {
+  return getLocalDateKey(input) === getLocalDateKey(new Date().toISOString());
+}
 
-  if (slug === 'squash') {
-    return 'SQ';
-  }
+function getTimelineDividerLabel(
+  input: string,
+  language: AppLanguage,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  return isToday(input) ? t('events.chat.todayDivider') : formatEventCompactDate(input, language);
+}
 
-  return fallbackName.slice(0, 2).toUpperCase();
+function buildChatTimeline(
+  messages: ChatMessage[],
+  language: AppLanguage,
+  t: ReturnType<typeof useTranslation>['t'],
+): ChatTimelineItem[] {
+  const sortedMessages = [...messages].sort(
+    (first, second) => new Date(first.sentAt).getTime() - new Date(second.sentAt).getTime(),
+  );
+  const timelineItems: ChatTimelineItem[] = [];
+  let currentDateKey: string | null = null;
+
+  sortedMessages.forEach((message) => {
+    const nextDateKey = getLocalDateKey(message.sentAt);
+
+    if (nextDateKey !== currentDateKey) {
+      timelineItems.push({
+        id: `divider-${nextDateKey}`,
+        label: getTimelineDividerLabel(message.sentAt, language, t),
+        type: 'divider',
+      });
+      currentDateKey = nextDateKey;
+    }
+
+    timelineItems.push({
+      id: message.id,
+      message,
+      type: 'message',
+    });
+  });
+
+  return timelineItems;
 }
 
 function canAccessEventChat(event: EventDetail): boolean {
@@ -203,18 +249,195 @@ function ChatBanner({ iconName, text, tone = 'default' }: ChatBannerProps) {
   );
 }
 
-export function ChatScreen({ route }: ChatScreenProps) {
+type ChatHeaderProps = {
+  event: EventDetail;
+  language: AppLanguage;
+  onBack: () => void;
+  onOpenEvent: () => void;
+  t: ReturnType<typeof useTranslation>['t'];
+  topInset: number;
+};
+
+function ChatHeader({ event, language, onBack, onOpenEvent, t, topInset }: ChatHeaderProps) {
+  const title = `${event.venueName} · ${formatEventCompactDate(event.startsAt, language)}`;
+
+  return (
+    <View style={[styles.header, { paddingTop: topInset + 8 }]}>
+      <Pressable
+        accessibilityLabel={t('events.chat.backAction')}
+        accessibilityRole="button"
+        onPress={onBack}
+        style={styles.headerButton}
+      >
+        <Ionicons color="#10233f" name="chevron-back" size={25} />
+      </Pressable>
+
+      <Pressable
+        accessibilityLabel={t('events.chat.openEventAction')}
+        accessibilityRole="button"
+        onPress={onOpenEvent}
+        style={styles.headerCopy}
+      >
+        <Text numberOfLines={1} style={styles.headerTitle}>
+          {title}
+        </Text>
+        <View style={styles.headerMetaRow}>
+          <View style={styles.headerStatusDot} />
+          <Text numberOfLines={1} style={styles.headerMeta}>
+            {t('events.chat.headerMeta', {
+              players: t('events.chat.playersCount', { count: event.spotsTaken }),
+              status: t(`events.chat.status.${event.status}`),
+            })}
+          </Text>
+        </View>
+      </Pressable>
+
+      <Pressable
+        accessibilityLabel={t('events.chat.openEventAction')}
+        accessibilityRole="button"
+        onPress={onOpenEvent}
+        style={styles.headerButton}
+      >
+        <Ionicons color="#10233f" name="tennisball-outline" size={20} />
+      </Pressable>
+    </View>
+  );
+}
+
+type EventSummaryCardProps = {
+  event: EventDetail;
+  language: AppLanguage;
+  onPress: () => void;
+  sportName: string;
+  t: ReturnType<typeof useTranslation>['t'];
+};
+
+function EventSummaryCard({ event, language, onPress, sportName, t }: EventSummaryCardProps) {
+  return (
+    <Pressable
+      accessibilityLabel={t('events.chat.openEventAction')}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={styles.eventCard}
+    >
+      <View style={styles.eventIconWrap}>
+        <Ionicons color="#071426" name="tennisball-outline" size={20} />
+      </View>
+      <View style={styles.eventCardCopy}>
+        <Text numberOfLines={1} style={styles.eventCardTitle}>
+          {t('events.chat.summaryTitle', {
+            sport: sportName,
+            time: formatEventTime(event.startsAt, language),
+            venue: event.venueName,
+          })}
+        </Text>
+        <Text numberOfLines={1} style={styles.eventCardMeta}>
+          {t('events.chat.summaryMeta', {
+            count: event.spotsTaken,
+            time: formatRelativeTime(event.startsAt, language),
+            total: event.playerCountTotal,
+          })}
+        </Text>
+      </View>
+      <Ionicons color="#d8ff45" name="arrow-forward" size={18} />
+    </Pressable>
+  );
+}
+
+function ChatDateDivider({ label }: { label: string }) {
+  return (
+    <View style={styles.dateDivider}>
+      <View style={styles.dateDividerLine} />
+      <Text style={styles.dateDividerLabel}>{label}</Text>
+      <View style={styles.dateDividerLine} />
+    </View>
+  );
+}
+
+function ChatAvatar({ label, uri }: { label: string; uri: string | null }) {
+  const initial = label.trim().slice(0, 1).toUpperCase() || '?';
+
+  return uri ? (
+    <Image accessibilityLabel={label} contentFit="cover" source={{ uri }} style={styles.avatar} />
+  ) : (
+    <View accessibilityLabel={label} style={styles.avatarFallback}>
+      <Text style={styles.avatarFallbackText}>{initial}</Text>
+    </View>
+  );
+}
+
+type ChatMessageRowProps = {
+  item: ChatMessage;
+  t: ReturnType<typeof useTranslation>['t'];
+  userId: string | null;
+};
+
+function ChatMessageRow({ item, t, userId }: ChatMessageRowProps) {
+  const isOwnMessage = item.userId === userId;
+  const authorName =
+    [item.authorFirstName, item.authorLastName].filter(Boolean).join(' ') ||
+    t('events.chat.deletedParticipant');
+  const body = item.isDeleted ? t('events.chat.deletedBody') : item.body;
+
+  if (isOwnMessage) {
+    return (
+      <View style={[styles.messageRow, styles.messageRowOwn]}>
+        <View
+          style={[
+            styles.messageBubble,
+            styles.messageBubbleOwnSize,
+            item.isDeleted ? styles.messageBubbleDeleted : styles.messageBubbleOwn,
+          ]}
+        >
+          <Text
+            style={[
+              styles.messageBody,
+              item.isDeleted ? styles.messageBodyDeleted : styles.messageBodyOwn,
+            ]}
+          >
+            {body}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.messageRow}>
+      <ChatAvatar label={authorName} uri={item.authorPhotoUrl} />
+      <View style={styles.messageColumn}>
+        <Text numberOfLines={1} style={styles.messageAuthor}>
+          {authorName}
+        </Text>
+        <View
+          style={[
+            styles.messageBubble,
+            item.isDeleted ? styles.messageBubbleDeleted : styles.messageBubbleOther,
+          ]}
+        >
+          <Text style={[styles.messageBody, item.isDeleted ? styles.messageBodyDeleted : null]}>
+            {body}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function ChatScreen({ navigation, route }: ChatScreenProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isScreenFocused = useIsFocused();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const language = useUserStore((state) => state.language);
   const userId = useAuthStore((state) => state.userId);
   const eventId = route.params.eventId;
+  const messageListRef = useRef<FlatList<ChatTimelineItem>>(null);
   const [notice, setNotice] = useState<AppNotice | null>(null);
   const [channelReconnectNonce, setChannelReconnectNonce] = useState(0);
+  const [keyboardBottomInset, setKeyboardBottomInset] = useState(0);
   const footerBottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 14) : 14;
-  const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.top + 44 : 0;
 
   const messageForm = useForm<MessageFormValues>({
     resolver: zodResolver(createMessageSchema(t)),
@@ -238,9 +461,19 @@ export function ChatScreen({ route }: ChatScreenProps) {
     enabled: canReadMessages,
     staleTime: 10_000,
   });
+  const timelineItems = useMemo(
+    () => buildChatTimeline(messagesQuery.data ?? [], language, t),
+    [language, messagesQuery.data, t],
+  );
 
   const requestChannelReconnect = useCallback(() => {
     setChannelReconnectNonce((current) => current + 1);
+  }, []);
+
+  const scrollToLatestMessage = useCallback(() => {
+    requestAnimationFrame(() => {
+      messageListRef.current?.scrollToEnd({ animated: true });
+    });
   }, []);
 
   const refetchChatState = useCallback(async () => {
@@ -356,6 +589,30 @@ export function ChatScreen({ route }: ChatScreenProps) {
     return () => subscription.remove();
   }, [canReadMessages, isScreenFocused, refetchChatState, requestChannelReconnect]);
 
+  useEffect(() => {
+    function handleKeyboardFrame(event: KeyboardEvent) {
+      setKeyboardBottomInset(Math.max(0, windowHeight - event.endCoordinates.screenY));
+    }
+
+    function handleKeyboardHide() {
+      setKeyboardBottomInset(0);
+    }
+
+    const frameSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow',
+      handleKeyboardFrame,
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      handleKeyboardHide,
+    );
+
+    return () => {
+      frameSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [windowHeight]);
+
   const sendMessageMutation = useMutation({
     mutationFn: sendEventMessage,
     onSuccess: async (message) => {
@@ -405,7 +662,8 @@ export function ChatScreen({ route }: ChatScreenProps) {
 
   if (eventQuery.isPending) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top + 18 }]}>
+        {isScreenFocused ? <StatusBar style="dark" /> : null}
         <ScreenCard title={t('events.chat.loadingTitle')}>
           <View style={styles.centeredBlock}>
             <ActivityIndicator color="#183153" />
@@ -417,7 +675,8 @@ export function ChatScreen({ route }: ChatScreenProps) {
 
   if (eventQuery.isError || !eventQuery.data) {
     return (
-      <View style={styles.screen}>
+      <View style={[styles.screen, { paddingTop: insets.top + 18 }]}>
+        {isScreenFocused ? <StatusBar style="dark" /> : null}
         <ScreenCard>
           <ChatStateView
             actionLabel={t('events.common.retry')}
@@ -437,50 +696,37 @@ export function ChatScreen({ route }: ChatScreenProps) {
   const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
   const canOpenChat = canAccessEventChat(event);
   const isReadOnly = isEventChatReadOnly(event);
-  const messageRows = messagesQuery.data ?? [];
   const finishedCountdownVisible =
     event.status === 'finished' &&
     Boolean(event.chatClosedAt) &&
     new Date(event.chatClosedAt ?? '').getTime() > Date.now();
   const showInput = canOpenChat && !isReadOnly;
+  const keyboardLift =
+    keyboardBottomInset > 0
+      ? Math.max(0, keyboardBottomInset - footerBottomPadding + CHAT_KEYBOARD_GAP)
+      : 0;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={keyboardVerticalOffset}
-      style={styles.keyboardWrap}
-    >
+    <View style={styles.keyboardWrap}>
+      {isScreenFocused ? <StatusBar style="dark" /> : null}
       <View style={styles.screen}>
-        <View style={styles.hero}>
-          <View style={styles.heroIdentity}>
-            <SportBadge
-              colorHex={event.sportColor}
-              label={getSportBadgeLabel(event.sportSlug, sportName)}
-            />
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>{sportName}</Text>
-              <Text numberOfLines={1} style={styles.heroSubtitle}>
-                {event.venueName}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.heroMetaRow}>
-            <View style={styles.heroMetaPill}>
-              <Ionicons color="#dbe4ee" name="calendar-clear-outline" size={14} />
-              <Text style={styles.heroMetaPillLabel}>
-                {formatEventDate(event.startsAt, language)}
-              </Text>
-            </View>
-            <View style={styles.heroMetaPill}>
-              <Ionicons color="#dbe4ee" name="time-outline" size={14} />
-              <Text style={styles.heroMetaPillLabel}>
-                {formatEventTime(event.startsAt, language)}
-              </Text>
-            </View>
-          </View>
-        </View>
+        <ChatHeader
+          event={event}
+          language={language}
+          onBack={() => navigation.goBack()}
+          onOpenEvent={() => navigation.navigate('EventDetail', { eventId })}
+          t={t}
+          topInset={insets.top}
+        />
 
         <View style={styles.content}>
+          <EventSummaryCard
+            event={event}
+            language={language}
+            onPress={() => navigation.navigate('EventDetail', { eventId })}
+            sportName={sportName}
+            t={t}
+          />
           <NoticeBanner notice={notice} resolveMessage={t} />
 
           {!canOpenChat ? (
@@ -518,37 +764,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
                 />
               ) : null}
 
-              <View style={styles.messagesPanel}>
-                <View style={styles.messagesPanelHeader}>
-                  <View style={styles.messagesPanelTitleRow}>
-                    <Ionicons color="#183153" name="chatbubble-ellipses-outline" size={16} />
-                    <Text style={styles.messagesPanelTitle}>{t('events.chat.threadTitle')}</Text>
-                  </View>
-                  <View style={styles.messagesPanelSignals}>
-                    {messagesQuery.isFetching && messageRows.length ? (
-                      <View style={styles.syncPill}>
-                        <ActivityIndicator color="#5f7388" size="small" />
-                        <Text style={styles.syncPillLabel}>{t('events.chat.syncing')}</Text>
-                      </View>
-                    ) : null}
-                    <View
-                      style={[
-                        styles.statusPill,
-                        isReadOnly ? styles.statusPillMuted : styles.statusPillLive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusPillLabel,
-                          isReadOnly ? styles.statusPillLabelMuted : undefined,
-                        ]}
-                      >
-                        {isReadOnly ? t('events.chat.readOnlyStatus') : t('events.chat.liveStatus')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
+              <View style={styles.timeline}>
                 {messagesQuery.isError ? (
                   <ChatStateView
                     actionLabel={t('events.common.retry')}
@@ -561,15 +777,16 @@ export function ChatScreen({ route }: ChatScreenProps) {
                   />
                 ) : (
                   <FlatList
-                    automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                    ref={messageListRef}
                     contentContainerStyle={[
                       styles.messageListContent,
-                      !messageRows.length ? styles.messageListContentEmpty : undefined,
+                      !timelineItems.length ? styles.messageListContentEmpty : undefined,
                     ]}
-                    data={messageRows}
-                    inverted
+                    data={timelineItems}
                     keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                     keyboardShouldPersistTaps="handled"
+                    onContentSizeChange={scrollToLatestMessage}
+                    onLayout={scrollToLatestMessage}
                     keyExtractor={(item) => item.id}
                     ListEmptyComponent={
                       messagesQuery.isPending ? (
@@ -584,69 +801,13 @@ export function ChatScreen({ route }: ChatScreenProps) {
                         />
                       )
                     }
-                    renderItem={({ item }) => {
-                      const isOwnMessage = item.userId === userId;
-                      const authorName =
-                        [item.authorFirstName, item.authorLastName].filter(Boolean).join(' ') ||
-                        t('events.chat.deletedParticipant');
-                      const body = item.isDeleted ? t('events.chat.deletedBody') : item.body;
-
-                      return (
-                        <View
-                          style={[styles.messageRow, isOwnMessage ? styles.messageRowOwn : null]}
-                        >
-                          {isOwnMessage ? (
-                            <View style={styles.messageAvatarSpacer} />
-                          ) : (
-                            <AvatarPhoto label={authorName} uri={item.authorPhotoUrl} size={34} />
-                          )}
-                          <View
-                            style={[
-                              styles.messageColumn,
-                              isOwnMessage ? styles.messageColumnOwn : null,
-                            ]}
-                          >
-                            <View
-                              style={[
-                                styles.messageHeader,
-                                isOwnMessage ? styles.messageHeaderOwn : null,
-                              ]}
-                            >
-                              {!isOwnMessage ? (
-                                <Text numberOfLines={1} style={styles.messageAuthor}>
-                                  {authorName}
-                                </Text>
-                              ) : null}
-                              <Text style={styles.messageTimestamp}>
-                                {formatChatTimestamp(item.sentAt, language)}
-                              </Text>
-                            </View>
-                            <View
-                              style={[
-                                styles.messageBubble,
-                                item.isDeleted
-                                  ? styles.messageBubbleDeleted
-                                  : isOwnMessage
-                                    ? styles.messageBubbleOwn
-                                    : styles.messageBubbleOther,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.messageBody,
-                                  !item.isDeleted && isOwnMessage
-                                    ? styles.messageBodyOwn
-                                    : undefined,
-                                  item.isDeleted ? styles.messageBodyDeleted : undefined,
-                                ]}
-                              >
-                                {body}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    }}
+                    renderItem={({ item }) =>
+                      item.type === 'divider' ? (
+                        <ChatDateDivider label={item.label} />
+                      ) : (
+                        <ChatMessageRow item={item.message} t={t} userId={userId} />
+                      )
+                    }
                     showsVerticalScrollIndicator={false}
                     style={styles.messageList}
                   />
@@ -657,7 +818,15 @@ export function ChatScreen({ route }: ChatScreenProps) {
         </View>
 
         {showInput ? (
-          <View style={[styles.inputWrap, { paddingBottom: footerBottomPadding }]}>
+          <View
+            style={[
+              styles.inputWrap,
+              {
+                paddingBottom: footerBottomPadding,
+                transform: [{ translateY: -keyboardLift }],
+              },
+            ]}
+          >
             <Controller
               control={messageForm.control}
               name="body"
@@ -701,9 +870,9 @@ export function ChatScreen({ route }: ChatScreenProps) {
                       ]}
                     >
                       {sendMessageMutation.isPending ? (
-                        <ActivityIndicator color="#fff8f0" size="small" />
+                        <ActivityIndicator color="#10233f" size="small" />
                       ) : (
-                        <Ionicons color="#fff8f0" name="arrow-up" size={20} />
+                        <Ionicons color="#10233f" name="paper-plane" size={20} />
                       )}
                     </Pressable>
                   </View>
@@ -712,12 +881,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
                     <Text style={styles.errorText}>
                       {messageForm.formState.errors.body.message}
                     </Text>
-                  ) : (
-                    <View style={styles.helperRow}>
-                      <Ionicons color="#8ea0b4" name="information-circle-outline" size={14} />
-                      <Text style={styles.helperText}>{t('events.chat.inputHelper')}</Text>
-                    </View>
-                  )}
+                  ) : null}
                 </>
               )}
             />
@@ -733,7 +897,7 @@ export function ChatScreen({ route }: ChatScreenProps) {
           </View>
         ) : null}
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -745,56 +909,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f7f0e6',
   },
-  hero: {
-    marginHorizontal: 18,
-    marginTop: 14,
-    borderRadius: 26,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    backgroundColor: '#183153',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
   },
-  heroIdentity: {
-    flexDirection: 'row',
+  headerButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#ede1d2',
   },
-  heroCopy: {
+  headerCopy: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
   },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#fff8f0',
-  },
-  heroSubtitle: {
+  headerTitle: {
     fontSize: 15,
-    color: '#d2dde8',
+    fontWeight: '900',
+    color: '#06162f',
   },
-  heroMetaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  heroMetaPill: {
+  headerMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255, 248, 240, 0.12)',
+    gap: 5,
+    marginTop: 2,
   },
-  heroMetaPillLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#dbe4ee',
+  headerStatusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: '#29e778',
+  },
+  headerMeta: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#20d66f',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingHorizontal: 20,
     gap: 10,
   },
   centeredBlock: {
@@ -833,213 +994,190 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#395065',
   },
-  messagesPanel: {
+  eventCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    borderRadius: 13,
+    paddingHorizontal: 14,
+    backgroundColor: '#08162b',
+  },
+  eventIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d8ff45',
+  },
+  eventCardCopy: {
     flex: 1,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#eadfce',
-    backgroundColor: '#fffaf5',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 6,
-    shadowColor: '#10233f',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    elevation: 1,
+    minWidth: 0,
   },
-  messagesPanelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    paddingHorizontal: 4,
-    paddingBottom: 10,
-  },
-  messagesPanelTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  messagesPanelTitle: {
+  eventCardTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#183153',
+    color: '#ffffff',
   },
-  messagesPanelSignals: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  syncPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#eef2f7',
-  },
-  syncPillLabel: {
+  eventCardMeta: {
+    marginTop: 2,
     fontSize: 11,
     fontWeight: '700',
-    color: '#5f7388',
+    color: '#aebed0',
   },
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  statusPillLive: {
-    backgroundColor: '#e6f3ec',
-  },
-  statusPillMuted: {
-    backgroundColor: '#f0e7d9',
-  },
-  statusPillLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#2f8154',
-  },
-  statusPillLabelMuted: {
-    color: '#8a694f',
+  timeline: {
+    flex: 1,
+    paddingTop: 8,
   },
   messageList: {
     flex: 1,
   },
   messageListContent: {
-    paddingHorizontal: 4,
-    paddingTop: 4,
-    paddingBottom: 12,
+    paddingBottom: 18,
+    paddingTop: 8,
   },
   messageListContentEmpty: {
     flexGrow: 1,
     justifyContent: 'center',
   },
+  dateDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 14,
+  },
+  dateDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2d8ca',
+  },
+  dateDividerLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: '#948b80',
+  },
   messageRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   messageRowOwn: {
     justifyContent: 'flex-end',
   },
-  messageAvatarSpacer: {
-    width: 34,
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginTop: 18,
+  },
+  avatarFallback: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    backgroundColor: '#5aa0ff',
+  },
+  avatarFallbackText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#ffffff',
   },
   messageColumn: {
-    flex: 1,
-    maxWidth: '82%',
-    gap: 5,
-  },
-  messageColumnOwn: {
-    alignItems: 'flex-end',
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 6,
-  },
-  messageHeaderOwn: {
-    justifyContent: 'flex-end',
+    maxWidth: '78%',
+    gap: 4,
   },
   messageAuthor: {
-    flexShrink: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#395065',
-  },
-  messageTimestamp: {
+    marginLeft: 4,
     fontSize: 11,
-    color: '#8393a4',
+    fontWeight: '700',
+    color: '#8d8173',
   },
   messageBubble: {
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  messageBubbleOwnSize: {
+    maxWidth: '78%',
   },
   messageBubbleOther: {
-    backgroundColor: '#fffdf9',
-    borderColor: '#eadfce',
+    alignSelf: 'flex-start',
+    backgroundColor: '#ffffff',
   },
   messageBubbleOwn: {
-    backgroundColor: '#183153',
-    borderColor: '#183153',
+    alignSelf: 'flex-end',
+    backgroundColor: '#08162b',
   },
   messageBubbleDeleted: {
-    backgroundColor: '#f4eee5',
-    borderColor: '#e7dbca',
+    backgroundColor: '#eee6da',
   },
   messageBody: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#183153',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#071426',
   },
   messageBodyOwn: {
-    color: '#fff8f0',
+    color: '#ffffff',
   },
   messageBodyDeleted: {
     fontStyle: 'italic',
     color: '#6f7c8b',
   },
   inputWrap: {
-    borderTopWidth: 1,
-    borderTopColor: '#eadfce',
-    backgroundColor: '#fffaf3',
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    gap: 8,
+    backgroundColor: '#f7f0e6',
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
   composerCard: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#e2d4c3',
-    backgroundColor: '#fffdf9',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 56,
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    paddingLeft: 18,
+    paddingRight: 7,
+    paddingVertical: 7,
     shadowColor: '#10233f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
     elevation: 1,
   },
   composerCardError: {
+    borderWidth: 1,
     borderColor: '#d15b5b',
   },
   input: {
     flex: 1,
-    minHeight: 46,
-    maxHeight: 140,
-    paddingTop: 2,
-    paddingBottom: 2,
-    fontSize: 15,
-    lineHeight: 22,
+    minHeight: 42,
+    maxHeight: 112,
+    paddingTop: 8,
+    paddingBottom: 8,
+    fontSize: 14,
+    lineHeight: 20,
     color: '#183153',
+    includeFontPadding: false,
   },
   sendButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#183153',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#d8ff45',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: '#9fb0c2',
+    opacity: 0.42,
   },
   sendButtonPressed: {
     opacity: 0.9,
-  },
-  helperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   helperText: {
     flex: 1,
@@ -1058,8 +1196,8 @@ const styles = StyleSheet.create({
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: '#eadfce',
-    backgroundColor: '#fffaf3',
-    paddingHorizontal: 18,
+    backgroundColor: '#f7f0e6',
+    paddingHorizontal: 20,
     paddingTop: 12,
   },
 });

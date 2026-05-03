@@ -4,15 +4,13 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  InputAccessoryView,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -32,6 +30,7 @@ import { z } from 'zod';
 import { ActionButton, FormTextField, NoticeBanner } from '../auth/AuthPrimitives';
 import {
   CreateEventSuccessOverlay,
+  type CreateEventSuccessOverlayOrigin,
   type CreateEventSuccessSummary,
 } from './CreateEventSuccessOverlay';
 import { canOrganizerEditEvent } from './event-eligibility';
@@ -72,7 +71,6 @@ type PickerTarget = 'date' | 'start' | 'end' | null;
 const skillLevelValues = [1, 2, 3, 4] as const;
 type SkillLevelValue = (typeof skillLevelValues)[number];
 const durationOptions = [60, 90, 120] as const;
-const descriptionAccessoryId = 'create-event-description-accessory';
 
 type CreateEventSuccessState = {
   eventId: string;
@@ -839,7 +837,12 @@ function StickySubmitCard({
   buttonLabel,
   disabled,
   isLoading,
+  buttonScale,
+  buttonWrapperRef,
+  onButtonLayout,
   onPress,
+  onPressIn,
+  onPressOut,
   t,
 }: {
   sport: SportSummary | undefined;
@@ -852,7 +855,12 @@ function StickySubmitCard({
   buttonLabel: string;
   disabled: boolean;
   isLoading: boolean;
+  buttonScale: Animated.Value;
+  buttonWrapperRef: RefObject<View | null>;
+  onButtonLayout: () => void;
   onPress: () => void;
+  onPressIn: () => void;
+  onPressOut: () => void;
   t: ReturnType<typeof useTranslation>['t'];
 }) {
   const sportName = sport
@@ -893,20 +901,26 @@ function StickySubmitCard({
         </View>
       </View>
 
-      <Pressable
-        accessibilityLabel={buttonLabel}
-        accessibilityRole="button"
-        disabled={disabled}
-        onPress={onPress}
-        style={[
-          styles.stickySubmitButton,
-          disabled ? styles.stickySubmitButtonDisabled : undefined,
-        ]}
-      >
-        {isLoading ? <ActivityIndicator color="#10233f" size="small" /> : null}
-        <Text style={styles.stickySubmitButtonLabel}>{buttonLabel}</Text>
-        {!isLoading ? <Ionicons color="#10233f" name="arrow-forward" size={18} /> : null}
-      </Pressable>
+      <View onLayout={onButtonLayout} ref={buttonWrapperRef}>
+        <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+          <Pressable
+            accessibilityLabel={buttonLabel}
+            accessibilityRole="button"
+            disabled={disabled}
+            onPress={onPress}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            style={[
+              styles.stickySubmitButton,
+              disabled ? styles.stickySubmitButtonDisabled : undefined,
+            ]}
+          >
+            {isLoading ? <ActivityIndicator color="#10233f" size="small" /> : null}
+            <Text style={styles.stickySubmitButtonLabel}>{buttonLabel}</Text>
+            {!isLoading ? <Ionicons color="#10233f" name="arrow-forward" size={18} /> : null}
+          </Pressable>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -916,11 +930,11 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const scrollViewRef = useRef<ScrollView>(null);
-  const descriptionCardOffsetRef = useRef(0);
+  const stickyButtonWrapperRef = useRef<View>(null);
   const overlayScreenScale = useRef(new Animated.Value(1)).current;
   const overlayScreenTranslateY = useRef(new Animated.Value(0)).current;
   const overlayScreenOpacity = useRef(new Animated.Value(1)).current;
+  const stickyButtonScale = useRef(new Animated.Value(1)).current;
   const userId = useAuthStore((state) => state.userId);
   const selectedCity = useUserStore((state) => state.selectedCity);
   const language = useUserStore((state) => state.language);
@@ -943,6 +957,8 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   const [pickerDraftValue, setPickerDraftValue] = useState(new Date());
   const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
   const [successState, setSuccessState] = useState<CreateEventSuccessState | null>(null);
+  const [successOriginFrame, setSuccessOriginFrame] =
+    useState<CreateEventSuccessOverlayOrigin | null>(null);
   const [isSuccessActionPending, setIsSuccessActionPending] = useState(false);
 
   const eventForm = useForm<CreateEventValues>({
@@ -986,24 +1002,6 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   }, [debouncedVenueSearch, activeVenueFilter, selectedCity]);
 
   useEffect(() => {
-    if (!isDescriptionFocused) {
-      return;
-    }
-
-    const scrollToComposer = () => {
-      const revealOffset = insets.top + 138;
-      const nextPosition = Math.max(descriptionCardOffsetRef.current - revealOffset, 0);
-      scrollViewRef.current?.scrollTo({ y: nextPosition, animated: true });
-    };
-
-    const initialHandle = setTimeout(scrollToComposer, 110);
-
-    return () => {
-      clearTimeout(initialHandle);
-    };
-  }, [insets.top, isDescriptionFocused]);
-
-  useEffect(() => {
     const isOverlayVisible = Boolean(successState);
     const entrance = Animated.parallel([
       Animated.timing(overlayScreenScale, {
@@ -1032,6 +1030,28 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
       entrance.stop();
     };
   }, [overlayScreenOpacity, overlayScreenScale, overlayScreenTranslateY, successState]);
+
+  const animateStickyButtonScale = useCallback(
+    (nextValue: number, duration = 130) => {
+      Animated.timing(stickyButtonScale, {
+        toValue: nextValue,
+        duration,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    },
+    [stickyButtonScale],
+  );
+
+  function measureStickyButtonFrame() {
+    requestAnimationFrame(() => {
+      stickyButtonWrapperRef.current?.measureInWindow((x, y, width, height) => {
+        if (width > 0 && height > 0) {
+          setSuccessOriginFrame({ x, y, width, height });
+        }
+      });
+    });
+  }
 
   const sportsQuery = useQuery({
     queryKey: ['sports', 'active'],
@@ -1112,6 +1132,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
     mutationFn: createEvent,
     onSuccess: (createdEvent) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      measureStickyButtonFrame();
       setSuccessState(
         buildCreateEventSuccessState({
           createdEvent,
@@ -1190,6 +1211,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
     try {
       await createEventMutation.mutateAsync(input);
     } catch (error) {
+      animateStickyButtonScale(1, 150);
       const mappedNotice = mapEventErrorToNotice(error, mode);
 
       if (error instanceof EdgeFunctionError && error.code === 'SKILL_LEVEL_REQUIRED') {
@@ -1204,6 +1226,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
     try {
       await updateEventMutation.mutateAsync(input);
     } catch (error) {
+      animateStickyButtonScale(1, 150);
       setAuthNotice(mapEventErrorToNotice(error, mode));
     }
   }
@@ -1216,8 +1239,11 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
     clearAuthNotice();
     setIsDescriptionFocused(false);
     Keyboard.dismiss();
+    measureStickyButtonFrame();
+    animateStickyButtonScale(0.985, 90);
 
     if (values.skillMin === null || values.skillMax === null) {
+      animateStickyButtonScale(1, 150);
       setAuthNotice({
         messageKey: 'events.create.validation.skillRequired',
         tone: 'error',
@@ -1244,6 +1270,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
       const editableEvent = editingEventQuery.data;
 
       if (!eventId || !editableEvent) {
+        animateStickyButtonScale(1, 150);
         setAuthNotice({
           messageKey: 'events.edit.errors.unavailable',
           tone: 'info',
@@ -1252,6 +1279,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
       }
 
       if (!canOrganizerEditEvent(editableEvent)) {
+        animateStickyButtonScale(1, 150);
         setAuthNotice({
           messageKey: 'events.edit.errors.unavailable',
           tone: 'info',
@@ -1260,6 +1288,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
       }
 
       if (values.playerCountTotal < editableEvent.spotsTaken) {
+        animateStickyButtonScale(1, 150);
         setAuthNotice({
           messageKey: 'events.edit.errors.playerCountTooLow',
           tone: 'error',
@@ -1287,6 +1316,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
       );
 
       if (!hasSportProfile) {
+        animateStickyButtonScale(1, 150);
         openSkillLevelRequirement(eventInput);
         return;
       }
@@ -1328,6 +1358,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   function finishSuccessFlow(nextEventId: string) {
     setIsSuccessActionPending(false);
     setSuccessState(null);
+    setSuccessOriginFrame(null);
     navigation.navigate('EventDetail', { eventId: nextEventId });
   }
 
@@ -1378,6 +1409,12 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
   const visibleNotice = notice?.messageKey.startsWith('events.') ? notice : null;
   const isSuccessOverlayVisible = Boolean(successState);
   const isInteractionLocked = isSubmitting || isSuccessOverlayVisible || isSuccessActionPending;
+
+  useEffect(() => {
+    if (!isSubmitting && !isSuccessOverlayVisible) {
+      animateStickyButtonScale(1, 140);
+    }
+  }, [animateStickyButtonScale, isSubmitting, isSuccessOverlayVisible]);
 
   const venueFilters = useMemo(
     () => [
@@ -1614,13 +1651,9 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
           />
         ) : null}
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 72 : 0}
-          style={styles.flex}
-        >
+        <View style={styles.flex}>
           <ScrollView
-            ref={scrollViewRef}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             contentContainerStyle={[
               styles.scrollContent,
               {
@@ -1992,19 +2025,11 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
                   step="05"
                   title={t('events.create.sections.detailsQuestion')}
                 >
-                  <View
-                    onLayout={(event) => {
-                      descriptionCardOffsetRef.current = event.nativeEvent.layout.y;
-                    }}
-                    style={styles.descriptionCard}
-                  >
+                  <View style={styles.descriptionCard}>
                     <Text style={styles.descriptionLabel}>{t('events.create.description')}</Text>
                     <TextInput
                       accessibilityLabel={t('events.create.description')}
                       editable={!isInteractionLocked}
-                      inputAccessoryViewID={
-                        Platform.OS === 'ios' ? descriptionAccessoryId : undefined
-                      }
                       multiline
                       numberOfLines={5}
                       onBlur={() => setIsDescriptionFocused(false)}
@@ -2065,12 +2090,25 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
               ]}
             >
               <StickySubmitCard
+                buttonScale={stickyButtonScale}
                 buttonLabel={submitFeedbackLabel}
+                buttonWrapperRef={stickyButtonWrapperRef}
                 disabled={!eventForm.formState.isValid || isInteractionLocked}
                 endTime={previewEndsAt}
                 isLoading={isSubmitting}
                 language={language}
+                onButtonLayout={measureStickyButtonFrame}
                 onPress={eventForm.handleSubmit(handleEventSubmit)}
+                onPressIn={() => {
+                  if (!isSubmitting && !isSuccessOverlayVisible) {
+                    animateStickyButtonScale(0.985, 90);
+                  }
+                }}
+                onPressOut={() => {
+                  if (!isSubmitting && !isSuccessOverlayVisible) {
+                    animateStickyButtonScale(1, 140);
+                  }
+                }}
                 playerCountTotal={formValues.playerCountTotal}
                 skillRangeLabel={skillRangeLabel}
                 sport={selectedSport}
@@ -2080,30 +2118,10 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
               />
             </View>
           ) : null}
-        </KeyboardAvoidingView>
+        </View>
 
         {isInteractionLocked ? (
           <View pointerEvents="auto" style={styles.interactionShield} />
-        ) : null}
-
-        {Platform.OS === 'ios' ? (
-          <InputAccessoryView nativeID={descriptionAccessoryId}>
-            <View style={styles.keyboardAccessory}>
-              <Pressable
-                accessibilityLabel={t('events.create.hideKeyboard')}
-                accessibilityRole="button"
-                onPress={() => {
-                  setIsDescriptionFocused(false);
-                  Keyboard.dismiss();
-                }}
-                style={styles.keyboardAccessoryButton}
-              >
-                <Text style={styles.keyboardAccessoryButtonLabel}>
-                  {t('events.create.hideKeyboard')}
-                </Text>
-              </Pressable>
-            </View>
-          </InputAccessoryView>
         ) : null}
       </Animated.View>
 
@@ -2111,6 +2129,8 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
         closeLabel={t('events.create.successCloseAction')}
         isActionPending={isSuccessActionPending}
         onClose={handleSuccessClose}
+        originButtonLabel={submitLabel}
+        originFrame={successOriginFrame}
         onPrimaryAction={handleSuccessInvite}
         onSecondaryAction={handleSuccessClose}
         primaryActionLabel={t('events.create.successInviteAction')}
@@ -3016,27 +3036,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     color: '#10233f',
-  },
-  keyboardAccessory: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e4e9f0',
-  },
-  keyboardAccessoryButton: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#10233f',
-  },
-  keyboardAccessoryButtonLabel: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#ffffff',
   },
   interactionShield: {
     ...StyleSheet.absoluteFillObject,

@@ -155,6 +155,7 @@ function MyGamesStackNavigator() {
         component={MyGamesScreen}
         name="MyGames"
         options={{
+          headerShown: false,
           title: t('navigation.titles.myGames'),
         }}
       />
@@ -379,6 +380,7 @@ export function AppNavigator() {
           component={EventDetailScreen}
           name="EventDetail"
           options={{
+            headerShown: false,
             title: t('navigation.titles.eventDetail'),
           }}
         />
@@ -393,6 +395,7 @@ export function AppNavigator() {
           component={ChatScreen}
           name="Chat"
           options={{
+            headerShown: false,
             title: t('navigation.titles.chat'),
           }}
         />

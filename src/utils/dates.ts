@@ -28,6 +28,15 @@ export function formatEventDate(input: DateInput, language: AppLanguage = 'cs'):
   );
 }
 
+export function formatEventCompactDate(input: DateInput, language: AppLanguage = 'cs'): string {
+  return formatInTimeZone(
+    toDate(input),
+    getLocalTimeZone(),
+    language === 'cs' ? 'EEE d. M.' : 'EEE, MMM d',
+    { locale: localeMap[language] },
+  );
+}
+
 export function formatEventTime(input: DateInput, language: AppLanguage = 'cs'): string {
   return formatInTimeZone(toDate(input), getLocalTimeZone(), 'HH:mm', {
     locale: localeMap[language],

@@ -13,9 +13,11 @@ import type { NavigationProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
 import { addDays, format, isSameWeek, isToday, isTomorrow, startOfWeek } from 'date-fns';
 import { cs, enUS } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton } from '../auth/AuthPrimitives';
 import {
@@ -54,6 +56,8 @@ const weekdayChipMap = {
   cs: ['PO', 'ÚT', 'ST', 'ČT', 'PÁ', 'SO', 'NE'],
   en: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'],
 } as const;
+
+const CALENDAR_PREVIEW_DAYS = 35;
 
 function getDateFnsLocale(language: AppLanguage) {
   return localeMap[language];
@@ -452,6 +456,7 @@ export function MyGamesScreen() {
   const { t } = useTranslation();
   const isScreenFocused = useIsFocused();
   const navigation = useNavigation<RootNavigation>();
+  const insets = useSafeAreaInsets();
   const language = useUserStore((state) => state.language);
   const userId = useAuthStore((state) => state.userId);
   const [activeTab, setActiveTab] = useState<MyGamesTab>('upcoming');
@@ -499,18 +504,16 @@ export function MyGamesScreen() {
       ).length,
     [upcomingItems],
   );
-  const currentWeekDays = useMemo(() => {
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const nextUpcomingThisWeek = upcomingItems.find((item) =>
-      isSameWeek(new Date(item.startsAt), new Date(), { weekStartsOn: 1 }),
-    );
+  const calendarDays = useMemo(() => {
+    const calendarStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const nextUpcoming = upcomingItems[0] ?? null;
     const highlightedKey = format(
-      nextUpcomingThisWeek ? new Date(nextUpcomingThisWeek.startsAt) : new Date(),
+      nextUpcoming ? new Date(nextUpcoming.startsAt) : new Date(),
       'yyyy-MM-dd',
     );
 
-    return Array.from({ length: 7 }).map((_, index) => {
-      const date = addDays(weekStart, index);
+    return Array.from({ length: CALENDAR_PREVIEW_DAYS }).map((_, index) => {
+      const date = addDays(calendarStart, index);
       const dateKey = format(date, 'yyyy-MM-dd');
       const hasGame = upcomingItems.some(
         (item) => format(new Date(item.startsAt), 'yyyy-MM-dd') === dateKey,
@@ -519,7 +522,7 @@ export function MyGamesScreen() {
       return {
         date,
         dateKey,
-        dayLabel: weekdayChipMap[language][index],
+        dayLabel: weekdayChipMap[language][index % 7],
         dayNumber: format(date, 'd', { locale: getDateFnsLocale(language) }),
         highlighted: dateKey === highlightedKey,
         hasGame,
@@ -553,6 +556,7 @@ export function MyGamesScreen() {
   function renderHeader() {
     return (
       <View style={styles.headerWrap}>
+        <Text style={styles.screenTitle}>{t('navigation.titles.myGames')}</Text>
         <Text style={styles.monthLabel}>{headerMonthLabel}</Text>
 
         {activeTab === 'upcoming' ? (
@@ -573,39 +577,50 @@ export function MyGamesScreen() {
             )}
 
             <View style={styles.weekStrip}>
-              {currentWeekDays.map((day) => (
-                <View
-                  key={day.dateKey}
-                  style={[
-                    styles.weekDayCard,
-                    day.highlighted ? styles.weekDayCardActive : undefined,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.weekDayLabel,
-                      day.highlighted ? styles.weekDayLabelActive : undefined,
-                    ]}
-                  >
-                    {day.dayLabel}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.weekDayNumber,
-                      day.highlighted ? styles.weekDayNumberActive : undefined,
-                    ]}
-                  >
-                    {day.dayNumber}
-                  </Text>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                contentContainerStyle={styles.weekStripContent}
+                showsHorizontalScrollIndicator={false}
+              >
+                {calendarDays.map((day) => (
                   <View
+                    key={day.dateKey}
                     style={[
-                      styles.weekDayDot,
-                      day.hasGame ? styles.weekDayDotVisible : undefined,
-                      day.highlighted ? styles.weekDayDotActive : undefined,
+                      styles.weekDayCard,
+                      day.highlighted ? styles.weekDayCardActive : undefined,
                     ]}
-                  />
-                </View>
-              ))}
+                  >
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.weekDayLabel,
+                        day.highlighted ? styles.weekDayLabelActive : undefined,
+                      ]}
+                    >
+                      {day.dayLabel}
+                    </Text>
+                    <Text
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.78}
+                      numberOfLines={1}
+                      style={[
+                        styles.weekDayNumber,
+                        day.highlighted ? styles.weekDayNumberActive : undefined,
+                      ]}
+                    >
+                      {day.dayNumber}
+                    </Text>
+                    <View
+                      style={[
+                        styles.weekDayDot,
+                        day.hasGame ? styles.weekDayDotVisible : undefined,
+                        day.highlighted ? styles.weekDayDotActive : undefined,
+                      ]}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
             </View>
           </>
         ) : (
@@ -743,9 +758,17 @@ export function MyGamesScreen() {
     );
   }
 
+  const listBottomPadding = Math.max(insets.bottom, 16) + 128;
+
   return (
     <ScrollView
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[
+        styles.listContent,
+        {
+          paddingTop: insets.top + 18,
+          paddingBottom: listBottomPadding,
+        },
+      ]}
       refreshControl={
         <RefreshControl
           onRefresh={() => {
@@ -759,6 +782,7 @@ export function MyGamesScreen() {
       showsVerticalScrollIndicator={false}
       style={styles.screen}
     >
+      {isScreenFocused ? <StatusBar style="dark" /> : null}
       {renderHeader()}
       {renderTimeline()}
     </ScrollView>
@@ -772,12 +796,18 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 40,
   },
   headerWrap: {
-    gap: 16,
+    gap: 14,
     marginBottom: 22,
+  },
+  screenTitle: {
+    marginBottom: 4,
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '900',
+    color: '#10233f',
   },
   monthLabel: {
     fontSize: 12,
@@ -802,12 +832,8 @@ const styles = StyleSheet.create({
     color: '#10233f',
   },
   weekStrip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
     borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#eee0ce',
@@ -817,29 +843,34 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
+  weekStripContent: {
+    gap: 8,
+    paddingHorizontal: 12,
+  },
   weekDayCard: {
-    flex: 1,
-    minHeight: 84,
+    width: 48,
+    minHeight: 62,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    paddingVertical: 8,
-    gap: 4,
+    borderRadius: 16,
+    paddingVertical: 7,
+    gap: 3,
   },
   weekDayCardActive: {
     backgroundColor: '#132b4f',
   },
   weekDayLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '800',
     color: '#8897aa',
   },
   weekDayLabelActive: {
     color: '#f3f7fb',
   },
   weekDayNumber: {
-    fontSize: 32,
-    lineHeight: 34,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '900',
     color: '#132b4f',
   },
