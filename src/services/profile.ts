@@ -23,6 +23,13 @@ type ProfilePreferencesInput = {
 };
 
 async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Promise<string> {
+  const shouldKeepPng = asset.mimeType === 'image/png';
+  const outputFormat = shouldKeepPng
+    ? ImageManipulator.SaveFormat.PNG
+    : ImageManipulator.SaveFormat.JPEG;
+  const extension = shouldKeepPng ? 'png' : 'jpg';
+  const contentType = shouldKeepPng ? 'image/png' : 'image/jpeg';
+
   const manipulated = await ImageManipulator.manipulateAsync(
     asset.uri,
     [
@@ -35,24 +42,19 @@ async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Prom
     ],
     {
       compress: 0.72,
-      format:
-        asset.mimeType === 'image/png'
-          ? ImageManipulator.SaveFormat.PNG
-          : ImageManipulator.SaveFormat.JPEG,
+      format: outputFormat,
     },
   );
 
   const fileResponse = await fetch(manipulated.uri);
   const blob = await fileResponse.blob();
-  const extension =
-    asset.mimeType === 'image/png' ? 'png' : asset.mimeType === 'image/webp' ? 'webp' : 'jpg';
-  const objectPath = `${userId}/avatar.${extension}`;
+  const objectPath = `${userId}/avatar-${Date.now()}.${extension}`;
 
   const uploadResult = await retrySupabaseOperationOnce(() =>
     supabase.storage.from('avatars').upload(objectPath, blob, {
       cacheControl: '3600',
-      contentType: asset.mimeType ?? 'image/jpeg',
-      upsert: true,
+      contentType,
+      upsert: false,
     }),
   );
 
@@ -81,10 +83,19 @@ export async function saveProfileSetup(input: ProfileUpdateInput): Promise<void>
   };
 
   const result = await retrySupabaseOperationOnce(() =>
-    supabase.from('profiles').update(updatePayload).eq('id', input.userId),
+    supabase
+      .from('profiles')
+      .update(updatePayload)
+      .eq('id', input.userId)
+      .select('id')
+      .maybeSingle(),
   );
 
   throwIfSupabaseError(result.error, 'Unable to save the profile.');
+
+  if (!result.data) {
+    throw new Error('Unable to save the profile.');
+  }
 }
 
 export async function saveProfilePreferences(input: ProfilePreferencesInput): Promise<void> {

@@ -1,3 +1,20 @@
+## Create Event CTA Morph Transition Pass
+
+### Problem
+The current post-create success moment already uses an overlay, but it still appears as a separate layer instead of feeling like it grows directly out of the sticky `Vytvořit hru` CTA.
+
+### Approach
+Keep the existing create success logic and overlay content, but add a measured button-origin transition: subtle press feedback on the sticky CTA, then a native-driver morph layer that expands from the CTA into the success overlay before the success content fades in.
+
+### Steps
+1. Capture the sticky CTA frame and add gentle pressed feedback on tap without changing the existing form or backend flow.
+2. Extend the success overlay to accept the CTA origin frame and render a morph layer plus button clone that animate from the CTA into the full-screen success state.
+3. Keep the existing success actions and navigation, rerun validation, and describe how to test the smoothness on a real iPhone.
+
+### Open questions / risks
+- Without Reanimated in the project, the morph needs to stay on transform/opacity animations only to preserve smoothness.
+- The transition should gracefully fall back to the current overlay reveal if the button frame cannot be measured for any reason.
+
 ## Create Event Success Overlay Fidelity Pass
 
 ### Problem

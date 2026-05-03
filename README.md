@@ -69,6 +69,10 @@ Launch-site asset variables used during Milestone 11:
 - `HRAYEM_APPLE_TEAM_ID`: Apple Team ID used to generate `apple-app-site-association`
 - `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS`: comma-separated release certificate SHA-256 fingerprints for `assetlinks.json`; may stay blank while Android app-link proof is deferred
 
+Shared launch smoke variable:
+
+- `HRAYEM_SMOKE_EVENT_ID`: UUID of a stable public upcoming event used by the shared-environment smoke suite to verify the public share route and live `/event/<id>` fallback without creating test data
+
 ## How to run locally
 
 ```bash
@@ -181,7 +185,7 @@ pnpm dlx supabase functions deploy share
 pnpm run verify:milestone1
 pnpm run verify:milestone4
 pnpm run verify:milestone10
-pnpm run verify:milestone11
+pnpm run verify:launch:smoke
 ```
 
 Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
@@ -213,6 +217,22 @@ pnpm run generate:launch-assets
 That command currently targets `https://www.hrayem.cz`. It always requires real iPhone/web inputs for the current launch target: `EXPO_PUBLIC_WEB_BASE_URL`, `EXPO_PUBLIC_APP_STORE_URL`, and `HRAYEM_APPLE_TEAM_ID`. It generates `public/.well-known/apple-app-site-association` for Apple/web now, and only generates `public/.well-known/assetlinks.json` when `EXPO_PUBLIC_PLAY_STORE_URL` and `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS` are both available for Android launch proof.
 
 The website should also host `public/privacy/index.html`, `public/terms/index.html`, the generated `public/.well-known/` files, and the Expo web build so shared `https://www.hrayem.cz/event/<id>` links can render the public fallback page for users without the app. The repo now includes a minimal [vercel.json](/home/martin/hrayem/vercel.json) for `/event/*`, `/privacy`, `/terms`, and `/.well-known/*`, and the current live iPhone/web host is `https://www.hrayem.cz`. Android app-link deployment is still intentionally deferred until the final Play-side inputs exist.
+
+For shared or production-like environments, run the safe smoke suite after deploy:
+
+```bash
+pnpm run verify:launch:smoke
+```
+
+`verify:launch:smoke` is read-only. It uses the public website, the anon Supabase key, and `HRAYEM_SMOKE_EVENT_ID` to confirm the current iPhone/web launch surface without creating or deleting data.
+
+If you need deeper end-to-end proof in an isolated environment where temporary write/delete activity is acceptable, run the existing Milestone 11 verifier instead:
+
+```bash
+pnpm run verify:milestone11
+```
+
+`verify:milestone11` still uses the service-role key to insert and clean up a synthetic event so it should not be the default shared-environment launch gate.
 
 ## Build and submit
 
