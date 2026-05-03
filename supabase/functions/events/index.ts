@@ -173,6 +173,13 @@ function errorResponse(code: ApiErrorCode, message: string, status: number): Res
   );
 }
 
+class MissingAuthorizationHeaderError extends Error {
+  constructor() {
+    super('Missing Authorization header.');
+    this.name = 'MissingAuthorizationHeaderError';
+  }
+}
+
 type RateLimitConfig = {
   bucket: string;
   limit: number;
@@ -850,19 +857,18 @@ function mapEventMutationError(message: string): {
   };
 }
 
-function createSupabaseClients(request: Request) {
+function createAuthClient(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase environment is not configured.');
   }
 
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader) {
-    throw new Error('Missing Authorization header.');
+    throw new MissingAuthorizationHeaderError();
   }
 
   const authClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -877,10 +883,7 @@ function createSupabaseClients(request: Request) {
     },
   });
 
-  return {
-    authClient,
-    adminClient: createAdminClient(),
-  };
+  return authClient;
 }
 
 function createAdminClient() {
@@ -914,7 +917,7 @@ function getDisplayName(input: { firstName: string | null; lastName: string | nu
 }
 
 async function loadEventNotificationContext(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   eventId: string,
 ): Promise<EventNotificationContext> {
   const eventResult = await adminClient
@@ -936,7 +939,7 @@ async function loadEventNotificationContext(
 }
 
 async function loadDisplayNames(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   userIds: string[],
 ): Promise<Map<string, string>> {
   if (!userIds.length) {
@@ -970,7 +973,7 @@ async function loadDisplayNames(
 }
 
 async function sendJoinNotifications(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   input: {
     eventId: string;
     joinedUserId: string;
@@ -1033,7 +1036,7 @@ async function sendJoinNotifications(
 }
 
 async function sendLeaveNotifications(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   input: {
     actorUserId: string;
     targetUserId: string;
@@ -1076,7 +1079,7 @@ async function sendLeaveNotifications(
 }
 
 async function sendCancelNotifications(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   input: {
     actorUserId: string;
     eventId: string;
@@ -1118,7 +1121,7 @@ async function sendCancelNotifications(
 }
 
 async function sendChatNotifications(
-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
+  adminClient: ReturnType<typeof createAdminClient>,
   input: {
     eventId: string;
     senderUserId: string;
@@ -1281,7 +1284,21 @@ async function handleDispatchRemindersRoute(request: Request): Promise<Response>
 }
 
 async function requireAuthenticatedUser(request: Request) {
-  const { authClient, adminClient } = createSupabaseClients(request);
+  let authClient: ReturnType<typeof createAuthClient>;
+
+  try {
+    authClient = createAuthClient(request);
+  } catch (error) {
+    if (error instanceof MissingAuthorizationHeaderError) {
+      return {
+        ok: false as const,
+        response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
+      };
+    }
+
+    throw error;
+  }
+
   const {
     data: { user },
     error: userError,
@@ -1297,7 +1314,7 @@ async function requireAuthenticatedUser(request: Request) {
   return {
     ok: true as const,
     user,
-    adminClient,
+    adminClient: createAdminClient(),
   };
 }
 

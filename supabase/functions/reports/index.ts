@@ -109,12 +109,11 @@ async function readJsonBody(request: Request): Promise<unknown> {
   return JSON.parse(rawBody) as unknown;
 }
 
-function createSupabaseClients(request: Request) {
+function createAuthClient(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase environment is not configured.');
   }
 
@@ -136,10 +135,7 @@ function createSupabaseClients(request: Request) {
     },
   });
 
-  return {
-    authClient,
-    adminClient: createAdminClient(),
-  };
+  return authClient;
 }
 
 function createAdminClient() {
@@ -159,7 +155,21 @@ function createAdminClient() {
 }
 
 async function requireAuthenticatedUser(request: Request) {
-  const { authClient, adminClient } = createSupabaseClients(request);
+  let authClient: ReturnType<typeof createAuthClient>;
+
+  try {
+    authClient = createAuthClient(request);
+  } catch (error) {
+    if (error instanceof MissingAuthorizationHeaderError) {
+      return {
+        ok: false as const,
+        response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
+      };
+    }
+
+    throw error;
+  }
+
   const {
     data: { user },
     error: userError,
@@ -175,7 +185,7 @@ async function requireAuthenticatedUser(request: Request) {
   return {
     ok: true as const,
     user,
-    adminClient,
+    adminClient: createAdminClient(),
   };
 }
 
@@ -478,8 +488,18 @@ Deno.serve(async (request) => {
     return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for reports.', 405);
   }
 
-  if (!request.headers.get('Authorization')) {
-    return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+  let authResult: Awaited<ReturnType<typeof requireAuthenticatedUser>>;
+
+  try {
+    authResult = await requireAuthenticatedUser(request);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Supabase environment is not configured.';
+    return errorResponse('INTERNAL_ERROR', message, 500);
+  }
+
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
   let payload: SubmitReportPayload;
@@ -490,24 +510,6 @@ Deno.serve(async (request) => {
     const isInvalidJson = error instanceof SyntaxError;
     const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
     return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
-  }
-
-  let authResult: Awaited<ReturnType<typeof requireAuthenticatedUser>>;
-
-  try {
-    authResult = await requireAuthenticatedUser(request);
-  } catch (error) {
-    if (error instanceof MissingAuthorizationHeaderError) {
-      return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
-    }
-
-    const message =
-      error instanceof Error ? error.message : 'Supabase environment is not configured.';
-    return errorResponse('INTERNAL_ERROR', message, 500);
-  }
-
-  if (!authResult.ok) {
-    return authResult.response;
   }
 
   const rateLimitResponse = await enforceSubmitReportRateLimit(authResult.user.id);
