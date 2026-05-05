@@ -58,3 +58,9 @@ export function formatChatTimestamp(input: DateInput, language: AppLanguage = 'c
     { locale: localeMap[language] },
   );
 }
+
+export function formatYear(input: DateInput, language: AppLanguage = 'cs'): string {
+  return formatInTimeZone(toDate(input), getLocalTimeZone(), 'yyyy', {
+    locale: localeMap[language],
+  });
+}

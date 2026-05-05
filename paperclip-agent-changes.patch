@@ -1,0 +1,404 @@
+diff --git a/.env.example b/.env.example
+index ac126ca..2e45309 100644
+--- a/.env.example
++++ b/.env.example
+@@ -21,3 +21,6 @@ REPORT_EMAIL_FROM=Hrayem Reports <reports@your-domain.example>
+ # Launch-site asset generation (Milestone 11)
+ HRAYEM_APPLE_TEAM_ID=ABCDE12345
+ HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS=
++
++# Shared launch smoke suite (safe in shared/prod-like environments)
++HRAYEM_SMOKE_EVENT_ID=
+diff --git a/README.md b/README.md
+index 484cabb..af6172a 100644
+--- a/README.md
++++ b/README.md
+@@ -69,6 +69,10 @@ Launch-site asset variables used during Milestone 11:
+ - `HRAYEM_APPLE_TEAM_ID`: Apple Team ID used to generate `apple-app-site-association`
+ - `HRAYEM_ANDROID_SHA256_CERT_FINGERPRINTS`: comma-separated release certificate SHA-256 fingerprints for `assetlinks.json`; may stay blank while Android app-link proof is deferred
+ 
++Shared launch smoke variable:
++
++- `HRAYEM_SMOKE_EVENT_ID`: UUID of a stable public upcoming event used by the shared-environment smoke suite to verify the public share route and live `/event/<id>` fallback without creating test data
++
+ ## How to run locally
+ 
+ ```bash
+@@ -181,7 +185,7 @@ pnpm dlx supabase functions deploy share
+ pnpm run verify:milestone1
+ pnpm run verify:milestone4
+ pnpm run verify:milestone10
+-pnpm run verify:milestone11
++pnpm run verify:launch:smoke
+ ```
+ 
+ Apply the versioned seed file in `supabase/seed.sql` immediately after the migrations as part of the same Supabase deployment workflow. The Milestone 4 event-creation flow now depends on the deployed `events` Edge Function.
+@@ -214,6 +218,22 @@ That command currently targets `https://www.hrayem.cz`. It always requires real
+ 
+ The website should also host `public/privacy/index.html`, `public/terms/index.html`, the generated `public/.well-known/` files, and the Expo web build so shared `https://www.hrayem.cz/event/<id>` links can render the public fallback page for users without the app. The repo now includes a minimal [vercel.json](/home/martin/hrayem/vercel.json) for `/event/*`, `/privacy`, `/terms`, and `/.well-known/*`, and the current live iPhone/web host is `https://www.hrayem.cz`. Android app-link deployment is still intentionally deferred until the final Play-side inputs exist.
+ 
++For shared or production-like environments, run the safe smoke suite after deploy:
++
++```bash
++pnpm run verify:launch:smoke
++```
++
++`verify:launch:smoke` is read-only. It uses the public website, the anon Supabase key, and `HRAYEM_SMOKE_EVENT_ID` to confirm the current iPhone/web launch surface without creating or deleting data.
++
++If you need deeper end-to-end proof in an isolated environment where temporary write/delete activity is acceptable, run the existing Milestone 11 verifier instead:
++
++```bash
++pnpm run verify:milestone11
++```
++
++`verify:milestone11` still uses the service-role key to insert and clean up a synthetic event so it should not be the default shared-environment launch gate.
++
+ ## Build and submit
+ 
+ The repo includes `development`, `preview`, and `production` EAS build profiles in [`eas.json`](/home/martin/hrayem/eas.json).
+diff --git a/package.json b/package.json
+index cda984b..e7f1c37 100644
+--- a/package.json
++++ b/package.json
+@@ -23,7 +23,8 @@
+     "verify:milestone8": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone8.mjs",
+     "verify:milestone9": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone9.mjs",
+     "verify:milestone10": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone10.mjs",
+-    "verify:milestone11": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone11.mjs"
++    "verify:milestone11": "bash ./scripts/with-node20.sh node ./scripts/verify-milestone11.mjs",
++    "verify:launch:smoke": "bash ./scripts/with-node20.sh node ./scripts/verify-launch-smoke.mjs"
+   },
+   "dependencies": {
+     "@expo/vector-icons": "^15.1.1",
+diff --git a/supabase/functions/account/index.ts b/supabase/functions/account/index.ts
+index 490773e..d9f324b 100644
+--- a/supabase/functions/account/index.ts
++++ b/supabase/functions/account/index.ts
+@@ -61,12 +61,11 @@ function errorResponse(code: ApiErrorCode, message: string, status: number): Res
+   );
+ }
+ 
+-function createSupabaseClients(request: Request) {
++function createAuthClient(request: Request) {
+   const supabaseUrl = Deno.env.get('SUPABASE_URL');
+   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+ 
+-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
++  if (!supabaseUrl || !supabaseAnonKey) {
+     throw new Error('Supabase environment is not configured.');
+   }
+ 
+@@ -88,10 +87,7 @@ function createSupabaseClients(request: Request) {
+     },
+   });
+ 
+-  return {
+-    authClient,
+-    adminClient: createAdminClient(),
+-  };
++  return authClient;
+ }
+ 
+ function createAdminClient() {
+@@ -111,7 +107,21 @@ function createAdminClient() {
+ }
+ 
+ async function requireAuthenticatedUser(request: Request) {
+-  const { authClient, adminClient } = createSupabaseClients(request);
++  let authClient: ReturnType<typeof createAuthClient>;
++
++  try {
++    authClient = createAuthClient(request);
++  } catch (error) {
++    if (error instanceof MissingAuthorizationHeaderError) {
++      return {
++        ok: false as const,
++        response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
++      };
++    }
++
++    throw error;
++  }
++
+   const {
+     data: { user },
+     error: userError,
+@@ -127,7 +137,7 @@ async function requireAuthenticatedUser(request: Request) {
+   return {
+     ok: true as const,
+     user,
+-    adminClient,
++    adminClient: createAdminClient(),
+   };
+ }
+ 
+@@ -385,19 +395,11 @@ Deno.serve(async (request) => {
+     return errorResponse('METHOD_NOT_ALLOWED', 'Only POST /delete is supported for account.', 405);
+   }
+ 
+-  if (!request.headers.get('Authorization')) {
+-    return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+-  }
+-
+   let authResult: Awaited<ReturnType<typeof requireAuthenticatedUser>>;
+ 
+   try {
+     authResult = await requireAuthenticatedUser(request);
+   } catch (error) {
+-    if (error instanceof MissingAuthorizationHeaderError) {
+-      return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+-    }
+-
+     const message =
+       error instanceof Error ? error.message : 'Supabase environment is not configured.';
+     return errorResponse('INTERNAL_ERROR', message, 500);
+diff --git a/supabase/functions/events/index.ts b/supabase/functions/events/index.ts
+index 0b4c7f4..9c0383e 100644
+--- a/supabase/functions/events/index.ts
++++ b/supabase/functions/events/index.ts
+@@ -173,6 +173,13 @@ function errorResponse(code: ApiErrorCode, message: string, status: number): Res
+   );
+ }
+ 
++class MissingAuthorizationHeaderError extends Error {
++  constructor() {
++    super('Missing Authorization header.');
++    this.name = 'MissingAuthorizationHeaderError';
++  }
++}
++
+ type RateLimitConfig = {
+   bucket: string;
+   limit: number;
+@@ -850,19 +857,18 @@ function mapEventMutationError(message: string): {
+   };
+ }
+ 
+-function createSupabaseClients(request: Request) {
++function createAuthClient(request: Request) {
+   const supabaseUrl = Deno.env.get('SUPABASE_URL');
+   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+ 
+-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
++  if (!supabaseUrl || !supabaseAnonKey) {
+     throw new Error('Supabase environment is not configured.');
+   }
+ 
+   const authHeader = request.headers.get('Authorization');
+ 
+   if (!authHeader) {
+-    throw new Error('Missing Authorization header.');
++    throw new MissingAuthorizationHeaderError();
+   }
+ 
+   const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+@@ -877,10 +883,7 @@ function createSupabaseClients(request: Request) {
+     },
+   });
+ 
+-  return {
+-    authClient,
+-    adminClient: createAdminClient(),
+-  };
++  return authClient;
+ }
+ 
+ function createAdminClient() {
+@@ -914,7 +917,7 @@ function getDisplayName(input: { firstName: string | null; lastName: string | nu
+ }
+ 
+ async function loadEventNotificationContext(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   eventId: string,
+ ): Promise<EventNotificationContext> {
+   const eventResult = await adminClient
+@@ -936,7 +939,7 @@ async function loadEventNotificationContext(
+ }
+ 
+ async function loadDisplayNames(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   userIds: string[],
+ ): Promise<Map<string, string>> {
+   if (!userIds.length) {
+@@ -970,7 +973,7 @@ async function loadDisplayNames(
+ }
+ 
+ async function sendJoinNotifications(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   input: {
+     eventId: string;
+     joinedUserId: string;
+@@ -1033,7 +1036,7 @@ async function sendJoinNotifications(
+ }
+ 
+ async function sendLeaveNotifications(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   input: {
+     actorUserId: string;
+     targetUserId: string;
+@@ -1076,7 +1079,7 @@ async function sendLeaveNotifications(
+ }
+ 
+ async function sendCancelNotifications(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   input: {
+     actorUserId: string;
+     eventId: string;
+@@ -1118,7 +1121,7 @@ async function sendCancelNotifications(
+ }
+ 
+ async function sendChatNotifications(
+-  adminClient: ReturnType<typeof createSupabaseClients>['adminClient'],
++  adminClient: ReturnType<typeof createAdminClient>,
+   input: {
+     eventId: string;
+     senderUserId: string;
+@@ -1281,7 +1284,21 @@ async function handleDispatchRemindersRoute(request: Request): Promise<Response>
+ }
+ 
+ async function requireAuthenticatedUser(request: Request) {
+-  const { authClient, adminClient } = createSupabaseClients(request);
++  let authClient: ReturnType<typeof createAuthClient>;
++
++  try {
++    authClient = createAuthClient(request);
++  } catch (error) {
++    if (error instanceof MissingAuthorizationHeaderError) {
++      return {
++        ok: false as const,
++        response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
++      };
++    }
++
++    throw error;
++  }
++
+   const {
+     data: { user },
+     error: userError,
+@@ -1297,7 +1314,7 @@ async function requireAuthenticatedUser(request: Request) {
+   return {
+     ok: true as const,
+     user,
+-    adminClient,
++    adminClient: createAdminClient(),
+   };
+ }
+ 
+diff --git a/supabase/functions/reports/index.ts b/supabase/functions/reports/index.ts
+index f47364a..1697298 100644
+--- a/supabase/functions/reports/index.ts
++++ b/supabase/functions/reports/index.ts
+@@ -109,12 +109,11 @@ async function readJsonBody(request: Request): Promise<unknown> {
+   return JSON.parse(rawBody) as unknown;
+ }
+ 
+-function createSupabaseClients(request: Request) {
++function createAuthClient(request: Request) {
+   const supabaseUrl = Deno.env.get('SUPABASE_URL');
+   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+ 
+-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
++  if (!supabaseUrl || !supabaseAnonKey) {
+     throw new Error('Supabase environment is not configured.');
+   }
+ 
+@@ -136,10 +135,7 @@ function createSupabaseClients(request: Request) {
+     },
+   });
+ 
+-  return {
+-    authClient,
+-    adminClient: createAdminClient(),
+-  };
++  return authClient;
+ }
+ 
+ function createAdminClient() {
+@@ -159,7 +155,21 @@ function createAdminClient() {
+ }
+ 
+ async function requireAuthenticatedUser(request: Request) {
+-  const { authClient, adminClient } = createSupabaseClients(request);
++  let authClient: ReturnType<typeof createAuthClient>;
++
++  try {
++    authClient = createAuthClient(request);
++  } catch (error) {
++    if (error instanceof MissingAuthorizationHeaderError) {
++      return {
++        ok: false as const,
++        response: errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401),
++      };
++    }
++
++    throw error;
++  }
++
+   const {
+     data: { user },
+     error: userError,
+@@ -175,7 +185,7 @@ async function requireAuthenticatedUser(request: Request) {
+   return {
+     ok: true as const,
+     user,
+-    adminClient,
++    adminClient: createAdminClient(),
+   };
+ }
+ 
+@@ -478,29 +488,11 @@ Deno.serve(async (request) => {
+     return errorResponse('METHOD_NOT_ALLOWED', 'Only POST is supported for reports.', 405);
+   }
+ 
+-  if (!request.headers.get('Authorization')) {
+-    return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+-  }
+-
+-  let payload: SubmitReportPayload;
+-
+-  try {
+-    payload = validatePayload(await readJsonBody(request));
+-  } catch (error) {
+-    const isInvalidJson = error instanceof SyntaxError;
+-    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
+-    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
+-  }
+-
+   let authResult: Awaited<ReturnType<typeof requireAuthenticatedUser>>;
+ 
+   try {
+     authResult = await requireAuthenticatedUser(request);
+   } catch (error) {
+-    if (error instanceof MissingAuthorizationHeaderError) {
+-      return errorResponse('UNAUTHORIZED', 'A valid authenticated user is required.', 401);
+-    }
+-
+     const message =
+       error instanceof Error ? error.message : 'Supabase environment is not configured.';
+     return errorResponse('INTERNAL_ERROR', message, 500);
+@@ -510,6 +502,16 @@ Deno.serve(async (request) => {
+     return authResult.response;
+   }
+ 
++  let payload: SubmitReportPayload;
++
++  try {
++    payload = validatePayload(await readJsonBody(request));
++  } catch (error) {
++    const isInvalidJson = error instanceof SyntaxError;
++    const message = error instanceof Error ? error.message : 'Request body must be valid JSON.';
++    return errorResponse(isInvalidJson ? 'INVALID_JSON' : 'VALIDATION_ERROR', message, 400);
++  }
++
+   const rateLimitResponse = await enforceSubmitReportRateLimit(authResult.user.id);
+ 
+   if (rateLimitResponse) {

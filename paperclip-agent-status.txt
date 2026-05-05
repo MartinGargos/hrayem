@@ -1,0 +1,10 @@
+ M .env.example
+ M README.md
+ M package.json
+ M supabase/functions/account/index.ts
+ M supabase/functions/events/index.ts
+ M supabase/functions/reports/index.ts
+?? .github/
+?? paperclip-agent-changes.patch
+?? paperclip-agent-status.txt
+?? scripts/verify-launch-smoke.mjs

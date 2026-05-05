@@ -102,6 +102,24 @@ export async function fetchVenueMatches(input: {
     .slice(0, limit);
 }
 
+export async function fetchVenueById(venueId: string): Promise<VenueSummary> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('venues')
+      .select('id, name, city, address, created_by, is_verified')
+      .eq('id', venueId)
+      .single(),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load venue.');
+
+  if (!result.data) {
+    throw new Error('Missing venue.');
+  }
+
+  return mapVenueRow(result.data as VenueRow);
+}
+
 export async function createVenue(input: {
   name: string;
   city: string;

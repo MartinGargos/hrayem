@@ -296,6 +296,7 @@
       "discover": "Objevit",
       "profile": "Profil",
       "eventDetail": "Detail hry",
+      "venueDetail": "Sportoviště",
       "chat": "Chat",
       "playerProfile": "Profil hráče",
       "postAvailability": "Přidat dostupnost",
@@ -438,7 +439,7 @@
     },
     "settings": {
       "title": "Nastavení",
-      "subtitle": "Spravujte preference, notifikace i účet na jednom čistém místě.",
+      "subtitle": "Preference, notifikace a účet na jednom čistém místě.",
       "stubTitle": "Stub nastavení",
       "placeholder": "Preference notifikací a editovatelné nastavení aplikace zůstávají jako stuby, dokud nezačne jejich milestone práce.",
       "openAccountDeletion": "Smazat účet"
@@ -465,12 +466,17 @@
   },
   "profile": {
     "summaryTitle": "Souhrn profilu",
+    "statsSectionEyebrow": "Tvoje sporty",
+    "statsSectionTitle": "Úrovně a forma",
     "statsTitle": "Vaše sportovní statistiky",
     "statsSubtitle": "Tady uvidíte své úrovně, odehrané hry a další signály z jednotlivých sportů.",
     "statsEmpty": "Dokončete více her nebo přidejte další sporty a statistiky se zobrazí tady.",
+    "connectionsSectionEyebrow": "Tvoje síť",
+    "connectionsSectionTitle": "Spojení pro další hru",
     "connectionsTitle": "Spojení pro další hru",
     "connectionsSubtitle": "Hráči, se kterými jste si sedli nejvíc, se objeví právě tady.",
-    "connectionsEmpty": "Doporučení na další společnou hru se tady začnou zobrazovat po dokončených hrách.",
+    "connectionsEmptyTitle": "Zatím tu nic není",
+    "connectionsEmpty": "Hráči, se kterými si sedneš nejvíc, se objeví po dokončených hrách.",
     "connectionsGroupCount": "{{count}} hráčů pro další hru",
     "playAgainBadge": "Zahrál bych si znovu",
     "skillEditHint": "Klepnutím upravíte svou úroveň pro tento sport.",
@@ -480,6 +486,7 @@
     "highlights": {
       "sports": "Sporty",
       "games": "Hry",
+      "hours": "Hodin",
       "connections": "Další hra"
     },
     "errors": {
@@ -490,23 +497,60 @@
       "reliabilityLabel": "Spolehlivost",
       "feedbackLabel": "Doporučení",
       "gamesAndHours": "{{games}} her · {{hours}} h",
+      "compactGamesAndHours": "{{games}} her · {{hours}}h",
       "noShows": "Bez omluvy: {{count}}",
       "thumbsHidden": "Podíl doporučení se zobrazí až po alespoň 3 dokončených hrách.",
+      "thumbsHiddenCompact": "—",
       "thumbsValue": "{{percentage}} % doporučení"
     }
   },
   "playerProfile": {
+    "title": "Hráč",
+    "backAction": "Zpět",
     "subtitle": "Zobrazte si viditelné sportovní statistiky tohoto hráče a společné signály pro další hru.",
     "summaryTitle": "Souhrn hráče",
     "statsTitle": "Sportovní statistiky",
     "statsSubtitle": "Tady se zobrazují viditelné úrovně a signály z dokončených her.",
     "empty": "Tento hráč zatím nemá žádné viditelné sportovní statistiky.",
+    "inviteAction": "Pozvat na hru",
+    "messageAction": "Napsat hráči",
+    "inviteUnavailableTitle": "Pozvánky přijdou později",
+    "inviteUnavailableBody": "Přímé pozvání konkrétního hráče zatím není v appce napojené. Teď můžete sdílet odkaz na vytvořenou hru.",
+    "messageUnavailableTitle": "Soukromý chat zatím není dostupný",
+    "messageUnavailableBody": "Chat v Hrayem je zatím jen u konkrétní potvrzené hry, ne jako přímé zprávy mezi hráči.",
+    "memberSince": "od {{year}}",
+    "skillBadge": "{{sport}} · {{level}}",
+    "noSportBadge": "Bez sportu",
+    "reliabilityBadge": "{{percentage}}% spolehlivost",
+    "reliabilityHidden": "Spolehlivost zatím není",
+    "percentageValue": "{{percentage}}%",
+    "metrics": {
+      "games": "Hry",
+      "together": "Spolu",
+      "recommended": "Dopor."
+    },
+    "sharedEyebrow": "Hráli jste spolu",
+    "sharedTitle": "Společné hry · {{count}}",
+    "sharedEmpty": "Zatím spolu nemáte žádnou dokončenou hru.",
+    "sharedPlayedBadge": "spolu",
+    "statsEyebrow": "Statistiky",
+    "noPrimarySport": "Sport",
+    "stats": {
+      "level": "Úroveň",
+      "levelValue": "{{level}} ({{short}})",
+      "games": "Odehraných her",
+      "reliability": "Spolehlivost",
+      "recommendations": "Doporučení",
+      "recommendationValue": "{{percentage}}% hráčů"
+    },
     "errors": {
       "summary": "Souhrn profilu tohoto hráče se teď nepodařilo načíst.",
-      "stats": "Sportovní statistiky tohoto hráče se teď nepodařilo načíst."
+      "stats": "Sportovní statistiky tohoto hráče se teď nepodařilo načíst.",
+      "sharedGames": "Společné hry s tímto hráčem se teď nepodařilo načíst."
     }
   },
   "settings": {
+    "backAction": "Zpět",
     "profileTitle": "Aplikace",
     "accountTitle": "Účet",
     "accountSubtitle": "Tady najdete přihlášení na tomto zařízení i citlivé akce kolem účtu.",
@@ -528,13 +572,16 @@
       "logoutTitle": "Odhlásit se",
       "logoutSubtitle": "Odhlásit se na tomto zařízení.",
       "deleteTitle": "Smazat účet",
-      "deleteSubtitle": "Trvale smazat účet a související budoucí data."
+      "deleteSubtitle": "Trvale smazat účet a související data."
     },
     "notifications": {
+      "title": "Notifikace",
       "permissionTitle": "Push oprávnění",
       "permissionBody": "Hrayem používá push notifikace pro přidání do hry, potvrzení místa, připomínky, chat i zrušení události. Tyto preference můžete kdykoli změnit.",
       "permissionStatusLabel": "Stav oprávnění",
       "permissionAction": "Povolit notifikace",
+      "permissionInlineTitle": "Povolit push notifikace",
+      "permissionInlineBody": "Stav zařízení: {{status}}. Bez oprávnění se zapnuté typy nemusí doručit.",
       "permissionReady": "Push notifikace jsou na tomto zařízení připravené.",
       "permissionUnavailable": "Notifikace teď na tomto zařízení ještě nejsou dostupné.",
       "permissionDenied": "Notifikace jsou pro Hrayem na tomto zařízení vypnuté.",
@@ -679,6 +726,7 @@
       "playAgainBadge": "Zahrál bych si znovu",
       "openOrganizerProfile": "Otevřít profil organizátora",
       "openEventHint": "Otevřít {{sport}} v {{venue}}",
+      "openVenueAction": "Otevřít sportoviště",
       "openPlayerProfileHint": "Otevřít profil tohoto hráče",
       "confirmedPlayersTitle": "Potvrzení hráči",
       "confirmedPlayersEmpty": "Kromě organizátora zatím nejsou vidět žádní potvrzení hráči.",
@@ -759,6 +807,50 @@
         "validation": "Vaše zpráva potřebuje ještě upravit, než ji půjde odeslat.",
         "rateLimited": "Posíláte zprávy příliš rychle. Chvíli počkejte.",
         "generic": "Tuto zprávu se teď nepodařilo odeslat. Zkuste to prosím znovu."
+      }
+    },
+    "venueDetail": {
+      "backAction": "Zpět",
+      "errorTitle": "Nepodařilo se načíst sportoviště",
+      "errorBody": "Detail sportoviště je připravený, ale aktuální data se teď nepodařilo načíst.",
+      "openGamesBadge": "Otevřené hry: {{count}}",
+      "verifiedVenue": "Ověřené",
+      "communityVenue": "Komunitní",
+      "realDataNote": "bez ratingu",
+      "actions": {
+        "navigation": "Navigace",
+        "reserve": "Rezervovat",
+        "sports": "Sporty"
+      },
+      "navigationUnavailableTitle": "Navigaci se nepodařilo otevřít",
+      "navigationUnavailableBody": "Zkuste to prosím znovu, případně adresu otevřete ručně v mapách.",
+      "reserveUnavailableTitle": "Rezervace zatím není dostupná",
+      "reserveUnavailableBody": "Hrayem zatím neumí rezervovat kurty přímo ve sportovišti. Pro domluvu použijte detail hry nebo kontaktujte sportoviště mimo aplikaci.",
+      "sportsTitle": "Sporty",
+      "sportsUnavailableBody": "U tohoto sportoviště zatím nemáme otevřené hry, ze kterých by šly sporty odvodit.",
+      "menuTitle": "Sportoviště",
+      "menuBody": "Hlášení a správa sportovišť přijdou později. Teď zobrazujeme jen data, která už appka bezpečně zná.",
+      "openGamesEyebrow": "Dnes a zítra",
+      "openGamesTitle": "Otevřené hry",
+      "openGamesErrorTitle": "Nepodařilo se načíst hry",
+      "openGamesErrorBody": "Zkuste to prosím znovu. Pokud problém přetrvá, zkontrolujte připojení.",
+      "openGamesEmptyTitle": "Žádné otevřené hry",
+      "openGamesEmptyBody": "V tomto sportovišti teď nevidíme žádnou otevřenou hru na nejbližší dva dny.",
+      "openGameAction": "Otevřít hru",
+      "soon": "Brzy",
+      "joinAction": "Přidat se",
+      "waitlistAction": "Čekačka",
+      "infoEyebrow": "Info",
+      "infoTitle": "Sportoviště",
+      "info": {
+        "sports": "Sporty",
+        "sportsPending": "Doplníme",
+        "courts": "Počet kurtů",
+        "courtsPending": "Doplníme",
+        "pricePerHour": "Cena za hodinu",
+        "pricePending": "Podle sportu",
+        "openingHours": "Otevřeno",
+        "openingHoursPending": "Doplníme"
       }
     },
     "membership": {

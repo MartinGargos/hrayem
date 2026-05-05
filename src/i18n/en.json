@@ -296,6 +296,7 @@
       "discover": "Discover",
       "profile": "Profile",
       "eventDetail": "Event detail",
+      "venueDetail": "Venue",
       "chat": "Chat",
       "playerProfile": "Player profile",
       "postAvailability": "Post availability",
@@ -437,7 +438,7 @@
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Manage preferences, notifications, and account actions in one clean place.",
+      "subtitle": "Preferences, notifications, and account in one clean place.",
       "stubTitle": "Settings stub",
       "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
       "openAccountDeletion": "Delete account"
@@ -464,12 +465,17 @@
   },
   "profile": {
     "summaryTitle": "Profile summary",
+    "statsSectionEyebrow": "Your sports",
+    "statsSectionTitle": "Levels and form",
     "statsTitle": "Your sport stats",
     "statsSubtitle": "Your levels and match history update here as you keep playing.",
     "statsEmpty": "Add or finish more games to build your sport stats here.",
+    "connectionsSectionEyebrow": "Your network",
+    "connectionsSectionTitle": "Connections for the next game",
     "connectionsTitle": "Play again connections",
     "connectionsSubtitle": "Players you clicked with most show up here for the next invite.",
-    "connectionsEmpty": "Mutual thumbs up will start surfacing here after finished games.",
+    "connectionsEmptyTitle": "Nothing here yet",
+    "connectionsEmpty": "Players you click with most will appear here after finished games.",
     "connectionsGroupCount": "{{count}} players ready for another game",
     "playAgainBadge": "Play again",
     "skillEditHint": "Tap to update your level for this sport.",
@@ -479,6 +485,7 @@
     "highlights": {
       "sports": "Sports",
       "games": "Games",
+      "hours": "Hours",
       "connections": "Play again"
     },
     "errors": {
@@ -489,24 +496,61 @@
       "reliabilityLabel": "Reliability",
       "feedbackLabel": "Feedback",
       "gamesAndHours": "{{games}} games · {{hours}} h",
+      "compactGamesAndHours": "{{games}} games · {{hours}}h",
       "noShows": "{{count}} no-shows",
       "thumbsHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
+      "thumbsHiddenCompact": "—",
       "thumbsValue": "{{percentage}}% thumbs up"
     }
   },
   "playerProfile": {
+    "title": "Player",
+    "backAction": "Back",
     "subtitle": "Review this player's visible sport stats and shared play-again signals.",
     "summaryTitle": "Player summary",
     "statsTitle": "Sport stats",
     "statsSubtitle": "Visible levels and finished-game signals appear here.",
     "empty": "This player has no visible sport stats yet.",
+    "inviteAction": "Invite to a game",
+    "messageAction": "Message player",
+    "inviteUnavailableTitle": "Invites are coming later",
+    "inviteUnavailableBody": "Directly inviting a specific player is not wired in the app yet. For now, share the link after creating a game.",
+    "messageUnavailableTitle": "Private chat is not available yet",
+    "messageUnavailableBody": "Hrayem chat currently lives inside a confirmed game, not as direct messages between players.",
+    "memberSince": "since {{year}}",
+    "skillBadge": "{{sport}} · {{level}}",
+    "noSportBadge": "No sport yet",
+    "reliabilityBadge": "{{percentage}}% reliability",
+    "reliabilityHidden": "Reliability pending",
+    "percentageValue": "{{percentage}}%",
+    "metrics": {
+      "games": "Games",
+      "together": "Together",
+      "recommended": "Recom."
+    },
+    "sharedEyebrow": "You played together",
+    "sharedTitle": "Shared games · {{count}}",
+    "sharedEmpty": "You do not have any finished games together yet.",
+    "sharedPlayedBadge": "played",
+    "statsEyebrow": "Stats",
+    "noPrimarySport": "Sport",
+    "stats": {
+      "level": "Level",
+      "levelValue": "{{level}} ({{short}})",
+      "games": "Games played",
+      "reliability": "Reliability",
+      "recommendations": "Recommendations",
+      "recommendationValue": "{{percentage}}% players"
+    },
     "errors": {
       "summary": "We couldn't load this player's profile summary right now.",
-      "stats": "We couldn't load this player's sport stats right now."
+      "stats": "We couldn't load this player's sport stats right now.",
+      "sharedGames": "We couldn't load your shared games with this player right now."
     }
   },
   "settings": {
-    "profileTitle": "App preferences",
+    "backAction": "Back",
+    "profileTitle": "App",
     "accountTitle": "Account",
     "accountSubtitle": "Session and privacy-sensitive actions live here.",
     "languageLabel": "Language",
@@ -525,15 +569,18 @@
     },
     "account": {
       "logoutTitle": "Log out",
-      "logoutSubtitle": "Sign out on this device and stop using this session here.",
+      "logoutSubtitle": "Sign out on this device.",
       "deleteTitle": "Delete account",
-      "deleteSubtitle": "Open the permanent account deletion flow."
+      "deleteSubtitle": "Permanently delete your account and related data."
     },
     "notifications": {
+      "title": "Notifications",
       "permissionTitle": "Push permission",
       "permissionBody": "Hrayem uses push notifications for event joins, confirmations, reminders, chat, and cancellations. You can change these preferences at any time.",
       "permissionStatusLabel": "Permission status",
       "permissionAction": "Enable notifications",
+      "permissionInlineTitle": "Enable push notifications",
+      "permissionInlineBody": "Device status: {{status}}. Enabled types may not arrive without permission.",
       "permissionReady": "Push notifications are ready on this device.",
       "permissionUnavailable": "Notifications are still unavailable on this device right now.",
       "permissionDenied": "Notifications are turned off for Hrayem on this device.",
@@ -678,6 +725,7 @@
       "playAgainBadge": "Play again",
       "openOrganizerProfile": "Open organizer profile",
       "openEventHint": "Open {{sport}} at {{venue}}",
+      "openVenueAction": "Open venue",
       "openPlayerProfileHint": "Open this player profile",
       "confirmedPlayersTitle": "Confirmed players",
       "confirmedPlayersEmpty": "No confirmed players are visible yet beyond the organizer.",
@@ -758,6 +806,50 @@
         "validation": "Your message needs another look before it can be sent.",
         "rateLimited": "You're sending messages too quickly. Please wait a moment.",
         "generic": "We couldn't send that message right now. Please try again."
+      }
+    },
+    "venueDetail": {
+      "backAction": "Back",
+      "errorTitle": "Could not load the venue",
+      "errorBody": "The venue detail is ready, but the latest data could not be loaded right now.",
+      "openGamesBadge": "Open games: {{count}}",
+      "verifiedVenue": "Verified",
+      "communityVenue": "Community",
+      "realDataNote": "no rating",
+      "actions": {
+        "navigation": "Directions",
+        "reserve": "Reserve",
+        "sports": "Sports"
+      },
+      "navigationUnavailableTitle": "Could not open directions",
+      "navigationUnavailableBody": "Please try again, or open the address manually in your maps app.",
+      "reserveUnavailableTitle": "Reservations are not available yet",
+      "reserveUnavailableBody": "Hrayem cannot reserve courts directly at venues yet. Use the game detail to coordinate, or contact the venue outside the app.",
+      "sportsTitle": "Sports",
+      "sportsUnavailableBody": "We do not have open games at this venue yet, so sports cannot be inferred.",
+      "menuTitle": "Venue",
+      "menuBody": "Venue reporting and management will come later. For now, we only show data the app already knows safely.",
+      "openGamesEyebrow": "Today and tomorrow",
+      "openGamesTitle": "Open games",
+      "openGamesErrorTitle": "Could not load games",
+      "openGamesErrorBody": "Please try again. If the issue persists, check your connection.",
+      "openGamesEmptyTitle": "No open games",
+      "openGamesEmptyBody": "We do not see any open games at this venue in the next two days.",
+      "openGameAction": "Open game",
+      "soon": "Soon",
+      "joinAction": "Join",
+      "waitlistAction": "Waitlist",
+      "infoEyebrow": "Info",
+      "infoTitle": "Venue",
+      "info": {
+        "sports": "Sports",
+        "sportsPending": "To be added",
+        "courts": "Courts",
+        "courtsPending": "To be added",
+        "pricePerHour": "Price per hour",
+        "pricePending": "By sport",
+        "openingHours": "Open",
+        "openingHoursPending": "To be added"
       }
     },
     "membership": {

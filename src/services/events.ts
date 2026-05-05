@@ -28,6 +28,7 @@ import type {
   SendChatMessageInput,
   SendChatMessageResponse,
   SharedEventDetail,
+  SharedPlayerEvent,
   SportSummary,
   UpdateEventInput,
   UpdateEventResponse,
@@ -203,6 +204,11 @@ type VisibleProfileRow = {
   last_name: string | null;
   photo_url: string | null;
   city: string | null;
+  created_at: string;
+};
+
+type SharedPlayerEventMembershipRow = {
+  event_id: string;
 };
 
 type PostGameThumbRow = {
@@ -440,6 +446,31 @@ export async function fetchEventFeedPage(input: {
   return ((result.data ?? []) as EventFeedRow[]).map(mapEventFeedRow);
 }
 
+export async function fetchVenueOpenEvents(input: {
+  venueId: string;
+  startsAtFrom: string;
+  startsAtTo: string;
+  limit?: number;
+}): Promise<EventFeedItem[]> {
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('event_feed_view')
+      .select(
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, created_at',
+      )
+      .eq('venue_id', input.venueId)
+      .gte('starts_at', input.startsAtFrom)
+      .lte('starts_at', input.startsAtTo)
+      .order('starts_at', { ascending: true })
+      .order('created_at', { ascending: true })
+      .limit(input.limit ?? 6),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load venue games.');
+
+  return ((result.data ?? []) as EventFeedRow[]).map(mapEventFeedRow);
+}
+
 export async function fetchEventDetail(eventId: string): Promise<EventDetail> {
   const detailResult = await retrySupabaseOperationOnce(() =>
     supabase
@@ -527,6 +558,52 @@ export async function fetchMyPastGames(): Promise<MyGamesPastItem[]> {
   );
 
   throwIfSupabaseError(result.error, 'Unable to load past games.');
+
+  return ((result.data ?? []) as MyGamesPastRow[]).map((row) => ({
+    ...mapEventFeedRow(row),
+    noShowWindowEnd: row.no_show_window_end,
+    chatClosedAt: row.chat_closed_at,
+    viewerMembershipStatus: row.viewer_membership_status,
+  }));
+}
+
+export async function fetchSharedFinishedEventsWithPlayer(
+  playerId: string,
+): Promise<SharedPlayerEvent[]> {
+  const membershipResult = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('event_players')
+      .select('event_id')
+      .eq('user_id', playerId)
+      .eq('status', 'confirmed'),
+  );
+
+  throwIfSupabaseError(membershipResult.error, 'Unable to load shared player memberships.');
+
+  const targetEventIds = [
+    ...new Set(
+      ((membershipResult.data ?? []) as SharedPlayerEventMembershipRow[]).map(
+        (row) => row.event_id,
+      ),
+    ),
+  ];
+
+  if (!targetEventIds.length) {
+    return [];
+  }
+
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('my_games_past_view')
+      .select(
+        'id, sport_id, sport_slug, sport_name_cs, sport_name_en, sport_icon, sport_color, organizer_id, organizer_first_name, organizer_photo_url, organizer_no_shows, organizer_games_played, venue_id, venue_name, venue_address, starts_at, ends_at, city, reservation_type, player_count_total, skill_min, skill_max, description, status, spots_taken, waitlist_count, no_show_window_end, chat_closed_at, viewer_membership_status, created_at',
+      )
+      .in('id', targetEventIds)
+      .order('ends_at', { ascending: false })
+      .limit(6),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to load shared player events.');
 
   return ((result.data ?? []) as MyGamesPastRow[]).map((row) => ({
     ...mapEventFeedRow(row),
@@ -678,7 +755,7 @@ export async function fetchVisibleProfile(playerId: string): Promise<VisibleProf
   const result = await retrySupabaseOperationOnce(() =>
     supabase
       .from('profiles')
-      .select('id, first_name, last_name, photo_url, city')
+      .select('id, first_name, last_name, photo_url, city, created_at')
       .eq('id', playerId)
       .single(),
   );

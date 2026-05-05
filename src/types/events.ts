@@ -101,6 +101,8 @@ export type MyGamesPastItem = EventFeedItem & {
   viewerMembershipStatus: Extract<EventMembershipStatus, 'organizer' | 'confirmed'>;
 };
 
+export type SharedPlayerEvent = MyGamesPastItem;
+
 export type ChatMessage = {
   id: string;
   eventId: string;

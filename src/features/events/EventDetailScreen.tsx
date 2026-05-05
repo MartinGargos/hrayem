@@ -362,16 +362,26 @@ function DetailFrame({
 function OrganizerHeroCard({
   event,
   language,
+  onPress,
   sportName,
   t,
 }: {
   event: EventDetail;
   language: AppLanguage;
+  onPress: () => void;
   sportName: string;
   t: ReturnType<typeof useTranslation>['t'];
 }) {
   return (
-    <View style={styles.organizerHeroCard}>
+    <Pressable
+      accessibilityLabel={t('events.detail.openVenueAction')}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.organizerHeroCard,
+        pressed ? styles.organizerHeroCardPressed : undefined,
+      ]}
+    >
       <View pointerEvents="none" style={styles.organizerHeroGrid}>
         <View style={styles.organizerHeroGridVertical} />
         <View style={styles.organizerHeroGridHorizontal} />
@@ -413,7 +423,7 @@ function OrganizerHeroCard({
           </Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -1634,7 +1644,13 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
         title={t('shell.eventDetail.title')}
         topInset={insets.top}
       >
-        <OrganizerHeroCard event={event} language={language} sportName={sportName} t={t} />
+        <OrganizerHeroCard
+          event={event}
+          language={language}
+          onPress={() => navigation.navigate('VenueDetail', { venueId: event.venueId })}
+          sportName={sportName}
+          t={t}
+        />
 
         <NoticeBanner notice={notice} resolveMessage={t} />
 
@@ -1981,6 +1997,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 22,
     elevation: 7,
+  },
+  organizerHeroCardPressed: {
+    transform: [{ scale: 0.99 }],
   },
   organizerHeroGrid: {
     position: 'absolute',

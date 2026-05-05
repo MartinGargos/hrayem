@@ -178,8 +178,7 @@ function assetLinksMatch(document, expectedFingerprints) {
 
   const androidAppLinkEntry = document.find(
     (entry) =>
-      entry?.target?.namespace === 'android_app' &&
-      entry?.target?.package_name === androidPackage,
+      entry?.target?.namespace === 'android_app' && entry?.target?.package_name === androidPackage,
   );
 
   if (!androidAppLinkEntry) {
@@ -276,7 +275,10 @@ async function main() {
   addCheck(checks, {
     id: 'app_store_url',
     surface: 'iphone_web',
-    status: launch.iphoneWeb.appStoreUrl && isFinalAppStoreUrl(launch.iphoneWeb.appStoreUrl) ? 'passed' : 'failed',
+    status:
+      launch.iphoneWeb.appStoreUrl && isFinalAppStoreUrl(launch.iphoneWeb.appStoreUrl)
+        ? 'passed'
+        : 'failed',
     detail: launch.iphoneWeb.appStoreUrl
       ? isFinalAppStoreUrl(launch.iphoneWeb.appStoreUrl)
         ? 'EXPO_PUBLIC_APP_STORE_URL points at a final App Store listing.'
@@ -366,12 +368,16 @@ async function main() {
       detail: 'Cannot validate apple-app-site-association without HRAYEM_APPLE_TEAM_ID.',
     });
   } else {
-    const localAppleAssociation = await readJsonFile('public/.well-known/apple-app-site-association');
+    const localAppleAssociation = await readJsonFile(
+      'public/.well-known/apple-app-site-association',
+    );
 
     addCheck(checks, {
       id: 'local_apple_association',
       surface: 'iphone_web',
-      status: appleAssociationMatches(localAppleAssociation, expectedAppleAppId) ? 'passed' : 'failed',
+      status: appleAssociationMatches(localAppleAssociation, expectedAppleAppId)
+        ? 'passed'
+        : 'failed',
       detail: appleAssociationMatches(localAppleAssociation, expectedAppleAppId)
         ? `Local apple-app-site-association contains ${expectedAppleAppId} for /event/*.`
         : `Local apple-app-site-association must contain ${expectedAppleAppId} for /event/*.`,
@@ -426,7 +432,9 @@ async function main() {
       fetchPage(`${launch.iphoneWeb.webBaseUrl}/privacy`),
       fetchPage(`${launch.iphoneWeb.webBaseUrl}/terms`),
       fetchPage(`${launch.iphoneWeb.webBaseUrl}/.well-known/apple-app-site-association`),
-      isUuid(smokeEventId) ? fetchPage(`${launch.iphoneWeb.webBaseUrl}/event/${smokeEventId}`) : null,
+      isUuid(smokeEventId)
+        ? fetchPage(`${launch.iphoneWeb.webBaseUrl}/event/${smokeEventId}`)
+        : null,
     ]);
     const [livePrivacyPage, liveTermsPage, liveAppleAssociationPage, liveEventFallbackPage] =
       liveChecks;
@@ -472,8 +480,7 @@ async function main() {
       addCheck(checks, {
         id: 'live_apple_association',
         surface: 'iphone_web',
-        status:
-          liveAppleAssociation.error || !liveAppleAssociationMatches ? 'failed' : 'passed',
+        status: liveAppleAssociation.error || !liveAppleAssociationMatches ? 'failed' : 'passed',
         detail: liveAppleAssociation.error
           ? 'Live apple-app-site-association is not valid JSON.'
           : liveAppleAssociationMatches
@@ -514,9 +521,12 @@ async function main() {
           : 'Expected minimum_app_version_ios and minimum_app_version_android to be readable by anon.',
     });
 
-    const shareResponse = await fetchPage(`${supabaseUrl}/functions/v1/share/event/${smokeEventId}`, {
-      apikey: anonKey,
-    });
+    const shareResponse = await fetchPage(
+      `${supabaseUrl}/functions/v1/share/event/${smokeEventId}`,
+      {
+        apikey: anonKey,
+      },
+    );
 
     if (!shareResponse.ok) {
       addCheck(checks, {
@@ -528,8 +538,11 @@ async function main() {
     } else {
       const sharePayload = parseJson(shareResponse.body);
       const shareEvent = sharePayload.data?.data;
-      const shareEventStartsAt = shareEvent?.starts_at ? Date.parse(shareEvent.starts_at) : Number.NaN;
-      const shareEventIsUpcoming = Number.isFinite(shareEventStartsAt) && shareEventStartsAt > Date.now();
+      const shareEventStartsAt = shareEvent?.starts_at
+        ? Date.parse(shareEvent.starts_at)
+        : Number.NaN;
+      const shareEventIsUpcoming =
+        Number.isFinite(shareEventStartsAt) && shareEventStartsAt > Date.now();
       const shareEventHasLaunchFields =
         typeof shareEvent?.sport_slug === 'string' &&
         shareEvent.sport_slug.length > 0 &&
@@ -537,7 +550,8 @@ async function main() {
         shareEvent.venue_name.length > 0 &&
         typeof shareEvent?.city === 'string' &&
         shareEvent.city.length > 0;
-      const shareEventStatusReady = shareEvent?.status === 'active' || shareEvent?.status === 'full';
+      const shareEventStatusReady =
+        shareEvent?.status === 'active' || shareEvent?.status === 'full';
       const shareRouteOk =
         !sharePayload.error &&
         shareEvent?.id === smokeEventId &&

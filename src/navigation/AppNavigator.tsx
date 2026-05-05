@@ -22,6 +22,7 @@ import { MyGamesScreen } from '../features/my-games/MyGamesScreen';
 import { PlayerProfileScreen, ProfileScreen } from '../features/profile/ProfileScreen';
 import { AccountDeletionScreen } from '../features/settings/AccountDeletionScreen';
 import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { VenueDetailScreen } from '../features/venues/VenueDetailScreen';
 import { useAuthStore } from '../store/auth-store';
 import { parseEventDeepLink } from './deep-links';
 import { getPendingDeepLinkReplayAction } from './pending-deep-link';
@@ -104,6 +105,14 @@ function HomeStackNavigator() {
           title: t('navigation.titles.home'),
         }}
       />
+      <HomeStack.Screen
+        component={PlayerProfileScreen}
+        name="PlayerProfile"
+        options={{
+          headerShown: false,
+          title: t('navigation.titles.playerProfile'),
+        }}
+      />
     </HomeStack.Navigator>
   );
 }
@@ -142,6 +151,14 @@ function DiscoverStackNavigator() {
           title: t('navigation.titles.discover'),
         }}
       />
+      <DiscoverStack.Screen
+        component={PlayerProfileScreen}
+        name="PlayerProfile"
+        options={{
+          headerShown: false,
+          title: t('navigation.titles.playerProfile'),
+        }}
+      />
     </DiscoverStack.Navigator>
   );
 }
@@ -172,7 +189,31 @@ function ProfileStackNavigator() {
         component={ProfileScreen}
         name="ProfileHome"
         options={{
+          headerShown: false,
           title: t('navigation.titles.profile'),
+        }}
+      />
+      <ProfileStack.Screen
+        component={PlayerProfileScreen}
+        name="PlayerProfile"
+        options={{
+          headerShown: false,
+          title: t('navigation.titles.playerProfile'),
+        }}
+      />
+      <ProfileStack.Screen
+        component={SettingsScreen}
+        name="Settings"
+        options={{
+          headerShown: false,
+          title: t('navigation.titles.settings'),
+        }}
+      />
+      <ProfileStack.Screen
+        component={AccountDeletionScreen}
+        name="AccountDeletion"
+        options={{
+          title: t('navigation.titles.accountDeletion'),
         }}
       />
     </ProfileStack.Navigator>
@@ -373,6 +414,7 @@ export function AppNavigator() {
           component={ProfileScreen}
           name="Profile"
           options={{
+            headerShown: false,
             title: t('navigation.titles.profile'),
           }}
         />
@@ -382,6 +424,14 @@ export function AppNavigator() {
           options={{
             headerShown: false,
             title: t('navigation.titles.eventDetail'),
+          }}
+        />
+        <RootStack.Screen
+          component={VenueDetailScreen}
+          name="VenueDetail"
+          options={{
+            headerShown: false,
+            title: t('navigation.titles.venueDetail'),
           }}
         />
         <RootStack.Screen
@@ -403,6 +453,7 @@ export function AppNavigator() {
           component={PlayerProfileScreen}
           name="PlayerProfile"
           options={{
+            headerShown: false,
             title: t('navigation.titles.playerProfile'),
           }}
         />
@@ -417,6 +468,7 @@ export function AppNavigator() {
           component={SettingsScreen}
           name="Settings"
           options={{
+            headerShown: false,
             title: t('navigation.titles.settings'),
           }}
         />
