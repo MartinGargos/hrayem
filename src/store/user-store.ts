@@ -13,6 +13,7 @@ type UserState = {
   hasHydrated: boolean;
   setHasHydrated: (hasHydrated: boolean) => void;
   setProfile: (profile: UserProfile | null) => void;
+  updateProfilePhoto: (photoUrl: string | null) => void;
   setSelectedCity: (selectedCity: CityName | null) => void;
   setLanguage: (language: AppLanguage) => void;
   clearProfile: () => void;
@@ -34,6 +35,15 @@ export const useUserStore = create<UserState>()(
       hasHydrated: false,
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setProfile: (profile) => set({ profile }),
+      updateProfilePhoto: (photoUrl) =>
+        set((state) => ({
+          profile: state.profile
+            ? {
+                ...state.profile,
+                photoUrl,
+              }
+            : state.profile,
+        })),
       setSelectedCity: (selectedCity) =>
         set((state) => ({
           selectedCity,

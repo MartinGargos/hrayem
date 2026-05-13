@@ -21,8 +21,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import type { NavigationProp, RouteProp } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -61,6 +62,7 @@ import type {
   VenueSummary,
 } from '../../types/events';
 import { formatEventDate, formatEventTime } from '../../utils/dates';
+import { translatePlural } from '../../utils/pluralization';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type EditEventRoute = RouteProp<RootStackParamList, 'EditEvent'>;
@@ -177,9 +179,12 @@ function buildCreateEventSuccessState(input: {
         input.createdEvent.ends_at,
         input.language,
       )}`,
-      playerCountLabel: input.t('events.create.summary.players', {
-        count: input.createdEvent.player_count_total,
-      }),
+      playerCountLabel: translatePlural(
+        input.t,
+        input.language,
+        'events.create.summary.players',
+        input.createdEvent.player_count_total,
+      ),
       reservationLabel: input.t(`events.reservationType.${input.createdEvent.reservation_type}`),
     },
     shareUrl,
@@ -382,21 +387,12 @@ function CreateScreenHeader({
   );
 }
 
-function StepBadge({ value }: { value: string }) {
-  return (
-    <View style={styles.stepBadge}>
-      <Text style={styles.stepBadgeLabel}>{value}</Text>
-    </View>
-  );
-}
-
 function FormSection({
-  step,
   title,
   description,
   children,
 }: {
-  step: string;
+  step?: string;
   title: string;
   description: string;
   children: React.ReactNode;
@@ -404,7 +400,6 @@ function FormSection({
   return (
     <View style={styles.sectionBlock}>
       <View style={styles.sectionTitleRow}>
-        <StepBadge value={step} />
         <Text style={styles.sectionHeadline}>{title}</Text>
       </View>
       <Text style={styles.sectionDescription}>{description}</Text>
@@ -646,9 +641,6 @@ function SkillLevelCard({
       onPress={onPress}
       style={[styles.skillCard, selected ? styles.skillCardSelected : undefined]}
     >
-      <Text style={[styles.skillShortLabel, selected ? styles.skillShortLabelSelected : undefined]}>
-        {shortLabel}
-      </Text>
       <Text
         adjustsFontSizeToFit
         minimumFontScale={0.86}
@@ -656,6 +648,9 @@ function SkillLevelCard({
         style={[styles.skillLongLabel, selected ? styles.skillLongLabelSelected : undefined]}
       >
         {label}
+      </Text>
+      <Text style={[styles.skillShortLabel, selected ? styles.skillShortLabelSelected : undefined]}>
+        {shortLabel}
       </Text>
     </Pressable>
   );
@@ -884,7 +879,7 @@ function StickySubmitCard({
             </View>
           )}
           <View style={styles.stickyFooterCopy}>
-            <Text numberOfLines={1} style={styles.stickyFooterTitle}>
+            <Text numberOfLines={2} style={styles.stickyFooterTitle}>
               {sportName}
               {venueName ? ` · ${venueName}` : ''}
             </Text>
@@ -896,7 +891,7 @@ function StickySubmitCard({
         </View>
         <View style={styles.stickyFooterStats}>
           <Text style={styles.stickyFooterPlayers}>
-            {t('events.create.summary.players', { count: playerCountTotal })}
+            {translatePlural(t, language, 'events.create.summary.players', playerCountTotal)}
           </Text>
         </View>
       </View>
@@ -917,7 +912,7 @@ function StickySubmitCard({
           >
             {isLoading ? <ActivityIndicator color="#10233f" size="small" /> : null}
             <Text style={styles.stickySubmitButtonLabel}>{buttonLabel}</Text>
-            {!isLoading ? <Ionicons color="#10233f" name="arrow-forward" size={18} /> : null}
+            {!isLoading ? <Ionicons color="#0d1728" name="arrow-forward" size={18} /> : null}
           </Pressable>
         </Animated.View>
       </View>
@@ -927,6 +922,7 @@ function StickySubmitCard({
 
 function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: string }) {
   const navigation = useNavigation<RootNavigation>();
+  const isScreenFocused = useIsFocused();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -1634,6 +1630,7 @@ function EventFormScreen({ mode, eventId }: { mode: EventFormMode; eventId?: str
 
   return (
     <View style={styles.screen}>
+      {isScreenFocused ? <StatusBar style={isSuccessOverlayVisible ? 'light' : 'dark'} /> : null}
       <Animated.View
         style={[
           styles.screenLayer,
@@ -2341,20 +2338,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  stepBadge: {
-    minWidth: 30,
-    height: 20,
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10233f',
-  },
-  stepBadgeLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#d8ff45',
-  },
   sectionHeadline: {
     fontSize: 18,
     fontWeight: '900',
@@ -2394,7 +2377,7 @@ const styles = StyleSheet.create({
   },
   sportCard: {
     width: '48%',
-    minHeight: 138,
+    minHeight: 126,
     borderRadius: 22,
     padding: 16,
     backgroundColor: '#ffffff',
@@ -2758,25 +2741,25 @@ const styles = StyleSheet.create({
     borderColor: '#10233f',
   },
   skillShortLabel: {
-    fontSize: 21,
-    fontWeight: '900',
-    color: '#10233f',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#8b98a8',
     textAlign: 'center',
   },
   skillShortLabelSelected: {
-    color: '#ffffff',
+    color: '#c5d1e0',
   },
   skillLongLabel: {
-    minHeight: 30,
-    fontSize: 11.5,
-    lineHeight: 14,
-    fontWeight: '700',
-    color: '#7b8796',
+    minHeight: 38,
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '900',
+    color: '#10233f',
     textAlign: 'center',
     width: '100%',
   },
   skillLongLabelSelected: {
-    color: '#c5d1e0',
+    color: '#ffffff',
   },
   skillSummaryCard: {
     borderRadius: 18,
@@ -3004,6 +2987,7 @@ const styles = StyleSheet.create({
   },
   stickyFooterTitle: {
     fontSize: 15,
+    lineHeight: 19,
     fontWeight: '800',
     color: '#ffffff',
   },
@@ -3030,12 +3014,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#d8ff45',
   },
   stickySubmitButtonDisabled: {
-    opacity: 0.45,
+    backgroundColor: '#e9f8a8',
+    opacity: 1,
   },
   stickySubmitButtonLabel: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#10233f',
+    color: '#0d1728',
   },
   interactionShield: {
     ...StyleSheet.absoluteFillObject,

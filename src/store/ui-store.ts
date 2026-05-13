@@ -10,6 +10,7 @@ type UIState = {
   pendingDeepLinkHandledUserId: string | null;
   authScreen: AuthScreen;
   authNotice: AppNotice | null;
+  authTransitionActive: boolean;
   setOffline: (isOffline: boolean) => void;
   setPendingDeepLink: (pendingDeepLink: string | null) => void;
   markPendingDeepLinkHandledByUser: (userId: string) => void;
@@ -17,6 +18,8 @@ type UIState = {
   setAuthScreen: (authScreen: AuthScreen) => void;
   setAuthNotice: (authNotice: AppNotice | null) => void;
   clearAuthNotice: () => void;
+  startAuthTransition: () => void;
+  finishAuthTransition: () => void;
   reset: () => void;
 };
 
@@ -28,6 +31,7 @@ export const useUIStore = create<UIState>()(
       pendingDeepLinkHandledUserId: null,
       authScreen: 'login',
       authNotice: null,
+      authTransitionActive: false,
       setOffline: (isOffline) => set({ isOffline }),
       setPendingDeepLink: (pendingDeepLink) =>
         set({
@@ -46,6 +50,8 @@ export const useUIStore = create<UIState>()(
       setAuthScreen: (authScreen) => set({ authScreen, authNotice: null }),
       setAuthNotice: (authNotice) => set({ authNotice }),
       clearAuthNotice: () => set({ authNotice: null }),
+      startAuthTransition: () => set({ authTransitionActive: true }),
+      finishAuthTransition: () => set({ authTransitionActive: false }),
       reset: () =>
         set({
           isOffline: false,
@@ -53,6 +59,7 @@ export const useUIStore = create<UIState>()(
           pendingDeepLinkHandledUserId: get().pendingDeepLinkHandledUserId,
           authScreen: 'login',
           authNotice: null,
+          authTransitionActive: false,
         }),
     }),
     {

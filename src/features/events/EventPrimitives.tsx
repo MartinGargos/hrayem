@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { formatEventDate, formatEventTime } from '../../utils/dates';
 import type { AppLanguage } from '../../types/app';
 import type { EventFeedItem, SportSummary } from '../../types/events';
+import { translatePlural } from '../../utils/pluralization';
 
 function getSportBadgeLabel(input: { slug?: string | null; name: string }): string {
   const slug = input.slug?.toLowerCase() ?? '';
@@ -24,6 +25,42 @@ function getSportBadgeLabel(input: { slug?: string | null; name: string }): stri
   }
 
   return input.name.slice(0, 2).toUpperCase();
+}
+
+function getSkillLevelRangeLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  minimum: number,
+  maximum: number,
+): string {
+  if (minimum === maximum) {
+    return t(`events.skillLevel.label.${minimum}`);
+  }
+
+  return `${t(`events.skillLevel.label.${minimum}`)} - ${t(`events.skillLevel.label.${maximum}`)}`;
+}
+
+function formatOrganizerHistoryMeta(
+  t: ReturnType<typeof useTranslation>['t'],
+  language: AppLanguage,
+  input: {
+    gamesPlayed: number;
+    noShows: number;
+  },
+): string | null {
+  if (input.gamesPlayed <= 0 && input.noShows <= 0) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (input.gamesPlayed > 0) {
+    parts.push(translatePlural(t, language, 'events.detail.playerGames', input.gamesPlayed));
+    parts.push(translatePlural(t, language, 'events.detail.playerAbsences', input.noShows));
+  } else if (input.noShows > 0) {
+    parts.push(translatePlural(t, language, 'events.detail.playerAbsences', input.noShows));
+  }
+
+  return parts.join(' · ');
 }
 
 type SportBadgeProps = {
@@ -84,11 +121,17 @@ type AvatarPhotoProps = {
 
 export function AvatarPhoto({ uri, label, size = 42 }: AvatarPhotoProps) {
   const fallback = label.trim().slice(0, 1).toUpperCase() || '?';
+  const [hasLoadError, setHasLoadError] = useState(false);
 
-  return uri ? (
+  useEffect(() => {
+    setHasLoadError(false);
+  }, [uri]);
+
+  return uri && !hasLoadError ? (
     <Image
       accessibilityLabel={label}
       contentFit="cover"
+      onError={() => setHasLoadError(true)}
       source={{ uri }}
       style={{
         width: size,
@@ -236,6 +279,10 @@ export function EventSummaryCard({ event, language, onPress }: EventSummaryCardP
   const { t } = useTranslation();
   const organizerName = event.organizerFirstName ?? t('events.common.organizerFallback');
   const sportName = language === 'cs' ? event.sportNameCs : event.sportNameEn;
+  const organizerHistoryMeta = formatOrganizerHistoryMeta(t, language, {
+    gamesPlayed: event.organizerGamesPlayed,
+    noShows: event.organizerNoShows,
+  });
 
   return (
     <Pressable
@@ -294,18 +341,17 @@ export function EventSummaryCard({ event, language, onPress }: EventSummaryCardP
             <InfoPill accentColor="#a0603b">
               {event.status === 'full'
                 ? t('events.feed.statusFull')
-                : t('events.feed.waitlistCount', { count: event.waitlistCount })}
+                : translatePlural(t, language, 'events.feed.waitlistCount', event.waitlistCount)}
             </InfoPill>
           ) : null}
           <InfoPill>
             {t('events.feed.spotsTaken', {
+              count: event.playerCountTotal,
               current: event.spotsTaken,
               total: event.playerCountTotal,
             })}
           </InfoPill>
-          <InfoPill>
-            {t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax })}
-          </InfoPill>
+          <InfoPill>{getSkillLevelRangeLabel(t, event.skillMin, event.skillMax)}</InfoPill>
         </View>
 
         <View style={styles.organizerRow}>
@@ -313,12 +359,9 @@ export function EventSummaryCard({ event, language, onPress }: EventSummaryCardP
           <View style={styles.organizerTextWrap}>
             <Text style={styles.organizerEyebrow}>{t('events.detail.organizerTitle')}</Text>
             <Text style={styles.organizerName}>{organizerName}</Text>
-            <Text style={styles.organizerMeta}>
-              {t('events.detail.organizerStats', {
-                games: event.organizerGamesPlayed,
-                noShows: event.organizerNoShows,
-              })}
-            </Text>
+            {organizerHistoryMeta ? (
+              <Text style={styles.organizerMeta}>{organizerHistoryMeta}</Text>
+            ) : null}
           </View>
         </View>
       </View>

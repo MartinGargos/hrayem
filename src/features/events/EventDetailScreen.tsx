@@ -10,8 +10,10 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useIsFocused } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { StatusBar } from 'expo-status-bar';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -60,8 +62,33 @@ import {
   formatRelativeTime,
 } from '../../utils/dates';
 import { formatDisplayName } from '../../utils/people';
+import { translatePlural } from '../../utils/pluralization';
 
 type EventDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'EventDetail'>;
+
+function formatPlayerHistoryMeta(
+  t: ReturnType<typeof useTranslation>['t'],
+  language: AppLanguage,
+  input: {
+    gamesPlayed: number;
+    noShows: number;
+  },
+): string | null {
+  if (input.gamesPlayed <= 0 && input.noShows <= 0) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (input.gamesPlayed > 0) {
+    parts.push(translatePlural(t, language, 'events.detail.playerGames', input.gamesPlayed));
+    parts.push(translatePlural(t, language, 'events.detail.playerAbsences', input.noShows));
+  } else if (input.noShows > 0) {
+    parts.push(translatePlural(t, language, 'events.detail.playerAbsences', input.noShows));
+  }
+
+  return parts.join(' · ');
+}
 
 function getOptimisticJoinResult(event: EventDetail): JoinEventResponse {
   const canConfirmImmediately = event.spotsTaken < event.playerCountTotal;
@@ -290,8 +317,16 @@ function mapJoinLeaveErrorToNotice(error: unknown): AppNotice {
   };
 }
 
-function buildEventCode(eventId: string): string {
-  return `#H-${eventId.replace(/-/g, '').slice(0, 4).toUpperCase()}`;
+function getSkillLevelRangeLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  minimum: number,
+  maximum: number,
+): string {
+  if (minimum === maximum) {
+    return t(`events.skillLevel.label.${minimum}`);
+  }
+
+  return `${t(`events.skillLevel.label.${minimum}`)} - ${t(`events.skillLevel.label.${maximum}`)}`;
 }
 
 function formatHeroRelativeTime(input: string, language: AppLanguage): string {
@@ -318,8 +353,11 @@ function DetailFrame({
   title: string;
   topInset: number;
 }) {
+  const isFrameFocused = useIsFocused();
+
   return (
     <View style={styles.detailRoot}>
+      {isFrameFocused ? <StatusBar style="dark" /> : null}
       <View style={[styles.detailTopBar, { paddingTop: topInset + 8 }]}>
         <Pressable
           accessibilityLabel={title}
@@ -347,7 +385,7 @@ function DetailFrame({
         contentContainerStyle={[
           styles.detailContent,
           {
-            paddingBottom: Math.max(bottomInset, 18) + 34,
+            paddingBottom: Math.max(bottomInset, 18) + 136,
           },
         ]}
         keyboardShouldPersistTaps="handled"
@@ -395,7 +433,7 @@ function OrganizerHeroCard({
           </Text>
         </View>
         <Text numberOfLines={1} style={styles.organizerHeroMeta}>
-          {t('events.detail.organizerHeroMeta', { code: buildEventCode(event.id) })}
+          {t('events.detail.organizerHeroMeta')}
         </Text>
       </View>
 
@@ -404,7 +442,7 @@ function OrganizerHeroCard({
       </Text>
       <View style={styles.organizerHeroLocationRow}>
         <Ionicons color="#9fb0c8" name="location-outline" size={15} />
-        <Text numberOfLines={1} style={styles.organizerHeroLocation}>
+        <Text numberOfLines={2} style={styles.organizerHeroLocation}>
           {event.venueAddress ?? event.city}
         </Text>
       </View>
@@ -432,16 +470,18 @@ function SectionTitle({
   rightLabel,
   title,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   rightLabel?: string;
   title: string;
 }) {
   return (
     <View style={styles.sectionTitleBlock}>
-      <View style={styles.sectionEyebrowRow}>
-        <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
-        {rightLabel ? <Text style={styles.sectionRightLabel}>{rightLabel}</Text> : null}
-      </View>
+      {eyebrow || rightLabel ? (
+        <View style={styles.sectionEyebrowRow}>
+          {eyebrow ? <Text style={styles.sectionEyebrow}>{eyebrow}</Text> : <View />}
+          {rightLabel ? <Text style={styles.sectionRightLabel}>{rightLabel}</Text> : null}
+        </View>
+      ) : null}
       <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
@@ -492,6 +532,7 @@ function ConfirmedPlayersCard({
   canRemovePlayers,
   event,
   isLoading,
+  language,
   onInvite,
   onOpenPlayer,
   onRemovePlayer,
@@ -503,6 +544,7 @@ function ConfirmedPlayersCard({
   canRemovePlayers: boolean;
   event: EventDetail;
   isLoading: boolean;
+  language: AppLanguage;
   onInvite: () => void;
   onOpenPlayer: (playerId: string) => void;
   onRemovePlayer: (playerId: string, playerName: string) => void;
@@ -531,6 +573,7 @@ function ConfirmedPlayersCard({
               onRemovePlayer={onRemovePlayer}
               player={player}
               removingUserId={removingUserId}
+              language={language}
               t={t}
             />
           ))}
@@ -546,7 +589,12 @@ function ConfirmedPlayersCard({
           {openSlotCount > visibleOpenSlots ? (
             <View style={styles.moreSlotsRow}>
               <Text style={styles.moreSlotsText}>
-                {t('events.detail.moreOpenSlots', { count: openSlotCount - visibleOpenSlots })}
+                {translatePlural(
+                  t,
+                  language,
+                  'events.detail.moreOpenSlots',
+                  openSlotCount - visibleOpenSlots,
+                )}
               </Text>
             </View>
           ) : null}
@@ -560,6 +608,7 @@ function ConfirmedPlayerRow({
   canRemove,
   isLast,
   isOrganizer,
+  language,
   onOpenPlayer,
   onRemovePlayer,
   player,
@@ -569,6 +618,7 @@ function ConfirmedPlayerRow({
   canRemove: boolean;
   isLast: boolean;
   isOrganizer: boolean;
+  language: AppLanguage;
   onOpenPlayer: (playerId: string) => void;
   onRemovePlayer: (playerId: string, playerName: string) => void;
   player: EventConfirmedPlayer;
@@ -580,6 +630,10 @@ function ConfirmedPlayerRow({
     (player.userId.startsWith('deleted-') ? t('common.deletedUser') : t('auth.home.defaultName'));
   const canOpenPlayerProfile = !player.userId.startsWith('deleted-');
   const isRemoving = removingUserId === player.userId;
+  const playerHistoryMeta = formatPlayerHistoryMeta(t, language, {
+    gamesPlayed: player.gamesPlayed,
+    noShows: player.noShows,
+  });
 
   return (
     <View style={[styles.playerSlotRow, isLast ? styles.playerSlotRowLast : undefined]}>
@@ -602,12 +656,11 @@ function ConfirmedPlayerRow({
             </Text>
             {isOrganizer ? <Text style={styles.organizerMiniLabel}>· ORG</Text> : null}
           </View>
-          <Text numberOfLines={1} style={styles.playerSlotMeta}>
-            {t('events.detail.playerStats', {
-              games: player.gamesPlayed,
-              noShows: player.noShows,
-            })}
-          </Text>
+          {playerHistoryMeta ? (
+            <Text numberOfLines={1} style={styles.playerSlotMeta}>
+              {playerHistoryMeta}
+            </Text>
+          ) : null}
         </View>
       </Pressable>
       <View style={styles.playerSlotActions}>
@@ -666,10 +719,12 @@ function OpenPlayerSlotRow({
 function CompactDetailsCard({
   event,
   eventDescription,
+  language,
   t,
 }: {
   event: EventDetail;
   eventDescription: string;
+  language: AppLanguage;
   t: ReturnType<typeof useTranslation>['t'];
 }) {
   const rows = [
@@ -679,11 +734,11 @@ function CompactDetailsCard({
     },
     {
       label: t('events.detail.waitlistLabel'),
-      value: t('events.detail.waitlistPlayers', { count: event.waitlistCount }),
+      value: translatePlural(t, language, 'events.detail.waitlistPlayers', event.waitlistCount),
     },
     {
       label: t('events.detail.skillTitle'),
-      value: t('events.feed.skillRange', { min: event.skillMin, max: event.skillMax }),
+      value: getSkillLevelRangeLabel(t, event.skillMin, event.skillMax),
     },
     {
       label: t('events.detail.courtStatusLabel'),
@@ -1695,10 +1750,7 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
 
         {canShowOrganizerTools ? (
           <View style={styles.organizerToolsSection}>
-            <SectionTitle
-              eyebrow={t('events.detail.organizerToolsEyebrow')}
-              title={t('events.organizerTools.title')}
-            />
+            <SectionTitle title={t('events.organizerTools.title')} />
             <View style={styles.organizerToolGrid}>
               {canEditEvent ? (
                 <OrganizerToolButton
@@ -1737,6 +1789,7 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
             canRemovePlayers={canRemovePlayers}
             event={event}
             isLoading={playersQuery.isPending}
+            language={language}
             onInvite={handleShare}
             onOpenPlayer={(playerId) => navigation.navigate('PlayerProfile', { playerId })}
             onRemovePlayer={handleRemovePlayerPress}
@@ -1747,11 +1800,13 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
         </View>
 
         <View style={styles.sectionStack}>
-          <SectionTitle
-            eyebrow={t('events.detail.whenWhereEyebrow')}
-            title={t('events.detail.whenWhereTitle')}
+          <SectionTitle title={t('events.detail.whenWhereTitle')} />
+          <CompactDetailsCard
+            event={event}
+            eventDescription={eventDescription}
+            language={language}
+            t={t}
           />
-          <CompactDetailsCard event={event} eventDescription={eventDescription} t={t} />
         </View>
 
         <ChatShortcutCard
@@ -1776,6 +1831,10 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
                       const playerName =
                         formatDisplayName(player.firstName, player.lastName) ||
                         t('auth.home.defaultName');
+                      const playerHistoryMeta = formatPlayerHistoryMeta(t, language, {
+                        gamesPlayed: player.gamesPlayed,
+                        noShows: player.noShows,
+                      });
 
                       return (
                         <View key={`no-show-${player.userId}`} style={styles.playerCard}>
@@ -1783,12 +1842,9 @@ export function EventDetailScreen({ route, navigation }: EventDetailScreenProps)
                             <AvatarPhoto label={playerName} uri={player.photoUrl} />
                             <View style={styles.playerCopy}>
                               <Text style={styles.playerName}>{playerName}</Text>
-                              <Text style={styles.playerMeta}>
-                                {t('events.detail.playerStats', {
-                                  games: player.gamesPlayed,
-                                  noShows: player.noShows,
-                                })}
-                              </Text>
+                              {playerHistoryMeta ? (
+                                <Text style={styles.playerMeta}>{playerHistoryMeta}</Text>
+                              ) : null}
                             </View>
                           </View>
                           <ActionButton

@@ -13,6 +13,7 @@ import {
   type KeyboardTypeOptions,
   type TextInputProps,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppNotice, NoticeTone } from '../../types/app';
@@ -21,10 +22,17 @@ type AuthScaffoldProps = {
   title: string;
   subtitle: string;
   children: ReactNode;
+  betweenHeroAndCard?: ReactNode;
   footer?: ReactNode;
 };
 
-export function AuthScaffold({ title, subtitle, children, footer }: AuthScaffoldProps) {
+export function AuthScaffold({
+  title,
+  subtitle,
+  children,
+  betweenHeroAndCard,
+  footer,
+}: AuthScaffoldProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -32,23 +40,30 @@ export function AuthScaffold({ title, subtitle, children, footer }: AuthScaffold
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.flex}
     >
+      <StatusBar style="dark" />
       <ScrollView
         bounces={false}
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: insets.top + 18,
+            paddingBottom: Math.max(insets.bottom + 30, 44),
           },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <Text style={styles.eyebrow}>Hrayem</Text>
+          <View style={[styles.heroGridLine, styles.heroGridLineVertical]} />
+          <View style={[styles.heroGridLine, styles.heroGridLineHorizontal]} />
+          <Text style={styles.eyebrow}>HRAYEM</Text>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
+        {betweenHeroAndCard ? (
+          <View style={styles.betweenHeroAndCard}>{betweenHeroAndCard}</View>
+        ) : null}
         <View style={styles.card}>{children}</View>
         {footer ? <View style={styles.footer}>{footer}</View> : null}
       </ScrollView>
@@ -88,6 +103,8 @@ type FormTextFieldProps = {
   maxLength?: number;
   numberOfLines?: number;
   textContentType?: TextInputProps['textContentType'];
+  leftIconName?: React.ComponentProps<typeof Ionicons>['name'];
+  rightIconName?: React.ComponentProps<typeof Ionicons>['name'];
 };
 
 export function FormTextField({
@@ -105,38 +122,48 @@ export function FormTextField({
   maxLength,
   numberOfLines,
   textContentType,
+  leftIconName,
+  rightIconName,
 }: FormTextFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        accessibilityHint={accessibilityHint ?? placeholder ?? label}
-        accessibilityLabel={label}
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete}
-        keyboardType={keyboardType}
-        maxLength={maxLength}
-        multiline={multiline}
-        numberOfLines={numberOfLines}
-        onBlur={() => setIsFocused(false)}
-        onChangeText={onChangeText}
-        onFocus={() => setIsFocused(true)}
-        placeholder={placeholder}
-        placeholderTextColor="#7a8ca3"
-        secureTextEntry={secureTextEntry}
-        selectionColor="#183153"
+      <View
         style={[
-          styles.input,
+          styles.inputShell,
           multiline ? styles.inputMultiline : undefined,
           isFocused ? styles.inputFocused : undefined,
           error ? styles.inputError : undefined,
         ]}
-        textAlignVertical={multiline ? 'top' : 'center'}
-        textContentType={textContentType}
-        value={value}
-      />
+      >
+        {leftIconName ? (
+          <Ionicons color={isFocused ? '#183153' : '#918a80'} name={leftIconName} size={19} />
+        ) : null}
+        <TextInput
+          accessibilityHint={accessibilityHint ?? placeholder ?? label}
+          accessibilityLabel={label}
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          onBlur={() => setIsFocused(false)}
+          onChangeText={onChangeText}
+          onFocus={() => setIsFocused(true)}
+          placeholder={placeholder}
+          placeholderTextColor="#8d96a1"
+          secureTextEntry={secureTextEntry}
+          selectionColor="#183153"
+          style={[styles.input, multiline ? styles.inputTextMultiline : undefined]}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          textContentType={textContentType}
+          value={value}
+        />
+        {rightIconName ? <Ionicons color="#918a80" name={rightIconName} size={20} /> : null}
+      </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
@@ -147,8 +174,9 @@ type ActionButtonProps = {
   onPress: () => void | Promise<void>;
   accessibilityHint?: string;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  variant?: 'primary' | 'secondary' | 'lime';
   iconName?: React.ComponentProps<typeof Ionicons>['name'];
+  iconPosition?: 'left' | 'right';
 };
 
 export function ActionButton({
@@ -158,6 +186,7 @@ export function ActionButton({
   disabled = false,
   variant = 'primary',
   iconName,
+  iconPosition = 'left',
 }: ActionButtonProps) {
   return (
     <Pressable
@@ -170,13 +199,17 @@ export function ActionButton({
       }}
       style={({ pressed }) => [
         styles.button,
-        variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
+        variant === 'primary'
+          ? styles.primaryButton
+          : variant === 'lime'
+            ? styles.limeButton
+            : styles.secondaryButton,
         disabled ? styles.buttonDisabled : undefined,
         pressed && !disabled ? styles.buttonPressed : undefined,
       ]}
     >
       <View style={styles.buttonContent}>
-        {iconName ? (
+        {iconName && iconPosition === 'left' ? (
           <Ionicons
             color={variant === 'primary' ? '#fff9f1' : '#183153'}
             name={iconName}
@@ -186,11 +219,22 @@ export function ActionButton({
         <Text
           style={[
             styles.buttonLabel,
-            variant === 'primary' ? styles.primaryButtonLabel : styles.secondaryButtonLabel,
+            variant === 'primary'
+              ? styles.primaryButtonLabel
+              : variant === 'lime'
+                ? styles.limeButtonLabel
+                : styles.secondaryButtonLabel,
           ]}
         >
           {label}
         </Text>
+        {iconName && iconPosition === 'right' ? (
+          <Ionicons
+            color={variant === 'primary' ? '#fff9f1' : '#183153'}
+            name={iconName}
+            size={16}
+          />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -286,6 +330,7 @@ export function SelectionField({
         onPress={onPress}
         style={[styles.selectionField, error ? styles.inputError : undefined]}
       >
+        <Ionicons color="#918a80" name="location-outline" size={19} />
         <Text style={value ? styles.selectionValue : styles.selectionPlaceholder}>
           {value || placeholder}
         </Text>
@@ -359,8 +404,13 @@ export function PickerSheet<TValue extends string>({
   onClose,
   visible,
 }: PickerSheetProps<TValue>) {
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal animationType="slide" onRequestClose={onClose} transparent visible={visible}>
+    <Modal animationType="slide" onRequestClose={onClose} transparent visible>
+      <StatusBar style="dark" />
       <Pressable
         accessibilityHint={closeAccessibilityLabel ?? title}
         accessibilityLabel={closeAccessibilityLabel ?? title}
@@ -421,52 +471,74 @@ const noticeStyles: Record<NoticeTone, object> = {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+    backgroundColor: '#f7f0e6',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 32,
-    gap: 16,
+    gap: 18,
     backgroundColor: '#f7f0e6',
   },
   hero: {
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    backgroundColor: '#183153',
+    minHeight: 178,
+    borderRadius: 30,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: '#061427',
+  },
+  heroGridLine: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  heroGridLineVertical: {
+    top: 0,
+    bottom: 0,
+    left: '58%',
+    width: 1,
+  },
+  heroGridLineHorizontal: {
+    left: 0,
+    right: 0,
+    top: '52%',
+    height: 1,
   },
   eyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: '#f4cf8c',
+    color: '#c8ff28',
   },
   title: {
-    marginTop: 8,
-    fontSize: 28,
-    lineHeight: 33,
-    fontWeight: '800',
+    marginTop: 14,
+    fontSize: 32,
+    lineHeight: 37,
+    fontWeight: '900',
+    letterSpacing: -0.2,
     color: '#fff8f0',
   },
   subtitle: {
-    marginTop: 8,
-    fontSize: 15,
-    lineHeight: 22,
+    marginTop: 12,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#dbe4ee',
   },
+  betweenHeroAndCard: {
+    marginTop: 2,
+  },
   card: {
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 28,
+    padding: 20,
     backgroundColor: '#fffbf6',
     gap: 14,
-    borderWidth: 1,
-    borderColor: '#eee1d2',
     shadowColor: '#10233f',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
     elevation: 1,
   },
   footer: {
@@ -488,38 +560,57 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#28445d',
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    color: '#66707c',
+  },
+  inputShell: {
+    minHeight: 60,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ded5c8',
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#f3efe7',
   },
   input: {
-    minHeight: 50,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#d4dee9',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    backgroundColor: '#fffefe',
+    flex: 1,
+    minHeight: 58,
+    paddingVertical: 0,
     fontSize: 16,
     color: '#183153',
   },
   inputMultiline: {
     minHeight: 112,
+    alignItems: 'flex-start',
+    paddingTop: 12,
+  },
+  inputTextMultiline: {
+    minHeight: 86,
+    paddingTop: 2,
   },
   inputFocused: {
     borderColor: '#183153',
+    backgroundColor: '#fffdf8',
   },
   inputError: {
     borderColor: '#cc5f58',
   },
   selectionField: {
-    minHeight: 50,
-    borderRadius: 15,
+    minHeight: 60,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#d4dee9',
-    paddingHorizontal: 14,
+    borderColor: '#ded5c8',
+    paddingHorizontal: 16,
     paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     justifyContent: 'center',
-    backgroundColor: '#fffefe',
+    backgroundColor: '#f3efe7',
   },
   selectionValue: {
     fontSize: 16,
@@ -535,30 +626,30 @@ const styles = StyleSheet.create({
     color: '#b44740',
   },
   button: {
-    minHeight: 50,
+    minHeight: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
+    borderRadius: 17,
     paddingHorizontal: 16,
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 1,
+    backgroundColor: '#d3d1cf',
+    borderColor: '#d3d1cf',
   },
   buttonPressed: {
     transform: [{ scale: 0.99 }],
   },
   primaryButton: {
-    backgroundColor: '#183153',
+    backgroundColor: '#061427',
+  },
+  limeButton: {
+    backgroundColor: '#c8ff28',
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#e3d2bf',
+    borderColor: '#dedbd7',
     backgroundColor: '#fffdf8',
-    shadowColor: '#10233f',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 1,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -576,6 +667,9 @@ const styles = StyleSheet.create({
   primaryButtonLabel: {
     color: '#fff9f1',
   },
+  limeButtonLabel: {
+    color: '#061427',
+  },
   secondaryButtonLabel: {
     color: '#183153',
   },
@@ -583,12 +677,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '700',
-    color: '#1d557f',
+    color: '#061427',
   },
   checkboxRow: {
     flexDirection: 'row',
     gap: 12,
     alignItems: 'flex-start',
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#f3efe7',
   },
   checkbox: {
     width: 22,

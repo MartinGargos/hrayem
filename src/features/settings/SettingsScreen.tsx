@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
@@ -24,7 +25,7 @@ import { z } from 'zod';
 import { CURATED_CITIES, type CityName } from '../../constants/cities';
 import { StateMessage } from '../../components/StateMessage';
 import type { RootStackParamList } from '../../navigation/types';
-import { saveProfilePreferences } from '../../services/profile';
+import { saveProfilePhoto, saveProfilePreferences } from '../../services/profile';
 import { signOutAndClearState } from '../../services/auth';
 import {
   fetchNotificationPreferences,
@@ -33,7 +34,7 @@ import {
 import { registerPushTokenIfNeeded } from '../../services/push-notifications';
 import { useAuthStore } from '../../store/auth-store';
 import { useUserStore } from '../../store/user-store';
-import type { AppLanguage, AppNotice } from '../../types/app';
+import type { AppLanguage, AppNotice, UserProfile } from '../../types/app';
 import type { NotificationPreference, NotificationPreferenceType } from '../../types/notifications';
 import { ActionButton, NoticeBanner, PickerSheet } from '../auth/AuthPrimitives';
 import { AvatarPhoto } from '../events/EventPrimitives';
@@ -118,7 +119,7 @@ function SettingsAvatar({ fullName, photoUrl }: { fullName: string; photoUrl?: s
   const fallback = fullName.trim().slice(0, 1).toUpperCase() || '?';
 
   if (photoUrl) {
-    return <AvatarPhoto label={fullName} size={58} uri={photoUrl} />;
+    return <AvatarPhoto key={photoUrl} label={fullName} size={58} uri={photoUrl} />;
   }
 
   return (
@@ -148,10 +149,12 @@ export function SettingsScreen() {
   const language = useUserStore((state) => state.language);
   const profile = useUserStore((state) => state.profile);
   const selectedCity = useUserStore((state) => state.selectedCity);
+  const updateProfilePhoto = useUserStore((state) => state.updateProfilePhoto);
   const setLanguage = useUserStore((state) => state.setLanguage);
   const setSelectedCity = useUserStore((state) => state.setSelectedCity);
   const [notice, setNotice] = useState<AppNotice | null>(null);
   const [isCityPickerVisible, setIsCityPickerVisible] = useState(false);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermissionStatus>(
     Notifications.PermissionStatus.UNDETERMINED,
   );
@@ -220,6 +223,49 @@ export function SettingsScreen() {
         messageKey: message.includes('network')
           ? 'settings.profileSaveFailedNetwork'
           : 'settings.profileSaveFailed',
+        tone: 'error',
+      });
+    },
+  });
+
+  const saveProfilePhotoMutation = useMutation({
+    mutationFn: async (photoAsset: ImagePicker.ImagePickerAsset) => {
+      if (!userId) {
+        throw new Error('Missing user id.');
+      }
+
+      return saveProfilePhoto({
+        userId,
+        photoAsset,
+      });
+    },
+    onSuccess: async (photoUrl) => {
+      setLocalPhotoUrl(photoUrl);
+      updateProfilePhoto(photoUrl);
+      queryClient.setQueryData<UserProfile | undefined>(['profile', userId], (currentProfile) =>
+        currentProfile
+          ? {
+              ...currentProfile,
+              photoUrl,
+            }
+          : currentProfile,
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+      ]);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setNotice({
+        messageKey: 'settings.photoSaved',
+        tone: 'success',
+      });
+    },
+    onError: async () => {
+      setLocalPhotoUrl(null);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setNotice({
+        messageKey: 'settings.photoSaveFailed',
         tone: 'error',
       });
     },
@@ -310,13 +356,56 @@ export function SettingsScreen() {
     }
   }
 
+  async function handleChangePhoto() {
+    try {
+      setNotice(null);
+
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (permission.status !== 'granted') {
+        setNotice({
+          messageKey: 'settings.photoPermissionDenied',
+          tone: 'error',
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const photoAsset = result.assets[0];
+
+      if (!photoAsset) {
+        return;
+      }
+
+      setLocalPhotoUrl(photoAsset.uri);
+      saveProfilePhotoMutation.mutate(photoAsset);
+    } catch {
+      setLocalPhotoUrl(null);
+      setNotice({
+        messageKey: 'settings.photoSaveFailed',
+        tone: 'error',
+      });
+    }
+  }
+
   const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
   const resolvedFullName = fullName || t('auth.home.defaultName');
+  const displayedPhotoUrl = localPhotoUrl ?? profile?.photoUrl ?? null;
   const languageLabel = t(`auth.language.${profile?.language ?? language}`);
   const permissionLabel = t(`settings.notifications.permissionStatus.${permissionStatus}`);
   const shouldShowPermissionPrompt =
     permissionStatus !== 'granted' && permissionStatus !== 'provisional';
-  const bottomPadding = Math.max(insets.bottom, 16) + 126;
+  const bottomPadding = Math.max(insets.bottom, 16) + 154;
 
   function handleGoBack() {
     if (navigation.canGoBack()) {
@@ -360,20 +449,29 @@ export function SettingsScreen() {
         <View style={styles.topBarSpacer} />
       </View>
 
-      <View style={styles.settingsHero}>
-        <View pointerEvents="none" style={styles.settingsHeroGrid}>
-          <View style={[styles.settingsHeroGridLine, styles.settingsHeroGridLineVerticalOne]} />
-          <View style={[styles.settingsHeroGridLine, styles.settingsHeroGridLineVerticalTwo]} />
-          <View style={[styles.settingsHeroGridLine, styles.settingsHeroGridLineHorizontal]} />
-        </View>
-        <Text style={styles.settingsHeroTitle}>{t('navigation.titles.settings')}</Text>
-        <Text style={styles.settingsHeroSubtitle}>{t('shell.settings.subtitle')}</Text>
-      </View>
-
       <NoticeBanner notice={notice} resolveMessage={t} />
 
       <View style={styles.profileCard}>
-        <SettingsAvatar fullName={resolvedFullName} photoUrl={profile?.photoUrl ?? null} />
+        <Pressable
+          accessibilityHint={t('settings.photoAction')}
+          accessibilityLabel={t('settings.photoAction')}
+          accessibilityRole="button"
+          disabled={saveProfilePhotoMutation.isPending}
+          onPress={handleChangePhoto}
+          style={({ pressed }) => [
+            styles.avatarButton,
+            pressed && !saveProfilePhotoMutation.isPending ? styles.avatarButtonPressed : null,
+          ]}
+        >
+          <SettingsAvatar fullName={resolvedFullName} photoUrl={displayedPhotoUrl} />
+          <View style={styles.avatarEditBadge}>
+            {saveProfilePhotoMutation.isPending ? (
+              <ActivityIndicator color="#06142a" size="small" />
+            ) : (
+              <Ionicons color="#06142a" name="camera-outline" size={14} />
+            )}
+          </View>
+        </Pressable>
         <View style={styles.profileCopy}>
           <Text numberOfLines={1} style={styles.profileName}>
             {resolvedFullName}
@@ -382,6 +480,24 @@ export function SettingsScreen() {
             <SettingsPill label={profile?.city ?? selectedCity ?? t('shell.common.noCity')} />
             <SettingsPill label={languageLabel} />
           </View>
+          <Pressable
+            accessibilityHint={t('settings.photoAction')}
+            accessibilityLabel={t('settings.photoAction')}
+            accessibilityRole="button"
+            disabled={saveProfilePhotoMutation.isPending}
+            onPress={handleChangePhoto}
+            style={({ pressed }) => [
+              styles.photoAction,
+              pressed && !saveProfilePhotoMutation.isPending ? styles.photoActionPressed : null,
+            ]}
+          >
+            <Ionicons color="#3c86ff" name="camera-outline" size={14} />
+            <Text style={styles.photoActionLabel}>
+              {saveProfilePhotoMutation.isPending
+                ? t('settings.photoSaving')
+                : t('settings.photoAction')}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -636,53 +752,6 @@ const styles = StyleSheet.create({
   topBarSpacer: {
     width: 42,
   },
-  settingsHero: {
-    position: 'relative',
-    overflow: 'hidden',
-    minHeight: 110,
-    justifyContent: 'center',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    backgroundColor: '#07162a',
-  },
-  settingsHeroGrid: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.72,
-  },
-  settingsHeroGridLine: {
-    position: 'absolute',
-    backgroundColor: 'rgba(185, 205, 230, 0.12)',
-  },
-  settingsHeroGridLineVerticalOne: {
-    top: 0,
-    bottom: 0,
-    left: '48%',
-    width: 1,
-  },
-  settingsHeroGridLineVerticalTwo: {
-    top: 0,
-    bottom: 0,
-    left: '76%',
-    width: 1,
-  },
-  settingsHeroGridLineHorizontal: {
-    top: 58,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  settingsHeroTitle: {
-    fontSize: 28,
-    lineHeight: 33,
-    fontWeight: '900',
-    color: '#ffffff',
-  },
-  settingsHeroSubtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    lineHeight: 19,
-    color: '#c5d1df',
-  },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -698,6 +767,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 18,
     elevation: 2,
+  },
+  avatarButton: {
+    position: 'relative',
+  },
+  avatarButtonPressed: {
+    transform: [{ scale: 0.97 }],
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -3,
+    bottom: -3,
+    width: 25,
+    height: 25,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d8ff45',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   settingsAvatar: {
     width: 58,
@@ -715,7 +803,7 @@ const styles = StyleSheet.create({
   },
   profileCopy: {
     flex: 1,
-    gap: 7,
+    gap: 8,
   },
   profileName: {
     fontSize: 16,
@@ -727,6 +815,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 7,
+  },
+  photoAction: {
+    alignSelf: 'flex-start',
+    minHeight: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  photoActionPressed: {
+    opacity: 0.68,
+  },
+  photoActionLabel: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '800',
+    color: '#3c86ff',
   },
   settingsPill: {
     minHeight: 21,

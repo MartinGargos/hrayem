@@ -31,6 +31,18 @@ function mapEventStatusLabel(
   }
 }
 
+function getSkillLevelRangeLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  minimum: number,
+  maximum: number,
+): string {
+  if (minimum === maximum) {
+    return t(`events.skillLevel.label.${minimum}`);
+  }
+
+  return `${t(`events.skillLevel.label.${minimum}`)} - ${t(`events.skillLevel.label.${maximum}`)}`;
+}
+
 export function PublicEventFallbackScreen({ eventId, screen }: PublicEventFallbackScreenProps) {
   const { t, i18n } = useTranslation();
   const language = (i18n.resolvedLanguage === 'en' ? 'en' : 'cs') as AppLanguage;
@@ -125,16 +137,14 @@ export function PublicEventFallbackScreen({ eventId, screen }: PublicEventFallba
         <DetailRow
           label={t('publicFallback.playersLabel')}
           value={t('events.feed.spotsTaken', {
+            count: event.playerCountTotal,
             current: event.spotsTaken,
             total: event.playerCountTotal,
           })}
         />
         <DetailRow
           label={t('events.detail.skillTitle')}
-          value={t('events.feed.skillRange', {
-            min: event.skillMin,
-            max: event.skillMax,
-          })}
+          value={getSkillLevelRangeLabel(t, event.skillMin, event.skillMax)}
         />
         {event.venueAddress ? (
           <DetailRow label={t('events.detail.addressLabel')} value={event.venueAddress} />

@@ -4,8 +4,9 @@
   },
   "auth": {
     "loading": {
-      "title": "Getting your session ready",
-      "subtitle": "Hrayem is checking your app version, consent state, and profile before opening the app."
+      "title": "Preparing your sign-in",
+      "subtitle": "Checking the app version, consent, and profile before opening Hrayem.",
+      "city": "Ostrava"
     },
     "fields": {
       "email": "Email",
@@ -28,15 +29,19 @@
     },
     "login": {
       "title": "Welcome back",
-      "subtitle": "Sign in to keep your games, profile, and session in sync across launches.",
+      "subtitle": "Sign in so your games and profile stay synced across devices.",
       "submit": "Log in",
       "apple": "Continue with Apple",
       "google": "Continue with Google",
+      "or": "OR",
+      "rememberMe": "Stay signed in",
       "qa": {
-        "title": "Dev-only QA login",
-        "description": "Development builds only. These buttons use the real seeded QA accounts and must never appear in preview or production.",
-        "loginAsQa1": "Login as QA 1",
-        "loginAsQa2": "Login as QA 2"
+        "title": "QA login",
+        "description": "Dev builds only. These buttons use real seeded QA accounts and must never appear in preview or production.",
+        "loginAsQa1": "QA 1",
+        "loginAsQa2": "QA 2",
+        "loginAsQa3": "QA 3",
+        "loginAsQa4": "QA 4"
       },
       "noAccount": "Don't have an account yet?",
       "createAccount": "Register",
@@ -44,8 +49,9 @@
     },
     "register": {
       "title": "Create your account",
-      "subtitle": "Start with email and password, then finish your profile before entering the app.",
+      "subtitle": "Enter your email and password. You'll finish your profile before entering the app.",
       "submit": "Create account",
+      "passwordStrength": "Password strength",
       "haveAccount": "Already have an account?",
       "signIn": "Log in",
       "termsCheckbox": "Terms and privacy consent",
@@ -53,14 +59,15 @@
       "termsLink": "Terms of Service",
       "privacyLink": "Privacy Policy",
       "and": "and",
-      "confirmEmail": "Check your email to confirm the account, then sign in to finish consent sync and profile setup."
+      "confirmEmail": "Check your email for the confirmation link, then sign in and we'll finish sync."
     },
     "forgotPassword": {
       "title": "Reset your password",
       "subtitle": "Enter your email and we'll send you a reset link.",
-      "submit": "Send reset link",
+      "submit": "Send link",
+      "info": "If you have an account, the email should arrive within a minute. Check spam too.",
       "sent": "A password reset link was sent to your email.",
-      "backToLogin": "Back to login"
+      "backToLogin": "← Back to login"
     },
     "resetPassword": {
       "title": "Set a new password",
@@ -71,14 +78,22 @@
     "reconsent": {
       "title": "Please review the latest terms",
       "subtitle": "Hrayem needs your consent for the current Terms of Service and Privacy Policy before you continue.",
+      "termsTitle": "Terms of Service",
+      "termsMeta": "v {{version}} · current version",
+      "privacyTitle": "Privacy Policy",
+      "privacyMeta": "v {{version}} · current version",
       "submit": "Accept and continue"
     },
     "profileSetup": {
       "title": "Finish your profile",
       "subtitle": "Add the basics now so other players can recognize you in events, chat, and player lists.",
+      "progress": "3 of 4",
+      "photoTitle": "Profile photo",
+      "photoHelp": "Helps others recognize you. A square photo works best.",
       "photoPlaceholder": "Optional photo",
-      "photoAction": "Choose profile photo",
-      "submit": "Save profile",
+      "photoAction": "Choose",
+      "photoRemove": "Remove",
+      "submit": "Save and continue",
       "cityPickerTitle": "Choose your city",
       "photoPermissionDenied": "Photo library access is needed to choose a profile picture.",
       "languageCzech": "Czech",
@@ -172,13 +187,16 @@
       "upcomingHeadline": "Your next game starts",
       "organizingBadge": "You're organizing",
       "confirmedBadge": "You're in",
-      "moreGames": "+{{count}} more",
+      "moreGames_one": "+{{count}} more",
+      "moreGames_other": "+{{count}} more",
       "openSpots": "Open spots {{count}}",
-      "lookingForPlayers": "Looking for {{count}} players",
+      "lookingForPlayers_one": "Looking for {{count}} player",
+      "lookingForPlayers_other": "Looking for {{count}} players",
       "noCityTitle": "Choose your city",
       "noCityBody": "As soon as you set your city, Hrayem will show games and players around you.",
       "feedReadyTitle": "Open games are nearby",
-      "feedReadyBody": "There are {{count}} open games nearby right now. If one fits, just open the detail and join in.",
+      "feedReadyBody_one": "There is {{count}} open game nearby right now. If it fits, just open the detail and join in.",
+      "feedReadyBody_other": "There are {{count}} open games nearby right now. If one fits, just open the detail and join in.",
       "emptyFilteredTitle": "Nothing exact for this selection",
       "emptyFilteredBody": "Try a different sport or time window. New games will appear here as soon as they are added.",
       "emptyOpenTitle": "It's quiet here for now",
@@ -208,16 +226,19 @@
       "venueFallback": "Nearby venue",
       "allLevels": "All levels",
       "organizerBy": "Organized by {{name}}",
-      "organizerMeta": "{{count}} games played"
+      "organizerMeta_one": "{{count}} game played",
+      "organizerMeta_other": "{{count}} games played"
     },
     "players": {
       "teaserTitle": "Who is available",
-      "teaserBody": "{{count}} players are free in this time window.",
+      "teaserBody_one": "{{count}} player is free in this time window.",
+      "teaserBody_other": "{{count}} players are free in this time window.",
       "teaserEmpty": "No one has posted availability here yet.",
       "teaserAction": "Show players",
       "postAction": "I'm available",
       "inlineCta": "Show others that you're available",
-      "inlineCount": "{{count}} available players",
+      "inlineCount_one": "{{count}} available player",
+      "inlineCount_other": "{{count}} available players",
       "sectionTitle": "Available players",
       "sectionSubtitle": "Players who are free in the selected time range.",
       "emptyTitle": "No one is free yet",
@@ -356,10 +377,10 @@
     "createEvent": {
       "title": "Create event",
       "subtitle": "Pick the sport, time, and venue, then publish the game in a minute.",
-      "stubTitle": "Create event stub",
-      "placeholder": "The final create-event form will add sport, date, time, venue, player count, and skill range in the next milestone.",
-      "openAddVenue": "Open add venue stub",
-      "openSkillLevel": "Open skill level modal stub"
+      "stubTitle": "Create event",
+      "placeholder": "The form will add sport, date, time, venue, player count, and game level.",
+      "openAddVenue": "Add venue",
+      "openSkillLevel": "Choose game level"
     },
     "addVenue": {
       "title": "Add venue",
@@ -369,9 +390,9 @@
     },
     "skillLevel": {
       "title": "Skill level",
-      "subtitle": "This modal route is reserved for the required skill declaration flow.",
-      "stubTitle": "Skill level stub",
-      "placeholder": "The real skill-level picker appears when event creation or joining needs it."
+      "subtitle": "Players choose their level for a specific sport here.",
+      "stubTitle": "Level",
+      "placeholder": "The level picker appears when event creation or joining needs it."
     },
     "myGames": {
       "title": "My games",
@@ -386,6 +407,7 @@
         "today": "Today",
         "tomorrow": "Tomorrow"
       },
+      "nextWeekSeparator": "Next week",
       "tabs": {
         "upcoming": "Upcoming",
         "past": "Past"
@@ -438,7 +460,7 @@
     },
     "settings": {
       "title": "Settings",
-      "subtitle": "Preferences, notifications, and account in one clean place.",
+      "subtitle": "",
       "stubTitle": "Settings stub",
       "placeholder": "Notification preferences and editable app settings stay stubbed until their milestone work begins.",
       "openAccountDeletion": "Delete account"
@@ -458,9 +480,9 @@
     },
     "postAvailability": {
       "title": "Post availability",
-      "subtitle": "This route reserves the availability posting flow from the Available players tab.",
-      "stubTitle": "Post availability stub",
-      "placeholder": "The real form for sport, date range, and time preference arrives in Milestone 6."
+      "subtitle": "Let other players know when you have time to play.",
+      "stubTitle": "Availability",
+      "placeholder": "The form for sport, dates, and time preference will be added later."
     }
   },
   "profile": {
@@ -476,16 +498,20 @@
     "connectionsSubtitle": "Players you clicked with most show up here for the next invite.",
     "connectionsEmptyTitle": "Nothing here yet",
     "connectionsEmpty": "Players you click with most will appear here after finished games.",
-    "connectionsGroupCount": "{{count}} players ready for another game",
+    "connectionsGroupCount_one": "{{count}} player ready for another game",
+    "connectionsGroupCount_other": "{{count}} players ready for another game",
     "playAgainBadge": "Play again",
     "skillEditHint": "Tap to update your level for this sport.",
     "skillModalSubtitle": "Update your current level for this sport so future games use the right expectations.",
     "skillUpdated": "Your skill level was updated.",
     "skillUpdateFailed": "Your skill level could not be updated. Please try again.",
     "highlights": {
-      "sports": "Sports",
-      "games": "Games",
-      "hours": "Hours",
+      "sports_one": "sport",
+      "sports_other": "sports",
+      "games_one": "game",
+      "games_other": "games",
+      "hours_one": "hour",
+      "hours_other": "hours",
       "connections": "Play again"
     },
     "errors": {
@@ -495,11 +521,16 @@
     "stats": {
       "reliabilityLabel": "Reliability",
       "feedbackLabel": "Feedback",
-      "gamesAndHours": "{{games}} games · {{hours}} h",
-      "compactGamesAndHours": "{{games}} games · {{hours}}h",
-      "noShows": "{{count}} no-shows",
+      "gamesAndHours_one": "{{games}} game · {{hours}} h",
+      "gamesAndHours_other": "{{games}} games · {{hours}} h",
+      "compactGamesAndHours_one": "{{games}} game · {{hours}}h",
+      "compactGamesAndHours_other": "{{games}} games · {{hours}}h",
+      "noShows_zero": "No absences",
+      "noShows_one": "{{count}} absence",
+      "noShows_other": "{{count}} absences",
+      "noRatingsYet": "No rating yet",
       "thumbsHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
-      "thumbsHiddenCompact": "—",
+      "thumbsHiddenCompact": "No rating yet",
       "thumbsValue": "{{percentage}}% thumbs up"
     }
   },
@@ -529,7 +560,8 @@
       "recommended": "Recom."
     },
     "sharedEyebrow": "You played together",
-    "sharedTitle": "Shared games · {{count}}",
+    "sharedTitle_one": "Shared game · {{count}}",
+    "sharedTitle_other": "Shared games · {{count}}",
     "sharedEmpty": "You do not have any finished games together yet.",
     "sharedPlayedBadge": "played",
     "statsEyebrow": "Stats",
@@ -558,6 +590,11 @@
     "profileSaved": "Your app preferences were saved.",
     "profileSaveFailed": "We couldn't save your app preferences right now.",
     "profileSaveFailedNetwork": "You're offline. Reconnect and try saving your app preferences again.",
+    "photoAction": "Change photo",
+    "photoSaving": "Saving photo...",
+    "photoSaved": "Your profile photo was saved.",
+    "photoSaveFailed": "We couldn't save your profile photo right now.",
+    "photoPermissionDenied": "Photo library access is needed to choose a profile picture.",
     "saveProfileAction": "Save preferences",
     "saveProfilePending": "Saving...",
     "cityPickerTitle": "Choose your city",
@@ -645,7 +682,8 @@
     "loadFailed": "We couldn't load your current availability right now.",
     "cityRequired": "Choose your city in the profile before posting availability.",
     "unknownSport": "Unknown sport",
-    "cardSummary": "{{skill}} · {{games}} games",
+    "cardSummary_one": "{{skill}} · {{games}} game",
+    "cardSummary_other": "{{skill}} · {{games}} games",
     "deleteAction": "Delete",
     "backToHome": "Back to Home",
     "sections": {
@@ -689,9 +727,11 @@
       "emptyBody": "No games matched this filter set. Be the first to create one.",
       "emptyCreateAction": "Create the first game",
       "statusFull": "Full",
-      "waitlistCount": "Waitlist: {{count}}",
-      "spotsTaken": "{{current}}/{{total}} players",
-      "skillRange": "Skill {{min}}-{{max}}"
+      "waitlistCount_one": "Waitlist: {{count}} player",
+      "waitlistCount_other": "Waitlist: {{count}} players",
+      "spotsTaken_one": "{{current}}/{{total}} player",
+      "spotsTaken_other": "{{current}}/{{total}} players",
+      "skillRange": "Level {{min}}-{{max}}"
     },
     "detail": {
       "loadingTitle": "Loading event",
@@ -705,21 +745,25 @@
       "addressLabel": "Address",
       "addressFallback": "Address not provided yet",
       "waitlistLabel": "Waitlist",
-      "waitlistPlayers": "{{count}} players",
+      "waitlistPlayers_one": "{{count}} player",
+      "waitlistPlayers_other": "{{count}} players",
       "yourStatusTitle": "Your status",
       "yourSkill": "Your level: {{level}}",
-      "skillTitle": "Skill range",
+      "skillTitle": "Game level",
       "courtStatusLabel": "Court status",
-      "skillRangeNote": "Players outside this range can still join. The range is there to set expectations before someone joins.",
+      "skillRangeNote": "Players outside the selected level can still join. This is mostly here to set expectations before the game.",
       "descriptionTitle": "Description",
       "noDescription": "No extra notes were added for this game.",
-      "organizerHeroMeta": "Organizing · {{code}}",
+      "organizerHeroMeta": "Organizing",
       "organizerToolsEyebrow": "Organizer tools",
       "playersEyebrow": "Players",
       "whenWhereEyebrow": "When and where",
       "organizerTitle": "Organizer",
-      "organizerStats": "{{games}} games played · {{noShows}} no-shows",
-      "playerStats": "{{games}} games · {{noShows}} no-shows",
+      "playerGames_one": "{{count}} game",
+      "playerGames_other": "{{count}} games",
+      "playerAbsences_zero": "no absences",
+      "playerAbsences_one": "{{count}} absence",
+      "playerAbsences_other": "{{count}} absences",
       "thumbsUpPercentage": "{{percentage}}% thumbs up",
       "thumbsUpPercentageHidden": "Thumbs-up percentage unlocks after at least 3 finished games.",
       "playAgainBadge": "Play again",
@@ -732,8 +776,9 @@
       "confirmedBadge": "Confirmed",
       "lookingForPlayer": "Looking for a player...",
       "inviteAction": "Invite",
-      "moreOpenSlots": "+ {{count}} more open spots",
-      "skillUnknown": "Skill not set yet",
+      "moreOpenSlots_one": "+ {{count}} more open spot",
+      "moreOpenSlots_other": "+ {{count}} more open spots",
+      "skillUnknown": "Level not set yet",
       "chatShortcutTitle": "Game chat",
       "chatShortcutSubtitle": "Open conversation",
       "shareAction": "Share event",
@@ -768,9 +813,11 @@
       "backAction": "Back",
       "openEventAction": "Open event detail",
       "headerMeta": "{{players}} · {{status}}",
-      "playersCount": "{{count}} players",
+      "playersCount_one": "{{count}} player",
+      "playersCount_other": "{{count}} players",
       "summaryTitle": "{{sport}} · {{venue}} · {{time}}",
-      "summaryMeta": "{{time}} · {{count}}/{{total}} players",
+      "summaryMeta_one": "{{time}} · {{current}}/{{total}} player",
+      "summaryMeta_other": "{{time}} · {{current}}/{{total}} players",
       "todayDivider": "Today",
       "status": {
         "active": "active",
@@ -812,10 +859,11 @@
       "backAction": "Back",
       "errorTitle": "Could not load the venue",
       "errorBody": "The venue detail is ready, but the latest data could not be loaded right now.",
-      "openGamesBadge": "Open games: {{count}}",
+      "openGamesBadge_one": "{{count}} open game",
+      "openGamesBadge_other": "{{count}} open games",
       "verifiedVenue": "Verified",
       "communityVenue": "Community",
-      "realDataNote": "no rating",
+      "realDataNote": "",
       "actions": {
         "navigation": "Directions",
         "reserve": "Reserve",
@@ -843,13 +891,13 @@
       "infoTitle": "Venue",
       "info": {
         "sports": "Sports",
-        "sportsPending": "To be added",
+        "sportsPending": "—",
         "courts": "Courts",
-        "courtsPending": "To be added",
+        "courtsPending": "—",
         "pricePerHour": "Price per hour",
         "pricePending": "By sport",
         "openingHours": "Open",
-        "openingHoursPending": "To be added"
+        "openingHoursPending": "—"
       }
     },
     "membership": {
@@ -863,7 +911,7 @@
       "skillModalSubtitle": "We need your current level for this sport before Hrayem can join the game for you.",
       "successConfirmed": "You're confirmed for this game.",
       "successWaitlisted": "You're on the waitlist for this game.",
-      "warningTitle": "Skill range warning",
+      "warningTitle": "Game level warning",
       "warningBody": "This game is set for {{range}} players. Your level is {{level}}. You can still join, but the organizer set this range to find players at a similar level. Continue?",
       "warningRange": "{{min}}-{{max}}",
       "warningContinue": "Join anyway",
@@ -911,8 +959,8 @@
       "reservationType": "Court status",
       "playerCountTotal": "Total player count",
       "playerCountCompact": "How many players?",
-      "skillMin": "Minimum skill",
-      "skillMax": "Maximum skill",
+      "skillMin": "Minimum level",
+      "skillMax": "Maximum level",
       "skillUnset": "Choose level",
       "skillHelper": "This range helps players quickly gauge the level of the game. Joining outside it is still allowed.",
       "skillRangeMin": "From · {{level}}",
@@ -963,7 +1011,8 @@
         "parking": "Parking is closest to the main entrance."
       },
       "summary": {
-        "players": "{{count}} players"
+        "players_one": "{{count}} player",
+        "players_other": "{{count}} players"
       },
       "errors": {
         "validation": "The event details need another look before they can be sent."
@@ -990,7 +1039,7 @@
         "venue": "Choose a venue.",
         "description": "Keep the description under 500 characters.",
         "skillRequired": "Choose the player level.",
-        "skillRange": "The minimum skill must be lower than or equal to the maximum skill.",
+        "skillRange": "The minimum level must be lower than or equal to the maximum level.",
         "endTime": "The end time must be later than the start time.",
         "futureStart": "The game must start in the future."
       }
@@ -1035,7 +1084,7 @@
     },
     "skillLevel": {
       "modalSubtitle": "We need your current level for this sport before Hrayem can create the game.",
-      "confirm": "Save skill and continue",
+      "confirm": "Save level and continue",
       "short": {
         "1": "B1",
         "2": "I2",

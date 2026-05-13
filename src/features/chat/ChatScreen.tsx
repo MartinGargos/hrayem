@@ -44,6 +44,7 @@ import { useUserStore } from '../../store/user-store';
 import type { AppLanguage, AppNotice } from '../../types/app';
 import type { ChatMessage, EventDetail } from '../../types/events';
 import { formatEventCompactDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
+import { translatePlural } from '../../utils/pluralization';
 
 type ChatScreenProps = NativeStackScreenProps<RootStackParamList, 'Chat'>;
 type ChatIconName = ComponentProps<typeof Ionicons>['name'];
@@ -278,14 +279,14 @@ function ChatHeader({ event, language, onBack, onOpenEvent, t, topInset }: ChatH
         onPress={onOpenEvent}
         style={styles.headerCopy}
       >
-        <Text numberOfLines={1} style={styles.headerTitle}>
+        <Text numberOfLines={2} style={styles.headerTitle}>
           {title}
         </Text>
         <View style={styles.headerMetaRow}>
           <View style={styles.headerStatusDot} />
           <Text numberOfLines={1} style={styles.headerMeta}>
             {t('events.chat.headerMeta', {
-              players: t('events.chat.playersCount', { count: event.spotsTaken }),
+              players: translatePlural(t, language, 'events.chat.playersCount', event.spotsTaken),
               status: t(`events.chat.status.${event.status}`),
             })}
           </Text>
@@ -324,7 +325,7 @@ function EventSummaryCard({ event, language, onPress, sportName, t }: EventSumma
         <Ionicons color="#071426" name="tennisball-outline" size={20} />
       </View>
       <View style={styles.eventCardCopy}>
-        <Text numberOfLines={1} style={styles.eventCardTitle}>
+        <Text numberOfLines={2} style={styles.eventCardTitle}>
           {t('events.chat.summaryTitle', {
             sport: sportName,
             time: formatEventTime(event.startsAt, language),
@@ -333,7 +334,8 @@ function EventSummaryCard({ event, language, onPress, sportName, t }: EventSumma
         </Text>
         <Text numberOfLines={1} style={styles.eventCardMeta}>
           {t('events.chat.summaryMeta', {
-            count: event.spotsTaken,
+            count: event.playerCountTotal,
+            current: event.spotsTaken,
             time: formatRelativeTime(event.startsAt, language),
             total: event.playerCountTotal,
           })}

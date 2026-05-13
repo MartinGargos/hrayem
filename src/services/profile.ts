@@ -22,6 +22,15 @@ type ProfilePreferencesInput = {
   language: AppLanguage;
 };
 
+type ProfilePhotoInput = {
+  userId: string;
+  photoAsset: ImagePickerAsset;
+};
+
+type ProfilePhotoRow = {
+  photo_url: string | null;
+};
+
 async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Promise<string> {
   const shouldKeepPng = asset.mimeType === 'image/png';
   const outputFormat = shouldKeepPng
@@ -47,11 +56,11 @@ async function uploadProfilePhoto(userId: string, asset: ImagePickerAsset): Prom
   );
 
   const fileResponse = await fetch(manipulated.uri);
-  const blob = await fileResponse.blob();
+  const fileBuffer = await fileResponse.arrayBuffer();
   const objectPath = `${userId}/avatar-${Date.now()}.${extension}`;
 
   const uploadResult = await retrySupabaseOperationOnce(() =>
-    supabase.storage.from('avatars').upload(objectPath, blob, {
+    supabase.storage.from('avatars').upload(objectPath, fileBuffer, {
       cacheControl: '3600',
       contentType,
       upsert: false,
@@ -110,4 +119,27 @@ export async function saveProfilePreferences(input: ProfilePreferencesInput): Pr
   );
 
   throwIfSupabaseError(result.error, 'Unable to save the profile preferences.');
+}
+
+export async function saveProfilePhoto(input: ProfilePhotoInput): Promise<string> {
+  const photoUrl = await uploadProfilePhoto(input.userId, input.photoAsset);
+
+  const result = await retrySupabaseOperationOnce(() =>
+    supabase
+      .from('profiles')
+      .update({ photo_url: photoUrl })
+      .eq('id', input.userId)
+      .select('photo_url')
+      .maybeSingle(),
+  );
+
+  throwIfSupabaseError(result.error, 'Unable to save the profile photo.');
+
+  const savedPhotoUrl = (result.data as ProfilePhotoRow | null)?.photo_url ?? null;
+
+  if (!savedPhotoUrl) {
+    throw new Error('Unable to save the profile photo.');
+  }
+
+  return savedPhotoUrl;
 }

@@ -27,6 +27,7 @@ import { useUserStore } from '../../store/user-store';
 import type { AppLanguage } from '../../types/app';
 import type { EventFeedItem, VenueSummary } from '../../types/events';
 import { formatEventCompactDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
+import { translatePlural } from '../../utils/pluralization';
 
 type VenueDetailScreenProps = NativeStackScreenProps<RootStackParamList, 'VenueDetail'>;
 
@@ -112,7 +113,15 @@ function VenueTopBar({
   );
 }
 
-function VenueHero({ openEventCount, venue }: { openEventCount: number; venue: VenueSummary }) {
+function VenueHero({
+  language,
+  openEventCount,
+  venue,
+}: {
+  language: AppLanguage;
+  openEventCount: number;
+  venue: VenueSummary;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -131,7 +140,7 @@ function VenueHero({ openEventCount, venue }: { openEventCount: number; venue: V
         <View style={styles.openGamesBadge}>
           <View style={styles.openGamesDot} />
           <Text style={styles.openGamesBadgeLabel}>
-            {t('events.venueDetail.openGamesBadge', { count: openEventCount })}
+            {translatePlural(t, language, 'events.venueDetail.openGamesBadge', openEventCount)}
           </Text>
         </View>
         <View style={styles.venueTrustBlock}>
@@ -141,7 +150,6 @@ function VenueHero({ openEventCount, venue }: { openEventCount: number; venue: V
               ? t('events.venueDetail.verifiedVenue')
               : t('events.venueDetail.communityVenue')}
           </Text>
-          <Text style={styles.venueTrustMeta}>{t('events.venueDetail.realDataNote')}</Text>
         </View>
       </View>
     </View>
@@ -172,12 +180,14 @@ function VenueAction({
 
 function VenueHeader({
   events,
+  language,
   onNavigate,
   onReservation,
   onSports,
   venue,
 }: {
   events: EventFeedItem[];
+  language: AppLanguage;
   onNavigate: () => void;
   onReservation: () => void;
   onSports: () => void;
@@ -188,9 +198,9 @@ function VenueHeader({
 
   return (
     <View style={styles.venueHeader}>
-      <VenueHero openEventCount={events.length} venue={venue} />
+      <VenueHero language={language} openEventCount={events.length} venue={venue} />
       <View style={styles.titleBlock}>
-        <Text numberOfLines={1} style={styles.venueTitle}>
+        <Text numberOfLines={2} style={styles.venueTitle}>
           {venue.name}
         </Text>
         <View style={styles.addressRow}>
@@ -261,7 +271,7 @@ function VenueEventCard({
 
       <View style={styles.gameMainRow}>
         <View style={styles.gameCopy}>
-          <Text numberOfLines={1} style={styles.gameVenueName}>
+          <Text numberOfLines={2} style={styles.gameVenueName}>
             {event.venueName}
           </Text>
           <Text numberOfLines={1} style={styles.gameMeta}>
@@ -305,21 +315,17 @@ function VenueInfoCard({ events, language }: { events: EventFeedItem[]; language
     new Map(events.map((event) => [event.sportId, getSportName(event, language)])).values(),
   );
   const rows = [
-    {
-      label: t('events.venueDetail.info.sports'),
-      value: sportNames.length ? sportNames.join(', ') : t('events.venueDetail.info.sportsPending'),
-    },
-    {
-      label: t('events.venueDetail.info.courts'),
-      value: t('events.venueDetail.info.courtsPending'),
-    },
+    ...(sportNames.length
+      ? [
+          {
+            label: t('events.venueDetail.info.sports'),
+            value: sportNames.join(', '),
+          },
+        ]
+      : []),
     {
       label: t('events.venueDetail.info.pricePerHour'),
       value: t('events.venueDetail.info.pricePending'),
-    },
-    {
-      label: t('events.venueDetail.info.openingHours'),
-      value: t('events.venueDetail.info.openingHoursPending'),
     },
   ];
 
@@ -472,7 +478,7 @@ export function VenueDetailScreen({ navigation, route }: VenueDetailScreenProps)
         contentContainerStyle={[
           styles.content,
           {
-            paddingBottom: Math.max(insets.bottom, 18) + 36,
+            paddingBottom: Math.max(insets.bottom, 18) + 150,
           },
         ]}
         refreshControl={
@@ -488,6 +494,7 @@ export function VenueDetailScreen({ navigation, route }: VenueDetailScreenProps)
       >
         <VenueHeader
           events={openEvents}
+          language={language}
           onNavigate={() => {
             void handleNavigatePress(venue);
           }}
@@ -545,7 +552,6 @@ export function VenueDetailScreen({ navigation, route }: VenueDetailScreenProps)
         )}
 
         <View style={styles.sectionBlock}>
-          <Text style={styles.sectionEyebrow}>{t('events.venueDetail.infoEyebrow')}</Text>
           <Text style={styles.sectionTitle}>{t('events.venueDetail.infoTitle')}</Text>
         </View>
         <VenueInfoCard events={openEvents} language={language} />

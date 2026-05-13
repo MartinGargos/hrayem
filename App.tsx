@@ -9,6 +9,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { AuthFlowScreen } from './src/features/auth/AuthFlowScreen';
+import { AuthLoginTransitionOverlay } from './src/features/auth/AuthLoginTransitionOverlay';
 import { BlockingMessageScreen } from './src/features/auth/BlockingMessageScreen';
 import { ForceUpdateScreen } from './src/features/auth/ForceUpdateScreen';
 import { LoadingScreen } from './src/features/auth/LoadingScreen';
@@ -441,6 +442,9 @@ function AppShell() {
 }
 
 export default Sentry.wrap(function RootApp() {
+  const authTransitionActive = useUIStore((state) => state.authTransitionActive);
+  const finishAuthTransition = useUIStore((state) => state.finishAuthTransition);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
@@ -458,6 +462,10 @@ export default Sentry.wrap(function RootApp() {
             >
               <AppShell />
             </Sentry.ErrorBoundary>
+            <AuthLoginTransitionOverlay
+              onFinished={finishAuthTransition}
+              visible={authTransitionActive}
+            />
           </View>
         </SafeAreaView>
       </SafeAreaProvider>

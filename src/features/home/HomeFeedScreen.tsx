@@ -47,6 +47,7 @@ import type { AppLanguage } from '../../types/app';
 import type { EventFeedItem } from '../../types/events';
 import { formatEventDate, formatEventTime, formatRelativeTime } from '../../utils/dates';
 import { formatDisplayName } from '../../utils/people';
+import { translatePlural } from '../../utils/pluralization';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type HomeSurface = 'games' | 'players';
@@ -478,6 +479,7 @@ function HomeRailEventCard({
           </View>
           <Text style={styles.homeRailCapacityLabel}>
             {t('events.feed.spotsTaken', {
+              count: event.playerCountTotal,
               current: event.spotsTaken,
               total: event.playerCountTotal,
             })}
@@ -491,13 +493,12 @@ function HomeRailEventCard({
               {organizerName}
             </Text>
             <Text style={styles.homeRailOrganizerMeta}>
-              {t('home.feed.organizerMeta', { count: event.organizerGamesPlayed })}
+              {translatePlural(t, language, 'home.feed.organizerMeta', event.organizerGamesPlayed)}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.homeRailCta}>
-          <Text style={styles.homeRailCtaLabel}>{t('home.actions.openDetail')}</Text>
+          <View style={styles.homeRailChevron}>
+            <Ionicons color="#102844" name="chevron-forward" size={18} />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -941,13 +942,14 @@ export function HomeFeedScreen({
             <View style={styles.heroBottomInfo}>
               <AvatarPhoto label={organizerName} size={34} uri={nextGame.organizerPhotoUrl} />
               <View style={styles.heroBottomCopy}>
-                <Text numberOfLines={1} style={styles.heroBottomHeadline}>
+                <Text numberOfLines={2} style={styles.heroBottomHeadline}>
                   {t('home.feed.organizerBy', { name: organizerName })}
                 </Text>
-                <Text numberOfLines={1} style={styles.heroBottomCaption}>
+                <Text numberOfLines={2} style={styles.heroBottomCaption}>
                   {openSpots > 0
-                    ? t('home.hero.lookingForPlayers', { count: openSpots })
+                    ? translatePlural(t, language, 'home.hero.lookingForPlayers', openSpots)
                     : t('events.feed.spotsTaken', {
+                        count: nextGame.playerCountTotal,
                         current: nextGame.spotsTaken,
                         total: nextGame.playerCountTotal,
                       })}
@@ -955,7 +957,7 @@ export function HomeFeedScreen({
               </View>
               {extraUpcomingCount > 0 ? (
                 <Text style={styles.heroExtraGamesNote}>
-                  {t('home.hero.moreGames', { count: extraUpcomingCount })}
+                  {translatePlural(t, language, 'home.hero.moreGames', extraUpcomingCount)}
                 </Text>
               ) : null}
             </View>
@@ -1006,7 +1008,7 @@ export function HomeFeedScreen({
           </Text>
           <Text style={styles.heroSubtitleDark}>
             {availablePlayers.length
-              ? t('home.players.teaserBody', { count: availablePlayers.length })
+              ? translatePlural(t, language, 'home.players.teaserBody', availablePlayers.length)
               : t('home.players.teaserEmpty')}
           </Text>
         </HeroSurface>
@@ -1020,7 +1022,7 @@ export function HomeFeedScreen({
             {t('home.hero.feedReadyTitle')}
           </Text>
           <Text style={styles.heroSubtitleDark}>
-            {t('home.hero.feedReadyBody', { count: feedItems.length })}
+            {translatePlural(t, language, 'home.hero.feedReadyBody', feedItems.length)}
           </Text>
           {availablePlayers.length ? (
             <View style={styles.heroActions}>
@@ -1169,7 +1171,7 @@ export function HomeFeedScreen({
           })}
         </View>
         <Text style={styles.inlineAvailabilityLinkLabel}>
-          {t('home.players.inlineCount', { count: availablePlayers.length })}
+          {translatePlural(t, language, 'home.players.inlineCount', availablePlayers.length)}
         </Text>
         <Ionicons color="#7b8d9f" name="arrow-forward" size={16} />
       </Pressable>
@@ -1331,6 +1333,7 @@ export function HomeFeedScreen({
       tintColor="#eff4fa"
     />
   );
+  const bottomSafePadding = Math.max(insets.bottom, 16) + 150;
 
   if (activeSurface === 'players') {
     return (
@@ -1342,7 +1345,7 @@ export function HomeFeedScreen({
         </View>
         <StatusBar style="light" />
         <FlatList
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomSafePadding }]}
           data={availablePlayers}
           keyExtractor={buildAvailabilityKey}
           ListEmptyComponent={
@@ -1448,7 +1451,7 @@ export function HomeFeedScreen({
       </View>
       <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={styles.gamesScrollContent}
+        contentContainerStyle={[styles.gamesScrollContent, { paddingBottom: bottomSafePadding }]}
         contentInsetAdjustmentBehavior="never"
         refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
@@ -1933,7 +1936,7 @@ const styles = StyleSheet.create({
   },
   heroBottomRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -2210,22 +2213,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#728399',
   },
-  homeRailCta: {
-    minHeight: 52,
+  homeRailChevron: {
+    width: 32,
+    height: 32,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#d8ff45',
-    shadowColor: '#91a838',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  homeRailCtaLabel: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#102844',
+    backgroundColor: '#f4f7fb',
+    borderWidth: 1,
+    borderColor: '#e3eaf2',
   },
   homeEventCard: {
     borderRadius: 24,

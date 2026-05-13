@@ -41,6 +41,7 @@ import type {
 } from '../../types/events';
 import { formatEventCompactDate, formatYear } from '../../utils/dates';
 import { formatDisplayName } from '../../utils/people';
+import { translatePlural } from '../../utils/pluralization';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type PlayerProfileScreenProps = NativeStackScreenProps<RootStackParamList, 'PlayerProfile'>;
@@ -184,12 +185,14 @@ function ProfileSportStatCard({ onPress, stat }: { onPress: () => void; stat: Pl
   const { t } = useTranslation();
   const language = useUserStore((state) => state.language);
   const sportName = language === 'cs' ? stat.sportNameCs : stat.sportNameEn;
-  const thumbsText =
-    stat.thumbsUpPercentage === null
-      ? t('profile.stats.thumbsHiddenCompact')
-      : t('profile.stats.thumbsValue', {
-          percentage: stat.thumbsUpPercentage,
-        });
+  const hasFinishedGames = stat.gamesPlayed > 0;
+  const hasRecommendationSignal = hasFinishedGames && stat.thumbsUpPercentage !== null;
+  const reliabilityText = translatePlural(t, language, 'profile.stats.noShows', stat.noShows);
+  const thumbsText = hasRecommendationSignal
+    ? t('profile.stats.thumbsValue', {
+        percentage: stat.thumbsUpPercentage,
+      })
+    : null;
 
   return (
     <Pressable
@@ -212,12 +215,20 @@ function ProfileSportStatCard({ onPress, stat }: { onPress: () => void; stat: Pl
             <Text numberOfLines={1} style={styles.profileSportName}>
               {sportName}
             </Text>
-            <Text style={styles.profileSportMeta}>
-              {t('profile.stats.compactGamesAndHours', {
-                games: stat.gamesPlayed,
-                hours: stat.hoursPlayed.toFixed(1),
-              })}
-            </Text>
+            {hasFinishedGames ? (
+              <Text style={styles.profileSportMeta}>
+                {translatePlural(
+                  t,
+                  language,
+                  'profile.stats.compactGamesAndHours',
+                  stat.gamesPlayed,
+                  {
+                    games: stat.gamesPlayed,
+                    hours: stat.hoursPlayed.toFixed(1),
+                  },
+                )}
+              </Text>
+            ) : null}
           </View>
         </View>
         <View style={styles.profileSportActionRow}>
@@ -230,22 +241,28 @@ function ProfileSportStatCard({ onPress, stat }: { onPress: () => void; stat: Pl
         </View>
       </View>
 
-      <View style={styles.profileSportDivider} />
+      {hasFinishedGames ? (
+        <>
+          <View style={styles.profileSportDivider} />
 
-      <View style={styles.profileSportSummaryRow}>
-        <View style={styles.profileSportSummaryCol}>
-          <Text style={styles.profileSportSummaryLabel}>{t('profile.stats.reliabilityLabel')}</Text>
-          <Text style={styles.profileSportSummaryValue}>
-            {t('profile.stats.noShows', {
-              count: stat.noShows,
-            })}
-          </Text>
-        </View>
-        <View style={styles.profileSportSummaryCol}>
-          <Text style={styles.profileSportSummaryLabel}>{t('profile.stats.feedbackLabel')}</Text>
-          <Text style={styles.profileSportSummaryValue}>{thumbsText}</Text>
-        </View>
-      </View>
+          <View style={styles.profileSportSummaryRow}>
+            <View style={styles.profileSportSummaryCol}>
+              <Text style={styles.profileSportSummaryLabel}>
+                {t('profile.stats.reliabilityLabel')}
+              </Text>
+              <Text style={styles.profileSportSummaryValue}>{reliabilityText}</Text>
+            </View>
+            {thumbsText ? (
+              <View style={styles.profileSportSummaryCol}>
+                <Text style={styles.profileSportSummaryLabel}>
+                  {t('profile.stats.feedbackLabel')}
+                </Text>
+                <Text style={styles.profileSportSummaryValue}>{thumbsText}</Text>
+              </View>
+            ) : null}
+          </View>
+        </>
+      ) : null}
     </Pressable>
   );
 }
@@ -337,9 +354,12 @@ function ProfileConnectionsPanel({
               <View style={styles.profileConnectionGroupCopy}>
                 <Text style={styles.profileConnectionGroupTitle}>{sportName}</Text>
                 <Text style={styles.profileConnectionGroupMeta}>
-                  {t('profile.connectionsGroupCount', {
-                    count: connections.length,
-                  })}
+                  {translatePlural(
+                    t,
+                    language,
+                    'profile.connectionsGroupCount',
+                    connections.length,
+                  )}
                 </Text>
               </View>
             </View>
@@ -368,10 +388,16 @@ function ProfileConnectionsPanel({
                   <View style={styles.profileConnectionCopy}>
                     <Text style={styles.profileConnectionName}>{connectionName}</Text>
                     <Text style={styles.profileConnectionMeta}>
-                      {t('profile.stats.compactGamesAndHours', {
-                        games: connection.gamesPlayed,
-                        hours: connection.hoursPlayed.toFixed(1),
-                      })}
+                      {translatePlural(
+                        t,
+                        language,
+                        'profile.stats.compactGamesAndHours',
+                        connection.gamesPlayed,
+                        {
+                          games: connection.gamesPlayed,
+                          hours: connection.hoursPlayed.toFixed(1),
+                        },
+                      )}
                     </Text>
                   </View>
                   <Ionicons color="#9aacbd" name="chevron-forward" size={18} />
@@ -452,22 +478,21 @@ export function ProfileScreen() {
   const totalSports = statsQuery.data?.length ?? 0;
   const totalGames = (statsQuery.data ?? []).reduce((sum, stat) => sum + stat.gamesPlayed, 0);
   const totalHours = (statsQuery.data ?? []).reduce((sum, stat) => sum + stat.hoursPlayed, 0);
+  const roundedTotalHours = Math.round(totalHours);
   const languageLabel = t(`auth.language.${profile?.language ?? language}`);
   const resolvedFullName = fullName || t('auth.home.defaultName');
   const profileHighlights = [
     {
-      label: t('profile.highlights.sports'),
-      tone: 'lime' as const,
+      label: translatePlural(t, language, 'profile.highlights.sports', totalSports),
       value: statsQuery.isPending || statsQuery.isError ? '—' : String(totalSports),
     },
     {
-      label: t('profile.highlights.games'),
+      label: translatePlural(t, language, 'profile.highlights.games', totalGames),
       value: statsQuery.isPending || statsQuery.isError ? '—' : String(totalGames),
     },
     {
-      label: t('profile.highlights.hours'),
-      tone: 'mint' as const,
-      value: statsQuery.isPending || statsQuery.isError ? '—' : `${Math.round(totalHours)}h`,
+      label: translatePlural(t, language, 'profile.highlights.hours', roundedTotalHours),
+      value: statsQuery.isPending || statsQuery.isError ? '—' : `${roundedTotalHours}h`,
     },
   ];
 
@@ -500,7 +525,7 @@ export function ProfileScreen() {
         sortOrder: 0,
       }
     : null;
-  const profileBottomPadding = Math.max(insets.bottom, 16) + 126;
+  const profileBottomPadding = Math.max(insets.bottom, 16) + 154;
 
   return (
     <>
@@ -531,7 +556,6 @@ export function ProfileScreen() {
         <NoticeBanner notice={notice} resolveMessage={t} />
 
         <View style={styles.profileSection}>
-          <Text style={styles.profileSectionEyebrow}>{t('profile.statsSectionEyebrow')}</Text>
           <Text style={styles.profileSectionTitle}>{t('profile.statsSectionTitle')}</Text>
           {statsQuery.isPending ? (
             <View style={styles.profileStateCard}>
@@ -583,7 +607,6 @@ export function ProfileScreen() {
         </View>
 
         <View style={styles.profileSection}>
-          <Text style={styles.profileSectionEyebrow}>{t('profile.connectionsSectionEyebrow')}</Text>
           <Text style={styles.profileSectionTitle}>{t('profile.connectionsSectionTitle')}</Text>
           <ProfileConnectionsPanel
             groupedConnections={groupedConnections}
@@ -840,7 +863,7 @@ function SharedGameRow({
         label={getSportBadgeLabel(event.sportSlug, sportName)}
       />
       <View style={styles.sharedGameCopy}>
-        <Text numberOfLines={1} style={styles.sharedGameTitle}>
+        <Text numberOfLines={2} style={styles.sharedGameTitle}>
           {event.venueName}
         </Text>
         <Text numberOfLines={1} style={styles.sharedGameMeta}>
@@ -1007,7 +1030,7 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
     ]);
   }, [canReportPlayer, t]);
 
-  const bottomPadding = Math.max(insets.bottom, 16) + 126;
+  const bottomPadding = Math.max(insets.bottom, 16) + 154;
 
   function handleGoBack() {
     if (navigation.canGoBack()) {
@@ -1126,9 +1149,12 @@ export function PlayerProfileScreen({ route }: PlayerProfileScreenProps) {
             <View style={styles.playerSection}>
               <Text style={styles.playerSectionEyebrow}>{t('playerProfile.sharedEyebrow')}</Text>
               <Text style={styles.playerSectionTitle}>
-                {t('playerProfile.sharedTitle', {
-                  count: sharedGamesQuery.data?.length ?? 0,
-                })}
+                {translatePlural(
+                  t,
+                  language,
+                  'playerProfile.sharedTitle',
+                  sharedGamesQuery.data?.length ?? 0,
+                )}
               </Text>
               <View style={styles.sharedGamesCard}>
                 {sharedGamesQuery.isPending ? (
@@ -1703,7 +1729,6 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     fontWeight: '900',
     letterSpacing: 1.1,
-    textTransform: 'uppercase',
     color: '#b8c5d5',
   },
   profileSection: {
@@ -1719,7 +1744,6 @@ const styles = StyleSheet.create({
     color: '#a79a89',
   },
   profileSectionTitle: {
-    marginTop: -8,
     marginLeft: 4,
     fontSize: 21,
     lineHeight: 25,

@@ -42,6 +42,7 @@ import type {
   MyGamesUpcomingItem,
 } from '../../types/events';
 import { formatEventTime, formatRelativeTime } from '../../utils/dates';
+import { translatePlural } from '../../utils/pluralization';
 
 type RootNavigation = NavigationProp<RootStackParamList>;
 type MyGamesListItem = MyGamesUpcomingItem | MyGamesPastItem;
@@ -377,7 +378,7 @@ function MyGamesEventCard({
       {showNeedPlayers ? (
         <View style={styles.needPlayersBadge}>
           <Text style={styles.needPlayersBadgeLabel}>
-            {t('shell.myGames.card.needsPlayers', { count: openSpots })}
+            {translatePlural(t, language, 'shell.myGames.card.needsPlayers', openSpots)}
           </Text>
         </View>
       ) : null}
@@ -391,7 +392,7 @@ function MyGamesEventCard({
               name: sportName,
             })}
           />
-          <Text numberOfLines={1} style={styles.eventCardSportLabel}>
+          <Text numberOfLines={2} style={styles.eventCardSportLabel}>
             {sportName}
           </Text>
         </View>
@@ -407,7 +408,7 @@ function MyGamesEventCard({
 
       <View style={styles.eventCardVenueRow}>
         <Ionicons color="#7d8ca1" name="location-outline" size={15} />
-        <Text numberOfLines={1} style={styles.eventCardVenueText}>
+        <Text numberOfLines={2} style={styles.eventCardVenueText}>
           {event.venueName}
         </Text>
       </View>
@@ -506,11 +507,7 @@ export function MyGamesScreen() {
   );
   const calendarDays = useMemo(() => {
     const calendarStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const nextUpcoming = upcomingItems[0] ?? null;
-    const highlightedKey = format(
-      nextUpcoming ? new Date(nextUpcoming.startsAt) : new Date(),
-      'yyyy-MM-dd',
-    );
+    const highlightedKey = format(new Date(), 'yyyy-MM-dd');
 
     return Array.from({ length: CALENDAR_PREVIEW_DAYS }).map((_, index) => {
       const date = addDays(calendarStart, index);
@@ -726,30 +723,57 @@ export function MyGamesScreen() {
       );
     }
 
+    let hasShownNextWeekSeparator = false;
+    const today = new Date();
+
     return (
       <View style={styles.timelineList}>
         {activeItems.map((item) => {
           const eventDate = new Date(item.startsAt);
+          const shouldShowNextWeekSeparator =
+            activeTab === 'upcoming' &&
+            !hasShownNextWeekSeparator &&
+            !isSameWeek(eventDate, today, { weekStartsOn: 1 });
+
+          if (shouldShowNextWeekSeparator) {
+            hasShownNextWeekSeparator = true;
+          }
 
           return (
-            <View key={item.id} style={styles.timelineRow}>
-              <View style={styles.timelineRail}>
-                <Text style={styles.timelineDayLabel}>
-                  {formatDayHeading(eventDate, language, t, activeTab === 'past')}
-                </Text>
-                <Text style={styles.timelineTimeLabel}>
-                  {formatEventTime(item.startsAt, language)}
-                </Text>
-                <Text style={styles.timelineDateLabel}>{formatShortDate(eventDate, language)}</Text>
-              </View>
+            <View key={item.id} style={styles.timelineItem}>
+              {shouldShowNextWeekSeparator ? (
+                <View style={styles.timelineWeekSeparator}>
+                  <View style={styles.timelineWeekSeparatorLine} />
+                  <Text style={styles.timelineWeekSeparatorLabel}>
+                    {t('shell.myGames.nextWeekSeparator')}
+                  </Text>
+                  <View style={styles.timelineWeekSeparatorLine} />
+                </View>
+              ) : null}
 
-              <View style={styles.timelineCardWrap}>
-                <MyGamesEventCard
-                  event={item}
-                  language={language}
-                  onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
-                />
-                {activeTab === 'past' ? <PastEventActions event={item as MyGamesPastItem} /> : null}
+              <View style={styles.timelineRow}>
+                <View style={styles.timelineRail}>
+                  <Text style={styles.timelineDayLabel}>
+                    {formatDayHeading(eventDate, language, t, activeTab === 'past')}
+                  </Text>
+                  <Text style={styles.timelineTimeLabel}>
+                    {formatEventTime(item.startsAt, language)}
+                  </Text>
+                  <Text style={styles.timelineDateLabel}>
+                    {formatShortDate(eventDate, language)}
+                  </Text>
+                </View>
+
+                <View style={styles.timelineCardWrap}>
+                  <MyGamesEventCard
+                    event={item}
+                    language={language}
+                    onPress={() => navigation.navigate('EventDetail', { eventId: item.id })}
+                  />
+                  {activeTab === 'past' ? (
+                    <PastEventActions event={item as MyGamesPastItem} />
+                  ) : null}
+                </View>
               </View>
             </View>
           );
@@ -758,34 +782,35 @@ export function MyGamesScreen() {
     );
   }
 
-  const listBottomPadding = Math.max(insets.bottom, 16) + 128;
+  const listBottomPadding = Math.max(insets.bottom, 16) + 164;
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.listContent,
-        {
-          paddingTop: insets.top + 18,
-          paddingBottom: listBottomPadding,
-        },
-      ]}
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => {
-            void handleRefresh();
-          }}
-          progressViewOffset={12}
-          refreshing={isRefreshing}
-          tintColor="#183153"
-        />
-      }
-      showsVerticalScrollIndicator={false}
-      style={styles.screen}
-    >
+    <View style={[styles.screen, { paddingTop: insets.top + 16 }]}>
       {isScreenFocused ? <StatusBar style="dark" /> : null}
-      {renderHeader()}
-      {renderTimeline()}
-    </ScrollView>
+      <ScrollView
+        contentContainerStyle={[
+          styles.listContent,
+          {
+            paddingBottom: listBottomPadding,
+          },
+        ]}
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => {
+              void handleRefresh();
+            }}
+            progressViewOffset={12}
+            refreshing={isRefreshing}
+            tintColor="#183153"
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollArea}
+      >
+        {renderHeader()}
+        {renderTimeline()}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -793,6 +818,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f7f0e6',
+  },
+  scrollArea: {
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -844,11 +872,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   weekStripContent: {
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 5,
+    paddingHorizontal: 8,
   },
   weekDayCard: {
-    width: 48,
+    width: 39,
     minHeight: 62,
     alignItems: 'center',
     justifyContent: 'center',
@@ -922,13 +950,34 @@ const styles = StyleSheet.create({
   timelineList: {
     gap: 18,
   },
+  timelineItem: {
+    gap: 12,
+  },
+  timelineWeekSeparator: {
+    minHeight: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  timelineWeekSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#eaddcc',
+  },
+  timelineWeekSeparatorLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    color: '#9a8b77',
+    textTransform: 'uppercase',
+  },
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 14,
+    gap: 12,
   },
   timelineRail: {
-    width: 86,
+    width: 74,
     paddingTop: 10,
   },
   timelineDayLabel: {
@@ -971,8 +1020,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   eventCardHighlighted: {
-    borderColor: '#d8ff39',
-    borderWidth: 2,
+    borderColor: '#efe3d4',
   },
   eventCardPressed: {
     transform: [{ scale: 0.99 }],
@@ -984,34 +1032,41 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#d8ff39',
+    backgroundColor: '#eef7d4',
+    borderWidth: 1,
+    borderColor: '#d6ecad',
   },
   needPlayersBadgeLabel: {
     fontSize: 12,
     fontWeight: '900',
     color: '#183153',
-    textTransform: 'uppercase',
   },
   eventCardTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 10,
   },
   eventCardIdentity: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    flex: 1,
+    flexBasis: 132,
+    flexGrow: 1,
+    flexShrink: 0,
+    minWidth: 0,
   },
   eventCardSportLabel: {
     flex: 1,
     fontSize: 16,
+    lineHeight: 20,
     fontWeight: '800',
     color: '#183153',
   },
   eventCardRole: {
-    fontSize: 12,
+    flexShrink: 0,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
   },

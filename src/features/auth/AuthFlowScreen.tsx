@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
@@ -60,6 +60,16 @@ const DEV_QA_ACCOUNTS = [
     email: 'qa.iphone2@example.com',
     password: 'Hrayem-QA-2026!',
   },
+  {
+    labelKey: 'auth.login.qa.loginAsQa3',
+    email: 'qa.iphone3@example.com',
+    password: 'Hrayem-QA-2026!',
+  },
+  {
+    labelKey: 'auth.login.qa.loginAsQa4',
+    email: 'qa.iphone4@example.com',
+    password: 'Hrayem-QA-2026!',
+  },
 ] as const satisfies readonly (LoginValues & {
   labelKey: string;
 })[];
@@ -97,17 +107,9 @@ function AuthFooterLinks() {
   }
 
   return (
-    <View style={styles.footerGroup}>
-      <View style={styles.footerRow}>
-        <Text style={styles.footerText}>{t('auth.login.noAccount')}</Text>
-        <TextLink label={t('auth.login.createAccount')} onPress={() => setAuthScreen('register')} />
-      </View>
-      <View style={styles.footerRow}>
-        <TextLink
-          label={t('auth.login.forgotPassword')}
-          onPress={() => setAuthScreen('forgot-password')}
-        />
-      </View>
+    <View style={styles.footerRow}>
+      <Text style={styles.footerText}>{t('auth.login.noAccount')}</Text>
+      <TextLink label={t('auth.login.createAccount')} onPress={() => setAuthScreen('register')} />
     </View>
   );
 }
@@ -126,12 +128,50 @@ function useResolvedNotice(): AppNotice | null {
   return authNotice;
 }
 
+function DividerLabel({ label }: { label: string }) {
+  return (
+    <View style={styles.dividerRow}>
+      <View style={styles.dividerLine} />
+      <Text style={styles.dividerLabel}>{label}</Text>
+      <View style={styles.dividerLine} />
+    </View>
+  );
+}
+
+function InfoCallout({ text }: { text: string }) {
+  return (
+    <View style={styles.infoCallout}>
+      <Text style={styles.infoIcon}>i</Text>
+      <Text style={styles.infoCalloutText}>{text}</Text>
+    </View>
+  );
+}
+
+function getPasswordStrength(password: string): number {
+  if (!password) {
+    return 0;
+  }
+
+  const checks = [
+    password.length >= 6,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ];
+
+  return Math.max(1, checks.filter(Boolean).length);
+}
+
 function LoginForm() {
   const { t } = useTranslation();
   const clearAuthNotice = useUIStore((state) => state.clearAuthNotice);
   const clearErrorMessage = useAuthStore((state) => state.clearErrorMessage);
   const setAuthNotice = useUIStore((state) => state.setAuthNotice);
+  const setAuthScreen = useUIStore((state) => state.setAuthScreen);
+  const startAuthTransition = useUIStore((state) => state.startAuthTransition);
+  const finishAuthTransition = useUIStore((state) => state.finishAuthTransition);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -144,10 +184,12 @@ function LoginForm() {
     clearAuthNotice();
     clearErrorMessage();
     setIsSubmitting(true);
+    startAuthTransition();
 
     try {
       await signInWithPassword(values);
     } catch (error) {
+      finishAuthTransition();
       setAuthNotice({
         messageKey: mapAuthErrorToMessageKey(error),
         tone: 'error',
@@ -190,6 +232,7 @@ function LoginForm() {
             autoComplete="email"
             keyboardType="email-address"
             label={t('auth.fields.email')}
+            leftIconName="mail-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.email')}
             textContentType="emailAddress"
@@ -205,8 +248,10 @@ function LoginForm() {
           <FormTextField
             autoComplete="password"
             label={t('auth.fields.password')}
+            leftIconName="lock-closed-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.password')}
+            rightIconName="eye-outline"
             secureTextEntry
             textContentType="password"
             value={field.value}
@@ -215,35 +260,67 @@ function LoginForm() {
         )}
       />
 
+      <View style={styles.loginUtilityRow}>
+        <Pressable
+          accessibilityLabel={t('auth.login.rememberMe')}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: rememberMe }}
+          onPress={() => setRememberMe((value) => !value)}
+          style={styles.rememberControl}
+        >
+          <View
+            style={[styles.rememberCheckbox, rememberMe ? styles.rememberCheckboxChecked : null]}
+          >
+            {rememberMe ? <Text style={styles.rememberCheck}>✓</Text> : null}
+          </View>
+          <Text style={styles.rememberText}>{t('auth.login.rememberMe')}</Text>
+        </Pressable>
+        <TextLink
+          label={t('auth.login.forgotPassword')}
+          onPress={() => setAuthScreen('forgot-password')}
+        />
+      </View>
+
       {__DEV__ ? (
         <View style={styles.devQuickLoginCard}>
-          <Text style={styles.devQuickLoginTitle}>{t('auth.login.qa.title')}</Text>
+          <View style={styles.devQuickLoginHeader}>
+            <Text style={styles.devBadge}>DEV</Text>
+            <Text style={styles.devQuickLoginTitle}>{t('auth.login.qa.title')}</Text>
+          </View>
           <Text style={styles.devQuickLoginBody}>{t('auth.login.qa.description')}</Text>
-          {DEV_QA_ACCOUNTS.map((account) => (
-            <ActionButton
-              key={account.email}
-              disabled={isSubmitting}
-              label={t(account.labelKey)}
-              onPress={() => handleQuickLogin(account)}
-              variant="secondary"
-            />
-          ))}
+          <View style={styles.devQuickLoginGrid}>
+            {DEV_QA_ACCOUNTS.map((account) => (
+              <View key={account.email} style={styles.devQuickLoginButton}>
+                <ActionButton
+                  disabled={isSubmitting}
+                  label={t(account.labelKey)}
+                  onPress={() => handleQuickLogin(account)}
+                  variant="secondary"
+                />
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
 
       <ActionButton
         disabled={isSubmitting}
+        iconName="arrow-forward"
+        iconPosition="right"
         label={t('auth.login.submit')}
         onPress={form.handleSubmit(handleSubmit)}
       />
+      <DividerLabel label={t('auth.login.or')} />
       <ActionButton
         disabled={isSubmitting}
+        iconName="logo-apple"
         label={t('auth.login.apple')}
         onPress={() => handleOAuth('apple')}
         variant="secondary"
       />
       <ActionButton
         disabled={isSubmitting}
+        iconName="logo-google"
         label={t('auth.login.google')}
         onPress={() => handleOAuth('google')}
         variant="secondary"
@@ -267,6 +344,7 @@ function RegisterForm() {
       acceptedTerms: false,
     },
   });
+  const passwordStrength = getPasswordStrength(form.watch('password'));
 
   async function handleSubmit(values: RegisterValues) {
     clearAuthNotice();
@@ -309,6 +387,7 @@ function RegisterForm() {
             autoComplete="email"
             keyboardType="email-address"
             label={t('auth.fields.email')}
+            leftIconName="mail-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.email')}
             textContentType="emailAddress"
@@ -324,8 +403,10 @@ function RegisterForm() {
           <FormTextField
             autoComplete="new-password"
             label={t('auth.fields.password')}
+            leftIconName="lock-closed-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.password')}
+            rightIconName="eye-outline"
             secureTextEntry
             textContentType="newPassword"
             value={field.value}
@@ -333,6 +414,20 @@ function RegisterForm() {
           />
         )}
       />
+      <View
+        style={styles.passwordStrengthRow}
+        accessibilityLabel={t('auth.register.passwordStrength')}
+      >
+        {[1, 2, 3, 4].map((level) => (
+          <View
+            key={level}
+            style={[
+              styles.passwordStrengthSegment,
+              passwordStrength >= level ? styles.passwordStrengthSegmentActive : null,
+            ]}
+          />
+        ))}
+      </View>
       <Controller
         control={form.control}
         name="acceptedTerms"
@@ -367,6 +462,8 @@ function RegisterForm() {
 
       <ActionButton
         disabled={isSubmitting || !form.watch('acceptedTerms')}
+        iconName="arrow-forward"
+        iconPosition="right"
         label={t('auth.register.submit')}
         onPress={form.handleSubmit(handleSubmit)}
       />
@@ -417,6 +514,7 @@ function ForgotPasswordForm() {
             autoComplete="email"
             keyboardType="email-address"
             label={t('auth.fields.email')}
+            leftIconName="mail-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.email')}
             textContentType="emailAddress"
@@ -425,9 +523,12 @@ function ForgotPasswordForm() {
           />
         )}
       />
+      <InfoCallout text={t('auth.forgotPassword.info')} />
 
       <ActionButton
         disabled={isSubmitting}
+        iconName="arrow-forward"
+        iconPosition="right"
         label={t('auth.forgotPassword.submit')}
         onPress={form.handleSubmit(handleSubmit)}
       />
@@ -472,8 +573,10 @@ function ResetPasswordForm() {
           <FormTextField
             autoComplete="new-password"
             label={t('auth.resetPassword.password')}
+            leftIconName="lock-closed-outline"
             onChangeText={field.onChange}
             placeholder={t('auth.placeholders.password')}
+            rightIconName="eye-outline"
             secureTextEntry
             textContentType="newPassword"
             value={field.value}
@@ -483,6 +586,8 @@ function ResetPasswordForm() {
       />
       <ActionButton
         disabled={isSubmitting}
+        iconName="arrow-forward"
+        iconPosition="right"
         label={t('auth.resetPassword.submit')}
         onPress={form.handleSubmit(handleSubmit)}
       />
@@ -548,21 +653,144 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#395065',
   },
-  devQuickLoginCard: {
+  loginUtilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
+  rememberControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    minHeight: 36,
+  },
+  rememberCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#c6c9cc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fffdf8',
+  },
+  rememberCheckboxChecked: {
+    backgroundColor: '#061427',
+    borderColor: '#061427',
+  },
+  rememberCheck: {
+    color: '#c8ff28',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  rememberText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#5f6670',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e7e1da',
+  },
+  dividerLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: '#8c9097',
+  },
+  infoCallout: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    backgroundColor: '#edf5ff',
+  },
+  infoIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#5fa0ff',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#3484ef',
+  },
+  infoCalloutText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#2e4056',
+  },
+  devQuickLoginCard: {
+    gap: 12,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: '#eef4fb',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#a8cfff',
+    backgroundColor: '#eef5ff',
+  },
+  devQuickLoginHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  devBadge: {
+    overflow: 'hidden',
+    borderRadius: 9,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#ff5f43',
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '900',
+    color: '#fffdf8',
   },
   devQuickLoginTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#183153',
+    fontWeight: '900',
+    color: '#061427',
   },
   devQuickLoginBody: {
     fontSize: 13,
     lineHeight: 19,
     color: '#395065',
+  },
+  devQuickLoginGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  devQuickLoginButton: {
+    flexBasis: '48%',
+    flexGrow: 1,
+  },
+  passwordStrengthRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: -4,
+  },
+  passwordStrengthSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#e6e1d9',
+  },
+  passwordStrengthSegmentActive: {
+    backgroundColor: '#c8ff28',
   },
   checkboxText: {
     fontSize: 14,
